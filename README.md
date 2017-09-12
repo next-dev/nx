@@ -40,16 +40,16 @@ My style is to use a single .c file with all the platform specific code in it (t
 use single header libraries for features (thanks Sean Barrett).  The header files can be re-used in other projects
 if you require.  The planned headers will be:
 
-ui.h				Manages the UI of the emulator.
-machine_??.h		Main glue code for a particular machine.  Manages memory and IO ports.
-memory.h			Memory emulation including ROM and page handling.
-video.h				Video emulation of ULA modes and Next's sprites and layer 2.
-z80.h				Z80 emulation.  Supports hooking into ED prefixes and contention.
-next_z80.h			Uses z80.h, but adds the other opcodes.
-tape.h				Supports tape-based file formats.
-microdrive.h		Supports microdrive file formats.
-keyboard.h			Emulates the keyboard.
-joystick.h			Emulates the joysticks, through keyboard.h and XInput.
+ui.h                Manages the UI of the emulator.
+machine.h           Main glue code for a particular machine.  Manages memory and IO ports.
+memory.h            Memory emulation including ROM and page handling.
+video.h             Video emulation of ULA modes and Next's sprites and layer 2.
+z80.h               Z80 emulation.  Supports hooking into ED prefixes and contention.
+next_z80.h          Uses z80.h, but adds the other opcodes.
+tape.h              Supports tape-based file formats.
+microdrive.h        Supports microdrive file formats.
+keyboard.h          Emulates the keyboard.
+joystick.h          Emulates the joysticks, through keyboard.h and XInput.
 
 The way the header libraries work is that you can #include them anywhere but in ONE .c file, you must define NX_IMPL
 so that the implementation is pulled into that compilation object.
