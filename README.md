@@ -41,6 +41,7 @@ use single header libraries for features (thanks Sean Barrett).  The header file
 if you require.  The planned headers will be:
 
 
+| Header              | Description                                                                 |
 |---------------------|-----------------------------------------------------------------------------|
 | ui.h                | Manages the UI of the emulator.                                             |
 | machine.h           | Main glue code for a particular machine.  Manages memory and IO ports.      |
