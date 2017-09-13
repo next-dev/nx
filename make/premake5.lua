@@ -39,8 +39,7 @@ solution "nx"
 	project "nx"
 		targetdir "../_bin/%{cfg.platform}/%{cfg.buildcfg}/%{prj.name}"
 		objdir "../_obj/%{cfg.platform}/%{cfg.buildcfg}/%{prj.name}"
-		kind "ConsoleApp"
-        -- kind "WindowedApp"
+        kind "WindowedApp"
 		files {
             "../src/**.h",
 			"../src/**.c",

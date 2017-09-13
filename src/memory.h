@@ -24,23 +24,23 @@ typedef struct
 }
 Ref;
 
-// Initialise the memory
+// Initialise the memory.  If it fails, mem will be left in null state.
 bool memoryOpen(Memory* mem);
 
 // Close the memory sub-system
 void memoryClose(Memory* mem);
 
 // Set an 8-bit value to the memory.  Will not write if the memory address points to ROM.
-void memorySet(Memory* mem, u16 address, u8 b);
+void memoryPoke(Memory* mem, u16 address, u8 b);
 
 // Set a 16-bit value to the memory in little endian form.
-void memorySet16(Memory* mem, u16 address, u16 w);
+void memoryPoke16(Memory* mem, u16 address, u16 w);
 
 // Read an 8-bit value from the memory.
-u8 memoryGet(Memory* mem, u16 address);
+u8 memoryPeek(Memory* mem, u16 address);
 
 // Read an 16-bit value from the memory.
-u16 memoryGet16(Memory* mem, u16 address);
+u16 memoryPeek16(Memory* mem, u16 address);
 
 // Get a reference to a memory address.
 Ref memoryRef(Memory* mem, u16 address);
@@ -70,6 +70,14 @@ bool memoryOpen(Memory* mem)
     mem->memory = K_ALLOC(KB(64));
     if (!mem->memory) return NO;
 
+    // Fill memory up with random stuff
+    Random r;
+    randomInit(&r);
+    for (u16 a = 0; a < 0xffff; ++a)
+    {
+        memoryPoke(mem, a, (u8)random64(&r));
+    }
+
     return YES;
 }
 
@@ -82,25 +90,25 @@ void memoryClose(Memory* mem)
 // Setting bytes
 //----------------------------------------------------------------------------------------------------------------------
 
-void memorySet(Memory* mem, u16 address, u8 b)
+void memoryPoke(Memory* mem, u16 address, u8 b)
 {
     if (address >= 0x4000) mem->memory[address] = b;
 }
 
-void memorySet16(Memory* mem, u16 address, u16 w)
+void memoryPoke16(Memory* mem, u16 address, u16 w)
 {
-    memorySet(mem, address, LO(w));
-    memorySet(mem, address + 1, HI(w));
+    memoryPoke(mem, address, LO(w));
+    memoryPoke(mem, address + 1, HI(w));
 }
 
-u8 memoryGet(Memory* mem, u16 address)
+u8 memoryPeek(Memory* mem, u16 address)
 {
     return mem->memory[address];
 }
 
-u16 memoryGet16(Memory* mem, u16 address)
+u16 memoryPeek16(Memory* mem, u16 address)
 {
-    return memoryGet(mem, address) + 256 * memoryGet(mem, address + 1);
+    return memoryPeek(mem, address) + 256 * memoryPeek(mem, address + 1);
 }
 
 Ref memoryRef(Memory* mem, u16 address)

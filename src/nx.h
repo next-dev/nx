@@ -17,11 +17,15 @@ Nx;
 // API to platform layer
 //----------------------------------------------------------------------------------------------------------------------
 
-// Initialise the NX system by providing callback functions for platform-specific memory and IO operations.
-bool nxOpen(Nx* N);
+// Initialise the NX system.  The image array past must be of size NX_WINDOW_WIDTH * NX_WINDOW_HEIGHT as defined in
+// video.h.  The format should be BGRA BGRA... (or ARGB in each u32).
+bool nxOpen(Nx* N, u32* img);
 
 // Close down the NX system
 void nxClose(Nx* N);
+
+// Advance a number of t-states.  Returns the new number of tstates.
+i64 nxUpdate(Nx* N, i64 tState);
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -34,17 +38,22 @@ void nxClose(Nx* N);
 // Public API
 //----------------------------------------------------------------------------------------------------------------------
 
-bool nxOpen(Nx* N)
+bool nxOpen(Nx* N, u32* img)
 {
     K_ASSERT(N);
 
-    return machineOpen(&N->machine);
+    return machineOpen(&N->machine, img);
 }
 
 void nxClose(Nx* N)
 {
     K_ASSERT(N);
     machineClose(&N->machine);
+}
+
+i64 nxUpdate(Nx* N, i64 tState)
+{
+    return machineUpdate(&N->machine, tState);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
