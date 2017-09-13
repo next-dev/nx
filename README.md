@@ -53,7 +53,7 @@ if you require.  The planned headers will be:
 | microdrive.h        | Supports microdrive file formats.                                           |
 | keyboard.h          | Emulates the keyboard.                                                      |
 | joystick.h          | Emulates the joysticks, through keyboard.h and XInput.                      |
-|---------------------------------------------------------------------------------------------------|
+|---------------------|-----------------------------------------------------------------------------|
 
 The way the header libraries work is that you can #include them anywhere but in ONE .c file, you must define NX_IMPL
 so that the implementation is pulled into that compilation object.
