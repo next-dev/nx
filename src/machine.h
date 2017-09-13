@@ -25,9 +25,17 @@ void machineClose(Machine* M);
 
 #ifdef NX_IMPL
 
+#include <kore/k_blob.h>
+
 bool machineOpen(Machine* M)
 {
     if (!memoryOpen(&M->memory)) return NO;
+    Blob rom = blobLoad("48.rom");
+    if (rom.bytes)
+    {
+        memoryLoad(&M->memory, 0, rom.bytes, (u16)rom.size);
+        blobUnload(rom);
+    }
 
     return YES;
 }
