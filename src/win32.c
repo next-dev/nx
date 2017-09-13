@@ -78,14 +78,15 @@ void* MemoryOperation(void* address, i64 numBytes)
 int WINAPI WinMain(HINSTANCE inst, HINSTANCE prev, LPSTR cmdLine, int showCmd)
 {
     // Step 1: Initialise the NX system with the platform specific callbacks.
-    NxConfig config = {
+    Platform platform = {
         __argc,                 // argc
         __argv,                 // argv
         &MemoryOperation,       // memFunc
-        { 0 },                  // MachineConfig
     };
 
-    struct _Nx N;
+    Nx N;
+    NxConfig config;
+    config.platform = platform;
 
     if (nxOpen(&N, &config))
     {

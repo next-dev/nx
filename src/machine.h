@@ -4,15 +4,17 @@
 
 #pragma once
 
+#include "platform.h"
+
 typedef struct  
 {
-    int _;
+    Platform    platform;
 }
 MachineConfig;
 
 typedef struct  
 {
-    int _;
+    Platform    platform;
 }
 Machine;
 
@@ -31,6 +33,7 @@ void machineClose(Machine* M);
 
 bool machineOpen(Machine* M, MachineConfig* config)
 {
+    M->platform = config->platform;
     return YES;
 }
 
