@@ -56,6 +56,7 @@ void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
 #ifdef NX_IMPL
 
 #include <memory.h>
+#include <kore/k_random.h>
 
 #define LO(x) ((u8)((x) % 256))
 #define HI(x) ((u8)((x) / 256))
