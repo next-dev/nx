@@ -1,0 +1,3 @@
+[submodule "include/kore"]
+	path = include/kore
+	url = https://github.com/next-dev/kore.git

@@ -4,22 +4,16 @@
 
 #pragma once
 
-#include "platform.h"
+#include "memory.h"
 
 typedef struct  
 {
-    Platform    platform;
-}
-MachineConfig;
-
-typedef struct  
-{
-    Platform    platform;
+    Memory      memory;
 }
 Machine;
 
 // Create a ZX Spectrum 48K machine
-bool machineOpen(Machine* M, MachineConfig* config);
+bool machineOpen(Machine* M);
 
 // Destroy a machine
 void machineClose(Machine* M);
@@ -31,14 +25,16 @@ void machineClose(Machine* M);
 
 #ifdef NX_IMPL
 
-bool machineOpen(Machine* M, MachineConfig* config)
+bool machineOpen(Machine* M)
 {
-    M->platform = config->platform;
+    if (!memoryOpen(&M->memory)) return NO;
+
     return YES;
 }
 
 void machineClose(Machine* M)
 {
+    memoryClose(&M->memory);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

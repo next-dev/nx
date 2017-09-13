@@ -44,7 +44,11 @@ solution "nx"
 		files {
             "../src/**.h",
 			"../src/**.c",
+            "../include/**.h",
 		}
+        includedirs {
+            "../include",
+        }
 
         -- postbuildcommands {
         --     "copy \"" .. path.translate(path.join(rootdir, "data", "*.*")) .. '" "' ..

@@ -9,13 +9,6 @@
 
 typedef struct
 {
-    Platform    platform;
-}
-NxConfig;
-
-typedef struct
-{
-    NxConfig    config;
     Machine     machine;
 }
 Nx;
@@ -25,7 +18,7 @@ Nx;
 //----------------------------------------------------------------------------------------------------------------------
 
 // Initialise the NX system by providing callback functions for platform-specific memory and IO operations.
-bool nxOpen(Nx* N, NxConfig* config);
+bool nxOpen(Nx* N);
 
 // Close down the NX system
 void nxClose(Nx* N);
@@ -41,20 +34,16 @@ void nxClose(Nx* N);
 // Public API
 //----------------------------------------------------------------------------------------------------------------------
 
-bool nxOpen(Nx* N, NxConfig* config)
+bool nxOpen(Nx* N)
 {
-    ASSERT(N);
-    ASSERT(config);
+    K_ASSERT(N);
 
-    N->config = *config;
-    MachineConfig machineConfig;
-    machineConfig.platform = config->platform;
-    return machineOpen(&N->machine, &machineConfig);
+    return machineOpen(&N->machine);
 }
 
 void nxClose(Nx* N)
 {
-    ASSERT(N);
+    K_ASSERT(N);
     machineClose(&N->machine);
 }
 
