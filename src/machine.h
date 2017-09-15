@@ -71,21 +71,21 @@ i64 machineUpdate(Machine* M, i64 tState)
     // # t-states per frame is (64+192+56)*(48+128+48) = 69888
     if (tState >= 69888)
     {
-        static TimePoint t = { 0 };
-        static bool flash = NO;
-
-        if (!flash && (M->frameCounter & 16))
-        {
-            flash = YES;
-            TimePoint tt = now();
-            TimePeriod dt = period(t, tt);
-            printf("FLASH TIME: %dms\n", (int)toMSecs(dt));
-            t = tt;
-        }
-        else if ((M->frameCounter & 16) == 0)
-        {
-            flash = NO;
-        }
+//         static TimePoint t = { 0 };
+//         static bool flash = NO;
+// 
+//         if (!flash && (M->frameCounter & 16))
+//         {
+//             flash = YES;
+//             TimePoint tt = now();
+//             TimePeriod dt = period(t, tt);
+//             printf("FLASH TIME: %dms\n", (int)toMSecs(dt));
+//             t = tt;
+//         }
+//         else if ((M->frameCounter & 16) == 0)
+//         {
+//             flash = NO;
+//         }
 
         videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
     }

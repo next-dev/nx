@@ -48,7 +48,7 @@ int kmain(int argc, char** argv)
     if (nxOpen(&N, img))
     {
         Window w = windowMake("NX (" NX_VERSION ")", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3);
-        windowConsole();
+        //windowConsole();
         TimePoint t = { 0 };
 
         LARGE_INTEGER qpf;
