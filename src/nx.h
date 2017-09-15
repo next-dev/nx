@@ -9,9 +9,21 @@
 
 typedef struct
 {
+    i64         tState;
     Machine     machine;
 }
 Nx;
+
+// Output structure returned by nxUpdate to communicate with the platform-specific layer.
+typedef struct 
+{
+    i64     startTState;        // Starting t-state when nxUpdate is called
+    i64     endTState;          // Ending t-state when nxUpdate is finished
+
+    // Signals
+    bool    redraw;
+}
+NxOut;
 
 //----------------------------------------------------------------------------------------------------------------------
 // API to platform layer
@@ -24,8 +36,19 @@ bool nxOpen(Nx* N, u32* img);
 // Close down the NX system
 void nxClose(Nx* N);
 
-// Advance a number of t-states.  Returns the new number of tstates.
-i64 nxUpdate(Nx* N, i64 tState);
+// Advance as many number of t-states as possible.  Returns a NxOut structure.  This will contain information about
+// the new tState.  The client should calculate the time to wait for before calling nxUpdate again.  The NxOut
+// structure will also contain booleans to signal to the client what to do.
+//
+//      redraw = YES        Redraw window.
+//
+NxOut nxUpdate(Nx* N);
+
+//----------------------------------------------------------------------------------------------------------------------
+// Event system
+//----------------------------------------------------------------------------------------------------------------------
+
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -42,6 +65,7 @@ bool nxOpen(Nx* N, u32* img)
 {
     K_ASSERT(N);
 
+    N->tState = 0;
     return machineOpen(&N->machine, img);
 }
 
@@ -51,9 +75,30 @@ void nxClose(Nx* N)
     machineClose(&N->machine);
 }
 
-i64 nxUpdate(Nx* N, i64 tState)
+NxOut nxUpdate(Nx* N)
 {
-    return machineUpdate(&N->machine, tState);
+    NxOut out;
+
+    out.startTState = N->tState;
+    out.redraw = NO;
+
+    for(;;)
+    {
+        i64 newTState = machineUpdate(&N->machine, N->tState);
+        if (newTState >= 69888)
+        {
+            out.endTState = newTState;
+            out.redraw = YES;
+            N->tState = newTState - 69888;
+            break;
+        }
+        else
+        {
+            N->tState = newTState;
+        }
+    }
+
+    return out;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

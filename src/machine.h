@@ -11,7 +11,8 @@ typedef struct
 {
     Memory      memory;
     Video       video;
-    u8          border;     // Write to port $fe will change this.
+    int         frameCounter;   // incremented each frame to time flash effect
+    u8          border;         // Write to port $fe will change this.
 }
 Machine;
 
@@ -65,12 +66,31 @@ void machineClose(Machine* M)
 
 i64 machineUpdate(Machine* M, i64 tState)
 {
+    ++tState;
+
     // # t-states per frame is (64+192+56)*(48+128+48) = 69888
-    if ((tState % 69888) == 0)
+    if (tState >= 69888)
     {
-        videoRenderULA(&M->video);
+        static TimePoint t = { 0 };
+        static bool flash = NO;
+
+        if (!flash && (M->frameCounter & 16))
+        {
+            flash = YES;
+            TimePoint tt = now();
+            TimePeriod dt = period(t, tt);
+            printf("FLASH TIME: %dms\n", (int)toMSecs(dt));
+            t = tt;
+        }
+        else if ((M->frameCounter & 16) == 0)
+        {
+            flash = NO;
+        }
+
+        videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
     }
-    return ++tState;
+
+    return tState;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

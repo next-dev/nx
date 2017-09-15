@@ -37,7 +37,7 @@ bool videoOpen(Video* video, Memory* mem, u8* border, u32* img);
 void videoClose(Video* video);
 
 // Render the ULA video.
-void videoRenderULA(Video* video);
+void videoRenderULA(Video* video, bool flash);
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ void videoClose(Video* video)
 {
 }
 
-void videoRenderULA(Video* video)
+void videoRenderULA(Video* video, bool flash)
 {
     static const u32 colours[16] =
     {
@@ -108,9 +108,8 @@ void videoRenderULA(Video* video)
                     u8 attr = memoryPeek(video->mem, a++);
                     u32 ink = 0xff000000 + colours[(attr & 7) + ((attr & 0x40) >> 3)];
                     u32 paper = 0xff000000 + colours[(attr & 0x7f) >> 3];
-                    bool flash = NO;  // #todo: flash
 
-                    if (flash /*&& N->flash*/)
+                    if (flash)
                     {
                         u32 t = ink;
                         ink = paper;

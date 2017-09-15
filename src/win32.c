@@ -9,6 +9,25 @@
 #include <kore/k_memory.h>
 #include <kore/k_window.h>
 
+#define NX_MINOR_VERSION        0
+#define NX_MAJOR_VERSION        0
+#define NX_PATCH_VERSION        1
+
+#define NX_STR2(x) #x
+#define NX_STR(x) NX_STR2(x)
+
+#if NX_MAJOR_VERSION == 0
+#   if NX_MINOR_VERSION == 0
+#       define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION)
+#   elif NX_MINOR_VERSION == 9
+#       define NX_VERSION "Beta." NX_STR(NX_PATCH_VERSION)
+#   else
+#       define NX_VERSION "Alpha." NX_STR(NX_PATCH_VERSION)
+#   endif
+#else
+#   define NX_VERSION NX_STR(NX_MAJOR_VERSION) "." NX_STR(NX_MINOR_VERSION) "." NX_STR(NX_PATCH_VERSION)
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // Include the header libraries
 //----------------------------------------------------------------------------------------------------------------------
@@ -28,17 +47,26 @@ int kmain(int argc, char** argv)
 
     if (nxOpen(&N, img))
     {
-        Window w = windowMake("NX 0.1", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3);
-        i64 tState = 0;
+        Window w = windowMake("NX (" NX_VERSION ")", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3);
+        windowConsole();
+        TimePoint t = { 0 };
+
+        LARGE_INTEGER qpf;
+        QueryPerformanceFrequency(&qpf);
 
         while (windowPump())
         {
-            tState = nxUpdate(&N, tState);
-            if (tState > 69888)
+            t = now();
+            NxOut out = nxUpdate(&N);
+            if (out.redraw)
             {
-                tState -= 69888;
                 windowRedraw(w);
             }
+
+            i64 tStateDiff = out.endTState - out.startTState;
+            i64 msElapsed = tStateDiff * 20 / 69888;
+            TimePoint futureTime = future(t, msecs(msElapsed));
+            waitUntil(futureTime);
         }
 
         windowClose(w);
