@@ -78,6 +78,10 @@ bool memoryOpen(Memory* mem)
         memoryPoke(mem, a, (u8)random64(&r));
     }
 
+    // Debug: initialise VRAM
+//     for (u16 a = 0x4000; a < 0x5800; ++a) memoryPoke(mem, a, 0);
+//     for (u16 a = 0x5800; a < 0x5820; ++a) memoryPoke(mem, a, 0x87);
+
     return YES;
 }
 
