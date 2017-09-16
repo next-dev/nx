@@ -43,6 +43,7 @@ if you require.  The planned headers will be:
 
 | Header              | Description                                                                 |
 |---------------------|-----------------------------------------------------------------------------|
+| nx.h                | This is the emulator.  Houses the UI and Machine structures.                |
 | ui.h                | Manages the UI of the emulator.                                             |
 | machine.h           | Main glue code for a particular machine.  Manages memory and IO ports.      |
 | memory.h            | Memory emulation including ROM and page handling.                           |
