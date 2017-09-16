@@ -33,6 +33,7 @@ i64 machineUpdate(Machine* M, i64 tState);
 #ifdef NX_IMPL
 
 #include <kore/k_blob.h>
+#include "z80.h"
 
 bool machineOpen(Machine* M, u32* img)
 {

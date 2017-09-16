@@ -128,10 +128,10 @@ void z80Init(Z80* Z)
         gSZ53[i] = (u8)(i & (F_3 | F_5 | F_SIGN));
 
         u8 p = 0, x = i;
-        for (int b = 0; b < 8; ++b) { p ^= (u8)(j & 1); j >>= 1; }
+        for (int b = 0; b < 8; ++b) { p ^= (u8)(b & 1); b >>= 1; }
         gParity[i] = p ? 0 : F_PARITY;
 
-        gSZ53P[i] = sz53[i] | gParity[i];
+        gSZ53P[i] = gSZ53[i] | gParity[i];
     }
 
     gSZ53[0] |= F_ZERO;
@@ -254,6 +254,51 @@ void z80AdcReg(Z80* Z, u8* r)
     A = (u8)t;
     F = ((t & 0x100) ? F_CARRY : 0) | kHalfCarryAdd[x & 0x07] | kOverflowAdd[x >> 4] | gSZ53[A];
 }
+
+void z80SubReg8(Z80* Z, u8* r)
+{
+    // S: Result is negative
+    // Z: Result is zero
+    // H: Borrow from bit 4
+    // P: Set if overflow
+    // N: Set
+    // C: Set if borrowed
+    u16 t = (u16)A - *r;
+    u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
+    A = (u8)t;
+    F = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | gSZ53[A];
+}
+
+void z80SbcReg8(Z80* Z, u8* r)
+{
+    // S: Result is negative
+    // Z: Result is zero
+    // H: Borrow from bit 4
+    // P: Set if overflow
+    // N: Set
+    // C: Set if borrowed
+    u16 t = (u16)A - *r - (F & F_CARRY);
+    u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
+    A = (u8)t;
+    F = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | gSZ53[A];
+}
+
+void z80SbcReg16(Z80* Z, u16* r)
+{
+    // S: Result is negative
+    // Z: Result is zero
+    // H: Borrow from bit 12
+    // P: Set if overflow
+    // N: Set
+    // C: Set if borrowed
+    u32 t = (u32)HL - *r - (F & F_CARRY);
+    u8 x = (u8)(((HL & 0x8800) >> 11) | ((*r & 0x8800) >> 10) | ((t & 0x8800) >> 9));
+    HL = (u16)t;
+    F = ((t & 0x10000) ? F_CARRY : 0) | F_NEG | kOverflowSub[x >> 4] | (H & (F_3 | F_5 | F_SIGN))
+        | kHalfCarrySub[x & 0x07] | (HL ? 0 : F_ZERO);
+}
+
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
