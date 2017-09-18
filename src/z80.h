@@ -506,6 +506,39 @@ void z80SetReg8(Z80* Z, u8* r, int b)
     *r = *r | ((u8)1 << b);
 }
 
+void z80Daa(Z80* Z)
+{
+    u8 result = A;
+    u8 incr = 0;
+    bool carry = K_BOOL(F & F_CARRY);
+
+    if (((F & F_HALF) != 0) || ((result & 0x0f) > 0x09))
+    {
+        incr |= 0x06;
+    }
+
+    if (carry || (result > 0x9f) || ((result > 0x8f) && ((result & 0x0f) > 0x09)))
+    {
+        incr |= 0x60;
+    }
+
+    if (result > 0x99) carry = YES;
+
+    if ((F & F_NEG) != 0)
+    {
+        z80SubReg8(Z, &incr);
+    }
+    else
+    {
+        z80AddReg8(Z, &incr);
+    }
+
+    result = A;
+
+    z80SetFlag(Z, F_CARRY, carry);
+    z80SetFlag(Z, F_PARITY, gParity[result]);
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 
