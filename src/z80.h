@@ -603,7 +603,15 @@ u16* z80GetReg16_2(Z80* Z, u8 p)
 
 void z80Step(Z80* Z)
 {
-    // Fetch opcode and decode it
+    // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
+    //
+    //    7   6   5   4   3   2   1   0
+    //  +---+---+---+---+---+---+---+---+
+    //  |   X   |     Y     |     Z     |
+    //  +---+---+---+---+---+---+---+---+
+    //  |       |   P   | Q |           |
+    //  +---+---+---+---+---+---+---+---+
+    //
     u8 opCode = memoryPeek(Z->mem, PC, Z->tState);
     u8 x = (opCode & 0xc0) >> 6;
     u8 y = (opCode & 0x38) >> 3;
