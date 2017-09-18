@@ -50,7 +50,7 @@ u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates);
 u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates);
 
 // Get a reference to a memory address.
-Ref memoryRef(Memory* mem, u16 address);
+Ref memoryRef(Memory* mem, u16 address, i64* inOutTStates);
 
 // Load a buffer into memory, ignoring write-only state of ROMs
 void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
@@ -165,7 +165,7 @@ u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates)
     return memoryPeek(mem, address, inOutTStates) + 256 * memoryPeek(mem, address + 1, inOutTStates);
 }
 
-Ref memoryRef(Memory* mem, u16 address)
+Ref memoryRef(Memory* mem, u16 address, i64* inOutTStates)
 {
     static u8 dump;
     Ref r = { &mem->memory[address], &mem->memory[address] };
@@ -173,6 +173,8 @@ Ref memoryRef(Memory* mem, u16 address)
     {
         r.w = &dump;
     }
+
+    *inOutTStates += memoryContention(mem, address, *inOutTStates);
 
     return r;
 }
