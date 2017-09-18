@@ -19,24 +19,28 @@ Reg;
 
 typedef struct  
 {
+    // External systems and information.
+    Memory*     mem;
+    i64*        tState;
+
     // Base registers
-    Reg     af, bc, de, hl;
-    Reg     sp, pc, ix, iy;
-    Reg     ir;
+    Reg         af, bc, de, hl;
+    Reg         sp, pc, ix, iy;
+    Reg         ir;
 
     // Alternate registers
-    Reg     af_, bc_, de_, hl_;
+    Reg         af_, bc_, de_, hl_;
 
     // Internal registers
-    Reg     m;
+    Reg         m;
 }
 Z80;
 
 // Initialise the internal tables and data structure.
-void z80Init(Z80* Z);
+void z80Init(Z80* Z, Memory* mem, i64* tStateCounter);
 
 // Run a single opcode
-void z80Run(Z80* Z);
+void z80Step(Z80* Z);
 
 // Convenient register accesses that relies on the Z80 structure variable being called Z.
 #define A       Z->af.h
@@ -119,9 +123,11 @@ void z80SetFlag(Z80* Z, u8 flags, bool value)
 // Initialisation
 //----------------------------------------------------------------------------------------------------------------------
 
-void z80Init(Z80* Z)
+void z80Init(Z80* Z, Memory* mem, i64* tStateCounter)
 {
     memoryClear(Z, sizeof(*Z));
+    Z->mem = mem;
+    Z->tState = tStateCounter;
 
     for (int i = 0; i < 256; ++i)
     {
@@ -542,6 +548,83 @@ void z80Daa(Z80* Z)
 int z80Displacement(u8 x)
 {
     return (128 ^ (int)x) - 128;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// z80Step
+// Run a single instruction
+//----------------------------------------------------------------------------------------------------------------------
+
+Ref z80GetReg(Z80* Z, u8 y)
+{
+    Ref r;
+    switch (y)
+    {
+    case 0:     r.r = &B;   r.w = &B;   break;
+    case 1:     r.r = &C;   r.w = &C;   break;
+    case 2:     r.r = &D;   r.w = &D;   break;
+    case 3:     r.r = &E;   r.w = &E;   break;
+    case 4:     r.r = &H;   r.w = &H;   break;
+    case 5:     r.r = &L;   r.w = &L;   break;
+    case 7:     r.r = &A;   r.w = &A;   break;
+
+    case 6:
+        r = memoryRef(Z->mem, HL, Z->tState);
+    }
+
+    return r;
+}
+
+u16* z80GetReg16_1(Z80* Z, u8 p)
+{
+    switch (p)
+    {
+    case 0: return &BC;
+    case 1: return &DE;
+    case 2: return &HL;
+    case 3: return &SP;
+    }
+
+    return 0;
+}
+
+u16* z80GetReg16_2(Z80* Z, u8 p)
+{
+    switch (p)
+    {
+    case 0: return &BC;
+    case 1: return &DE;
+    case 2: return &HL;
+    case 3: return &AF;
+    }
+
+    return 0;
+}
+
+void z80Step(Z80* Z)
+{
+    // Fetch opcode and decode it
+    u8 opCode = memoryPeek(Z->mem, PC, Z->tState);
+    u8 x = (opCode & 0xc0) >> 6;
+    u8 y = (opCode & 0x38) >> 3;
+    u8 z = (opCode & 0x07);
+    u8 p = (y & 6) >> 1;
+    u8 q = (y & 1);
+
+    switch (x)
+    {
+    case 0:
+        break; // x == 0
+
+    case 1:
+        break; // x == 1
+
+    case 2:
+        break; // x == 2
+
+    case 3:
+        break; // x == 3
+    } // switch(x)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
