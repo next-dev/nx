@@ -104,8 +104,10 @@ void videoRenderULA(Video* video, bool flash)
                 }
                 else
                 {
-                    u8 data = memoryPeek(video->mem, p++);
-                    u8 attr = memoryPeek(video->mem, a++);
+                    i64 ts = 0;
+                    // #todo: add API for direct page/address access
+                    u8 data = memoryPeek(video->mem, p++, &ts);
+                    u8 attr = memoryPeek(video->mem, a++, &ts);
                     u32 ink = 0xff000000 + colours[(attr & 7) + ((attr & 0x40) >> 3)];
                     u32 paper = 0xff000000 + colours[(attr & 0x7f) >> 3];
 

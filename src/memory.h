@@ -14,6 +14,7 @@
 typedef struct 
 {
     u8*         memory;
+    u8*         contention;
 }
 Memory;
 
@@ -30,17 +31,23 @@ bool memoryOpen(Memory* mem);
 // Close the memory sub-system
 void memoryClose(Memory* mem);
 
-// Set an 8-bit value to the memory.  Will not write if the memory address points to ROM.
-void memoryPoke(Memory* mem, u16 address, u8 b);
+// Return the number of t-states of contention for a particular memory address at a particular t-state time from
+// video trace.
+i64 memoryContention(Memory* mem, u16 addr, i64 tStates);
 
-// Set a 16-bit value to the memory in little endian form.
-void memoryPoke16(Memory* mem, u16 address, u16 w);
+// Set an 8-bit value to the memory.  Will not write if the memory address points to ROM.  Will also adjust the
+// tState counter according to contention.
+void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates);
+
+// Set a 16-bit value to the memory in little endian form.  Will also adjust the tState counter according to
+// contention.
+void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates);
 
 // Read an 8-bit value from the memory.
-u8 memoryPeek(Memory* mem, u16 address);
+u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates);
 
 // Read an 16-bit value from the memory.
-u16 memoryPeek16(Memory* mem, u16 address);
+u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates);
 
 // Get a reference to a memory address.
 Ref memoryRef(Memory* mem, u16 address);
@@ -70,49 +77,92 @@ bool memoryOpen(Memory* mem)
     mem->memory = K_ALLOC(KB(64));
     if (!mem->memory) return NO;
 
+    // Build contention table
+    mem->contention = K_ALLOC_CLEAR(sizeof(*mem->contention) * 70930);
+    int contentionStart = 14335;
+    int contentionEnd = contentionStart + (192 * 224);
+    int t = contentionStart;
+
+    while (t < contentionEnd)
+    {
+        // Calculate contention for the next 128 t-states (i.e. a single pixel line)
+        for (int i = 0; i < 128; i += 8)
+        {
+            mem->contention[t++] = 6;
+            mem->contention[t++] = 5;
+            mem->contention[t++] = 4;
+            mem->contention[t++] = 3;
+            mem->contention[t++] = 2;
+            mem->contention[t++] = 1;
+            mem->contention[t++] = 0;
+            mem->contention[t++] = 0;
+        }
+
+        // Skip the time the border is being drawn: 96 t-states (24 left, 24 right, 48 retrace)
+        t += (224 - 128);
+    }
+
     // Fill memory up with random stuff
     Random r;
     randomInit(&r);
     for (u16 a = 0; a < 0xffff; ++a)
     {
-        memoryPoke(mem, a, (u8)random64(&r));
+        i64 ts = 0;
+        memoryPoke(mem, a, (u8)random64(&r), &ts);
     }
-
-    // Debug: initialise VRAM
-//     for (u16 a = 0x4000; a < 0x5800; ++a) memoryPoke(mem, a, 0);
-//     for (u16 a = 0x5800; a < 0x5820; ++a) memoryPoke(mem, a, 0x87);
 
     return YES;
 }
 
 void memoryClose(Memory* mem)
 {
+    K_FREE(mem->contention, sizeof(*mem->contention) * 70930);
     K_FREE(mem->memory, KB(64));
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Attributes
+//----------------------------------------------------------------------------------------------------------------------
+
+i64 memoryContention(Memory* mem, u16 addr, i64 tStates)
+{
+    // Check for slot 2: Address = SS00 0000 0000 0000, where SS = 01
+    if ((addr & 0xc000) == 0x4000)
+    {
+        K_ASSERT(tStates < 70930);
+        return mem->contention[tStates];
+    }
+
+    return 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 // Setting bytes
 //----------------------------------------------------------------------------------------------------------------------
 
-void memoryPoke(Memory* mem, u16 address, u8 b)
+void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates)
 {
+    *inOutTStates += memoryContention(mem, address, *inOutTStates);
+    *inOutTStates += 3;
     if (address >= 0x4000) mem->memory[address] = b;
 }
 
-void memoryPoke16(Memory* mem, u16 address, u16 w)
+void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates)
 {
-    memoryPoke(mem, address, LO(w));
-    memoryPoke(mem, address + 1, HI(w));
+    memoryPoke(mem, address, LO(w), inOutTStates);
+    memoryPoke(mem, address + 1, HI(w), inOutTStates);
 }
 
-u8 memoryPeek(Memory* mem, u16 address)
+u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates)
 {
+    *inOutTStates += memoryContention(mem, address, *inOutTStates);
+    *inOutTStates += 3;
     return mem->memory[address];
 }
 
-u16 memoryPeek16(Memory* mem, u16 address)
+u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates)
 {
-    return memoryPeek(mem, address) + 256 * memoryPeek(mem, address + 1);
+    return memoryPeek(mem, address, inOutTStates) + 256 * memoryPeek(mem, address + 1, inOutTStates);
 }
 
 Ref memoryRef(Memory* mem, u16 address)
