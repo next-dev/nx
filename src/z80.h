@@ -566,10 +566,10 @@ u16 z80Pop(Z80* Z)
     return x;
 }
 
-void z80Push(Z80* Z, u16* x)
+void z80Push(Z80* Z, u16 x)
 {
     SP -= 2;
-    memoryPoke16(Z->mem, SP, *x, Z->tState);
+    memoryPoke16(Z->mem, SP, x, Z->tState);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1029,6 +1029,19 @@ void z80Step(Z80* Z)
             break;  // x, z = (3, 3)
 
         case 4:
+            // C4 CC D4 DC E4 EC F4 FC - CALL F,nn
+            tt = PEEK16(PC);
+            MP = tt;
+            if (z80GetFlag(y, F))
+            {
+                CONTEND(PC + 1, 1, 1);
+                z80Push(Z, PC + 2);
+                PC = tt;
+            }
+            else
+            {
+                PC += 2;
+            }
             break;  // x, z = (3, 4)
 
         case 5:
