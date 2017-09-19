@@ -71,3 +71,12 @@ So the normal operation is to run `build2017.bat` then run `edit.bat`.
 
 If you require use of a different version of Visual Studio, you can edit the build batch file.  Look for the parameter
 passed to premake.  It should be obvious what you change.
+
+# Legal notices
+
+First with the distribution of the ROM:
+
+_Amstrad have kindly given their permission for the redistribution of their copyrighted material but retain that copyright_
+
+Thanks Amstrad & Cliff Lawson!  I love how you are so cool with the retro scene and Sinclair technology.  This information is from
+http://www.worldofspectrum.org/permits/amstrad-roms.txt.
