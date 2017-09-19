@@ -22,6 +22,7 @@ typedef struct
     // External systems and information.
     Memory*     mem;
     i64*        tState;
+    void*       io;         // Placeholder
 
     // Base registers
     Reg         af, bc, de, hl;
@@ -35,6 +36,9 @@ typedef struct
     Reg         m;
 
     bool        halt;
+    bool        iff1;
+    bool        iff2;
+    bool        lastOpcodeWasEI;    // YES, if EI was executed (as no interrupt can happen immediately after it)
 }
 Z80;
 
@@ -642,6 +646,10 @@ bool z80GetFlag(u8 y, u8 flags)
 #define POKE16(a, w) memoryPoke16(Z->mem, (a), (w), Z->tState)
 #define CONTEND(a, t, n) memoryContend(Z->mem, (a), (t), (n), Z->tState)
 
+// Temporary place holders
+#define ioIn(io, port) ((u8)0)
+#define ioOut(io, port, b) do { } while(0)
+
 void z80Step(Z80* Z)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
@@ -966,6 +974,58 @@ void z80Step(Z80* Z)
             break;  // x, z = (3, 2)
 
         case 3:
+            switch (y)
+            {
+            case 0:     // C3 - JP nn
+                PC = PEEK16(PC);
+                MP = PC;
+                break;
+
+            case 1:     // CB (prefix)
+                break;
+
+            case 2:     // D3 - OUT (n),A       A -> $AAnn
+                // #todo: I/O
+                d = PEEK(PC);
+                ioOut(Z->io, (u16)d | ((u16)A << 8), A);
+                MP = ((u16)(d + 1)) | ((u16)A << 8);
+                ++PC;
+                break;
+
+            case 3:     // DB - IN A,(n)        A <- $AAnn
+                d = PEEK(PC);
+                tt = ((u16)A << 8) | d;
+                MP = ((u16)A << 8) + d + 1;
+                A = ioIn(Z->io, tt);
+                ++PC;
+                break;
+
+            case 4:     // E3 - EX (SP),HL
+                tt = PEEK16(SP);
+                CONTEND(SP + 1, 1, 1);
+                POKE16(SP, HL);
+                CONTEND(SP, 1, 2);
+                HL = tt;
+                MP = HL;
+                break;
+
+            case 5:     // EB - EX DE,HL
+                tt = DE;
+                DE = HL;
+                HL = tt;
+                break;
+
+            case 6:     // F3 - DI
+                Z->iff1 = NO;
+                Z->iff2 = NO;
+                break;
+
+            case 7:     // FB - EI
+                Z->iff1 = YES;
+                Z->iff2 = YES;
+                Z->lastOpcodeWasEI = YES;
+                break;
+            }
             break;  // x, z = (3, 3)
 
         case 4:
@@ -991,6 +1051,14 @@ void z80Step(Z80* Z)
 #undef POKE16
 #undef CONTEND
 
+#undef F_CARRY
+#undef F_NEG
+#undef F_PARITY
+#undef F_3
+#undef F_HALF
+#undef F_5
+#undef F_ZERO
+#undef F_SIGN
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
