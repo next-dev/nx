@@ -1090,6 +1090,11 @@ void z80Step(Z80* Z)
             break;  // x, z = (3, 6)
 
         case 7:
+            // C7, CF, D7, DF, E7, EF, F7, FF - RST n
+            CONTEND(IR, 1, 1);
+            z80Push(Z, PC);
+            PC = (u16)y * 8;
+            MP = PC;
             break;  // x, z = (3, 7)
 
         }
