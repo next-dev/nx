@@ -621,6 +621,12 @@ bool z80GetFlag(u8 y, u8 flags)
     return YES;
 }
 
+#define PEEK(a) memoryPeek(Z->mem, (a), Z->tState)
+#define POKE(a, b) memoryPoke(Z->mem, (a), (b), Z->tState)
+#define PEEK16(a) memoryPeek16(Z->mem, (a), Z->tState)
+#define POKE16(a, w) memoryPoke16(Z->mem, (a), (w), Z->tState)
+#define CONTEND(a, t, n) memoryContend(Z->mem, (a), (t), (n), Z->tState)
+
 void z80Step(Z80* Z)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
@@ -635,7 +641,7 @@ void z80Step(Z80* Z)
     //
     // See http://www.z80.info/decoding.htm
     //
-    u8 opCode = memoryPeek(Z->mem, PC++, Z->tState);
+    u8 opCode = PEEK(PC++);
     u8 x = (opCode & 0xc0) >> 6;
     u8 y = (opCode & 0x38) >> 3;
     u8 z = (opCode & 0x07);
@@ -644,6 +650,7 @@ void z80Step(Z80* Z)
 
     // Commonly used local variables
     u8 d = 0;       // Used for displacement
+    u16 tt = 0;     // Temporary for an address
 
     // Opcode hex calculated from:
     //
@@ -669,29 +676,29 @@ void z80Step(Z80* Z)
                 break;
 
             case 2:     // 10 - DJNZ d
-                memoryContend(Z->mem, IR, 1, 1, Z->tState);
-                d = z80Displacement(memoryPeek(Z->mem, PC++, Z->tState));
+                CONTEND(IR, 1, 1);
+                d = z80Displacement(PEEK(PC++));
                 --B;
                 if (B != 0)
                 {
-                    memoryContend(Z->mem, PC, 1, 5, Z->tState);
+                    CONTEND(PC, 1, 5);
                     PC += d;
                     MP = PC;
                 }
                 break;
 
             case 3:     // 18 - JR d
-                d = z80Displacement(memoryPeek(Z->mem, PC++, Z->tState));
-                memoryContend(Z->mem, PC, 1, 5, Z->tState);
+                d = z80Displacement(PEEK(PC++));
+                CONTEND(PC, 1, 5);
                 PC += d;
                 MP = PC;
                 break;
 
             default:    // 20, 28, 30, 38 - JR cc(y-4),d
-                d = z80Displacement(memoryPeek(Z->mem, PC++, Z->tState));
+                d = z80Displacement(PEEK(PC++));
                 if (z80GetFlag(y - 4, F))
                 {
-                    memoryContend(Z->mem, PC, 1, 5, Z->tState);
+                    CONTEND(PC, 1, 5);
                     PC += d;
                     MP = PC;
                 }
@@ -701,21 +708,71 @@ void z80Step(Z80* Z)
         case 1: // x, z = (0, 1)
             if (0 == q)
             {
-                // $01, $11, $21, $31 - LD BC/DE/HL/SP, nnnn
+                // 01, 11, 21, 31 - LD BC/DE/HL/SP, nnnn
                 u16* rr = z80GetReg16_1(Z, p);
-                *rr = memoryPeek16(Z->mem, PC, Z->tState);
+                *rr = PEEK16(PC);
                 PC += 2;
             }
             else
             {
-                // $09, $19, $29, $39 - ADD HL, BC/DE/HL/SP
-                memoryContend(Z->mem, IR, 1, 7, Z->tState);
+                // 09, 19, 29, 39 - ADD HL, BC/DE/HL/SP
+                CONTEND(IR, 1, 1);
                 MP = HL + 1;
                 z80AddReg16(Z, &HL, z80GetReg16_1(Z, p));
             }
             break;
 
         case 2: // x, z = (0, 2)
+            switch (y)
+            {
+            case 0:     // 02 - LD (BC),A
+                POKE(BC, A);
+                MP = (((BC + 1) & 0xff) | (A << 8));
+                break;
+
+            case 1:     // 0A - LD A,(BC)
+                A = PEEK(BC);
+                MP = BC + 1;
+                break;
+
+            case 2:     // 12 - LD (DE),A
+                POKE(BC, A);
+                MP = (((DE + 1) & 0xff) | (A << 8));
+                break;
+
+            case 3:     // 1A - LD A,(DE)
+                A = PEEK(DE);
+                MP = DE + 1;
+                break;
+
+            case 4:     // 22 - LD (nn),HL
+                tt = PEEK16(PC);
+                POKE16(tt, HL);
+                MP = tt + 1;
+                PC += 2;
+                break;
+
+            case 5:     // 2A - LD HL,(nn)
+                tt = PEEK16(PC);
+                HL = PEEK16(tt);
+                PC += 2;
+                MP = tt + 1;
+                break;
+
+            case 6:     // 32 - LD (nn),A
+                tt = PEEK16(PC);
+                POKE(tt, A);
+                MP = (((tt + 1) & 0xff) | (A << 8));
+                PC += 2;
+                break;
+
+            case 7:     // 3A - LD A,(nn)
+                tt = PEEK16(PC);
+                MP = tt + 1;
+                A = PEEK(tt);
+                PC += 2;
+                break;
+            }
             break;
 
         case 3: // x, z = (0, 3)
@@ -746,6 +803,13 @@ void z80Step(Z80* Z)
         break; // x == 3
     } // switch(x)
 }
+
+#undef PEEK
+#undef POKE
+#undef PEEK16
+#undef POKE16
+#undef CONTEND
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
