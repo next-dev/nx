@@ -252,7 +252,7 @@ void z80AdcReg16(Z80* Z, u16* r)
 }
 
 // Result always goes into A
-void z80AdcReg(Z80* Z, u8* r)
+void z80AdcReg8(Z80* Z, u8* r)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -871,11 +871,27 @@ void z80Step(Z80* Z)
             // 40 - 7F - LD R,R
             Ref r1 = z80GetReg(Z, y);
             Ref r2 = z80GetReg(Z, z);
-            *r1.w = *r1.r;
+            *r1.w = *r2.r;
         }
         break; // x == 1
 
     case 2:
+        {
+            typedef void (*ALUFunc) (Z80* Z, u8* r);
+            static const ALUFunc alus[8] =
+            {
+                &z80AddReg8,
+                &z80AdcReg8,
+                &z80SubReg8,
+                &z80SbcReg8,
+                &z80AndReg8,
+                &z80XorReg8,
+                &z80OrReg8,
+                &z80AndReg8
+            };
+            r = z80GetReg(Z, z);
+            alus[y](Z, r.r);
+        }
         break; // x == 2
 
     case 3:
