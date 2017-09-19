@@ -557,7 +557,7 @@ int z80Displacement(u8 x)
 
 u16 z80Pop(Z80* Z)
 {
-    u16 x = PEEK16(SP);
+    u16 x = memoryPeek16(Z->mem, SP, Z->tState);
     SP += 2;
     return x;
 }
@@ -565,7 +565,7 @@ u16 z80Pop(Z80* Z)
 void z80Push(Z80* Z, u16* x)
 {
     SP -= 2;
-    POKE16(SP, x);
+    memoryPoke16(Z->mem, SP, *x, Z->tState);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -921,6 +921,34 @@ void z80Step(Z80* Z)
             break;  // x, z = (3, 0)
 
         case 1:
+            if (0 == q)
+            {
+                // C1, D1, E1, F1 - POP RR
+                *z80GetReg16_2(Z, p) = z80Pop(Z);
+            }
+            else
+            {
+                switch (p)
+                {
+                case 0:     // C9 - RET
+                    PC = z80Pop(Z);
+                    MP = PC;
+                    break;
+
+                case 1:     // D9 - EXX
+                    z80Exx(Z);
+                    break;
+
+                case 2:     // E9 - JP HL
+                    PC = HL;
+                    break;
+
+                case 3:     // F9 - LD SP, HL
+                    CONTEND(IR, 1, 1);
+                    SP = HL;
+                    break;
+                }
+            }
             break;  // x, z = (3, 1)
 
         case 2:
