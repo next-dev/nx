@@ -35,6 +35,9 @@ void memoryClose(Memory* mem);
 // video trace.
 i64 memoryContention(Memory* mem, u16 addr, i64 tStates);
 
+// Contends the machine for a given address for t t-states, for n times.
+void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates);
+
 // Set an 8-bit value to the memory.  Will not write if the memory address points to ROM.  Will also adjust the
 // tState counter according to contention.
 void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates);
@@ -121,7 +124,7 @@ void memoryClose(Memory* mem)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// Attributes
+// Memory contention
 //----------------------------------------------------------------------------------------------------------------------
 
 i64 memoryContention(Memory* mem, u16 addr, i64 tStates)
@@ -134,6 +137,22 @@ i64 memoryContention(Memory* mem, u16 addr, i64 tStates)
     }
 
     return 0;
+}
+
+void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates)
+{
+    // #todo: Disable this for +3
+    if ((addr & 0xc000) == 0x4000)
+    {
+        for (int i = 0; i < n; ++i)
+        {
+            *inOutTStates += mem->contention[*inOutTStates] + t;
+        }
+    }
+    else
+    {
+        *inOutTStates += t * n;
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
