@@ -645,6 +645,14 @@ void z80Step(Z80* Z)
     // Commonly used local variables
     u8 d = 0;       // Used for displacement
 
+    // Opcode hex calculated from:
+    //
+    //      X = $00, $40, $80, $c0
+    //      Y = add: $08, $10, $18, $20, $28, $30, $38
+    //      Z = add: Z
+    //      P = add: $00, $10, $20, $30
+    //      Q = add: $00, $08
+
     switch (x)
     {
     case 0:
@@ -691,6 +699,20 @@ void z80Step(Z80* Z)
             break;
 
         case 1: // x, z = (0, 1)
+            if (0 == q)
+            {
+                // $01, $11, $21, $31 - LD BC/DE/HL/SP, nnnn
+                u16* rr = z80GetReg16_1(Z, p);
+                *rr = memoryPeek16(Z->mem, PC, Z->tState);
+                PC += 2;
+            }
+            else
+            {
+                // $09, $19, $29, $39 - ADD HL, BC/DE/HL/SP
+                memoryContend(Z->mem, IR, 1, 7, Z->tState);
+                MP = HL + 1;
+                z80AddReg16(Z, &HL, z80GetReg16_1(Z, p));
+            }
             break;
 
         case 2: // x, z = (0, 2)
