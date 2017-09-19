@@ -175,9 +175,9 @@ void z80ExAfAf(Z80* Z)
     AF_ = t;
 }
 
-void z80IncReg(Z80* Z, u8* reg)
+void z80IncReg(Z80* Z, Ref* reg)
 {
-    *reg = (*reg + 1);
+    *reg->w = (*reg->r + 1);
 
     // S: Result is negative
     // Z: Result is zero
@@ -185,10 +185,10 @@ void z80IncReg(Z80* Z, u8* reg)
     // P: Result is 0x80
     // N: Reset
     // C: Unaffected
-    F = (F & F_CARRY) | ((*reg == 0x80) ? F_PARITY : 0) | ((*reg & 0x0f) ? 0 : F_HALF) | gSZ53[*reg];
+    F = (F & F_CARRY) | ((*reg->r == 0x80) ? F_PARITY : 0) | ((*reg->r & 0x0f) ? 0 : F_HALF) | gSZ53[*reg->r];
 }
 
-void z80DecReg(Z80* Z, u8* reg)
+void z80DecReg(Z80* Z, Ref* reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -196,11 +196,11 @@ void z80DecReg(Z80* Z, u8* reg)
     // P: Result is 0x7f
     // N: Set
     // C: Unaffected
-    F = (F & F_CARRY) | ((*reg & 0x0f) ? 0 : F_HALF) | F_NEG;
+    F = (F & F_CARRY) | ((*reg->r & 0x0f) ? 0 : F_HALF) | F_NEG;
 
-    *reg = (*reg - 1);
+    *reg->w = (*reg->r - 1);
 
-    F |= (*reg == 0x7f ? F_PARITY : 0) | gSZ53[*reg];
+    F |= (*reg->r == 0x7f ? F_PARITY : 0) | gSZ53[*reg->r];
 }
 
 void z80AddReg16(Z80* Z, u16* r1, u16* r2)
@@ -651,6 +651,7 @@ void z80Step(Z80* Z)
     // Commonly used local variables
     u8 d = 0;       // Used for displacement
     u16 tt = 0;     // Temporary for an address
+    Ref r;          // Temporary for a reference
 
     // Opcode hex calculated from:
     //
@@ -791,9 +792,15 @@ void z80Step(Z80* Z)
             break;
 
         case 4: // x, z = (0, 4)
+            // 04, 0C, 14, 1C, 24, 2C, 34, 3C - INC B/C/D/E/H/L/(HL)/A
+            r = z80GetReg(Z, y);
+            z80IncReg(Z, &r);
             break;
 
         case 5: // x, z = (0, 5)
+            // 05, 0C, 15, 1C, 25, 2C, 35, 3C - DEC B/C/D/E/H/L/(HL)/A
+            r = z80GetReg(Z, y);
+            z80DecReg(Z, &r);
             break;
 
         case 6: // x, z = (0, 6)
