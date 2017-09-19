@@ -629,8 +629,8 @@ bool z80GetFlag(u8 y, u8 flags)
     case 3: return K_BOOL(flags & F_CARRY);
     case 4: return K_BOOL(!(flags & F_PARITY));
     case 5: return K_BOOL(flags & F_PARITY);
-    case 6: return K_BOOL(!(flags & F_NEG));
-    case 7: return K_BOOL(flags & F_NEG);
+    case 6: return K_BOOL(!(flags & F_SIGN));
+    case 7: return K_BOOL(flags & F_SIGN);
     }
 
     return YES;
@@ -952,6 +952,17 @@ void z80Step(Z80* Z)
             break;  // x, z = (3, 1)
 
         case 2:
+            // C2, CA, D2, DA, E2, EA, F2, FA - JP flag,nn
+            tt = PEEK16(PC);
+            if (z80GetFlag(y, F))
+            {
+                PC = tt;
+            }
+            else
+            {
+                PC += 2;
+            }
+            MP = tt;
             break;  // x, z = (3, 2)
 
         case 3:
