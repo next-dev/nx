@@ -1045,6 +1045,34 @@ void z80Step(Z80* Z)
             break;  // x, z = (3, 4)
 
         case 5:
+            if (0 == q)
+            {
+                // C5 D5 E5 F5 - PUSH RR
+                CONTEND(IR, 1, 1);
+                z80Push(Z, *z80GetReg16_2(Z, p));
+            }
+            else
+            {
+                switch (p)
+                {
+                case 0:     // CD - CALL nn
+                    tt = PEEK16(PC);
+                    MP = tt;
+                    CONTEND(PC + 1, 1, 1);
+                    z80Push(Z, PC + 2);
+                    PC = tt;
+                    break;
+
+                case 1:     // DD - IX prefix
+                    break;
+
+                case 2:     // ED - extensions prefix
+                    break;
+
+                case 3:     // FD - IY prefix
+                    break;
+                }
+            }
             break;  // x, z = (3, 5)
 
         case 6:
