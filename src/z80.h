@@ -810,6 +810,48 @@ void z80Step(Z80* Z)
             break;
 
         case 7: // x, z = (0, 7)
+            switch (y)
+            {
+            case 0:     // 07 - RLCA
+                A = ((A << 1) | (A >> 7));
+                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & (F_CARRY | F_3 | F_5));
+                break;
+
+            case 1:     // 0F - RRCA
+                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & F_CARRY);
+                A = ((A >> 1) | (A << 7));
+                F |= (A & (F_3 | F_5));
+                break;
+
+            case 2:     // 17 - RLA
+                d = A;
+                A = (A << 1) | (F & F_CARRY);
+                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & (F_3 | F_5)) | (d >> 7);
+                break;
+
+            case 3:     // 1F - RRA
+                d = A;
+                A = (A >> 1) | (F << 7);
+                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & (F_3 | F_5)) | (A & F_CARRY);
+                break;
+
+            case 4:     // 27 - DAA
+                z80Daa(Z);
+                break;
+
+            case 5:     // 2F - CPL
+                A = A ^ 0xff;
+                F = (F & (F_CARRY | F_PARITY | F_ZERO | F_SIGN)) | (A & (F_3 | F_5)) | F_NEG | F_HALF;
+                break;
+
+            case 6:     // 37 - SCF
+                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & (F_3 | F_5)) | F_CARRY;
+                break;
+
+            case 7:     // 3F - CCF
+                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & (F_3 | F_5)) | ((F & F_CARRY) ? F_HALF : F_CARRY);
+                break;
+            }
             break;
 
         } // switch(z)
