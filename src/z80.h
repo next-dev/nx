@@ -33,6 +33,8 @@ typedef struct
 
     // Internal registers
     Reg         m;
+
+    bool        halt;
 }
 Z80;
 
@@ -858,6 +860,19 @@ void z80Step(Z80* Z)
         break; // x == 0
 
     case 1:
+        if (z == 6 && y == 6)
+        {
+            // 76 - HALT
+            Z->halt = YES;
+            --PC;
+        }
+        else
+        {
+            // 40 - 7F - LD R,R
+            Ref r1 = z80GetReg(Z, y);
+            Ref r2 = z80GetReg(Z, z);
+            *r1.w = *r1.r;
+        }
         break; // x == 1
 
     case 2:
