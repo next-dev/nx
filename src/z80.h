@@ -66,11 +66,14 @@ void z80Step(Z80* Z);
 #define PC      Z->pc.r
 #define IX      Z->ix.r
 #define IY      Z->iy.r
+#define IR      Z->ir.r
 
 #define AF_     Z->af_.r
 #define BC_     Z->bc_.r
 #define DE_     Z->de_.r
 #define HL_     Z->hl_.r
+
+#define MP      Z->m.r
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -601,6 +604,23 @@ u16* z80GetReg16_2(Z80* Z, u8 p)
     return 0;
 }
 
+bool z80GetFlag(u8 y, u8 flags)
+{
+    switch (y)
+    {
+    case 0: return K_BOOL(!(flags & F_ZERO));
+    case 1: return K_BOOL(flags & F_ZERO);
+    case 2: return K_BOOL(!(flags & F_CARRY));
+    case 3: return K_BOOL(flags & F_CARRY);
+    case 4: return K_BOOL(!(flags & F_PARITY));
+    case 5: return K_BOOL(flags & F_PARITY);
+    case 6: return K_BOOL(!(flags & F_NEG));
+    case 7: return K_BOOL(flags & F_NEG);
+    }
+
+    return YES;
+}
+
 void z80Step(Z80* Z)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
@@ -612,16 +632,86 @@ void z80Step(Z80* Z)
     //  |       |   P   | Q |           |
     //  +---+---+---+---+---+---+---+---+
     //
-    u8 opCode = memoryPeek(Z->mem, PC, Z->tState);
+    //
+    // See http://www.z80.info/decoding.htm
+    //
+    u8 opCode = memoryPeek(Z->mem, PC++, Z->tState);
     u8 x = (opCode & 0xc0) >> 6;
     u8 y = (opCode & 0x38) >> 3;
     u8 z = (opCode & 0x07);
     u8 p = (y & 6) >> 1;
     u8 q = (y & 1);
 
+    // Commonly used local variables
+    u8 d = 0;       // Used for displacement
+
     switch (x)
     {
     case 0:
+        switch (z)
+        {
+        case 0: // x, z = (0, 0)
+            switch (y)
+            {
+            case 0:     // 00 - NOP
+                break;
+
+            case 1:     // 08 - EX AF,AF'
+                z80ExAfAf(Z);
+                break;
+
+            case 2:     // 10 - DJNZ d
+                memoryContend(Z->mem, IR, 1, 1, Z->tState);
+                d = z80Displacement(memoryPeek(Z->mem, PC++, Z->tState));
+                --B;
+                if (B != 0)
+                {
+                    memoryContend(Z->mem, PC, 1, 5, Z->tState);
+                    PC += d;
+                    MP = PC;
+                }
+                break;
+
+            case 3:     // 18 - JR d
+                d = z80Displacement(memoryPeek(Z->mem, PC++, Z->tState));
+                memoryContend(Z->mem, PC, 1, 5, Z->tState);
+                PC += d;
+                MP = PC;
+                break;
+
+            default:    // 20, 28, 30, 38 - JR cc(y-4),d
+                d = z80Displacement(memoryPeek(Z->mem, PC++, Z->tState));
+                if (z80GetFlag(y - 4, F))
+                {
+                    memoryContend(Z->mem, PC, 1, 5, Z->tState);
+                    PC += d;
+                    MP = PC;
+                }
+            }
+            break;
+
+        case 1: // x, z = (0, 1)
+            break;
+
+        case 2: // x, z = (0, 2)
+            break;
+
+        case 3: // x, z = (0, 3)
+            break;
+
+        case 4: // x, z = (0, 4)
+            break;
+
+        case 5: // x, z = (0, 5)
+            break;
+
+        case 6: // x, z = (0, 6)
+            break;
+
+        case 7: // x, z = (0, 7)
+            break;
+
+        } // switch(z)
         break; // x == 0
 
     case 1:
