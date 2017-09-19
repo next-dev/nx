@@ -555,6 +555,19 @@ int z80Displacement(u8 x)
     return (128 ^ (int)x) - 128;
 }
 
+u16 z80Pop(Z80* Z)
+{
+    u16 x = PEEK16(SP);
+    SP += 2;
+    return x;
+}
+
+void z80Push(Z80* Z, u16* x)
+{
+    SP -= 2;
+    POKE16(SP, x);
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // z80Step
 // Run a single instruction
@@ -895,6 +908,40 @@ void z80Step(Z80* Z)
         break; // x == 2
 
     case 3:
+        switch (z)
+        {
+        case 0:
+            // C0, C8, D0, D8, E0, E8, F0, F8 - RET flag
+            CONTEND(IR, 1, 1);
+            if (z80GetFlag(y, F))
+            {
+                PC = z80Pop(Z);
+                MP = PC;
+            }
+            break;  // x, z = (3, 0)
+
+        case 1:
+            break;  // x, z = (3, 1)
+
+        case 2:
+            break;  // x, z = (3, 2)
+
+        case 3:
+            break;  // x, z = (3, 3)
+
+        case 4:
+            break;  // x, z = (3, 4)
+
+        case 5:
+            break;  // x, z = (3, 5)
+
+        case 6:
+            break;  // x, z = (3, 6)
+
+        case 7:
+            break;  // x, z = (3, 7)
+
+        }
         break; // x == 3
     } // switch(x)
 }
