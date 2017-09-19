@@ -776,6 +776,18 @@ void z80Step(Z80* Z)
             break;
 
         case 3: // x, z = (0, 3)
+            if (0 == q)
+            {
+                // 03, 13, 23, 33 - INC BC/DE/HL/SP
+                CONTEND(IR, 1, 2);
+                ++(*z80GetReg16_1(Z, p));
+            }
+            else
+            {
+                // 0B, 1B, 2B, 3B - DEC BC/DE/HL/SP
+                CONTEND(IR, 1, 2);
+                --(*z80GetReg16_1(Z, p));
+            }
             break;
 
         case 4: // x, z = (0, 4)
