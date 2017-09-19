@@ -640,6 +640,26 @@ bool z80GetFlag(u8 y, u8 flags)
     return YES;
 }
 
+typedef void(*ALUFunc) (Z80* Z, u8* r);
+
+ALUFunc z80GetAlu(u8 y)
+{
+    static ALUFunc funcs[8] =
+    {
+        &z80AddReg8,
+        &z80AdcReg8,
+        &z80SubReg8,
+        &z80SbcReg8,
+        &z80AndReg8,
+        &z80XorReg8,
+        &z80OrReg8,
+        &z80AndReg8
+    };
+
+    return funcs[y];
+};
+
+
 #define PEEK(a) memoryPeek(Z->mem, (a), Z->tState)
 #define POKE(a, b) memoryPoke(Z->mem, (a), (b), Z->tState)
 #define PEEK16(a) memoryPeek16(Z->mem, (a), Z->tState)
@@ -898,20 +918,8 @@ void z80Step(Z80* Z)
 
     case 2:
         {
-            typedef void (*ALUFunc) (Z80* Z, u8* r);
-            static const ALUFunc alus[8] =
-            {
-                &z80AddReg8,
-                &z80AdcReg8,
-                &z80SubReg8,
-                &z80SbcReg8,
-                &z80AndReg8,
-                &z80XorReg8,
-                &z80OrReg8,
-                &z80AndReg8
-            };
             r = z80GetReg(Z, z);
-            alus[y](Z, r.r);
+            z80GetAlu(y)(Z, r.r);
         }
         break; // x == 2
 
@@ -1076,6 +1084,9 @@ void z80Step(Z80* Z)
             break;  // x, z = (3, 5)
 
         case 6:
+            // C6, CE, D6, DE, E6, EE, F6, FE - ALU A,n
+            d = PEEK(PC++);
+            z80GetAlu(y)(Z, &d);
             break;  // x, z = (3, 6)
 
         case 7:
