@@ -798,12 +798,15 @@ void z80Step(Z80* Z)
             break;
 
         case 5: // x, z = (0, 5)
-            // 05, 0C, 15, 1C, 25, 2C, 35, 3C - DEC B/C/D/E/H/L/(HL)/A
+            // 05, 0D, 15, 1D, 25, 2D, 35, 3D - DEC B/C/D/E/H/L/(HL)/A
             r = z80GetReg(Z, y);
             z80DecReg(Z, &r);
             break;
 
         case 6: // x, z = (0, 6)
+            // 06, 0E, 16, 1E, 26, 2E, 36, 3E - LD B/C/D/E/H/L/(HL)/A, n
+            r = z80GetReg(Z, y);
+            *r.w = PEEK(PC++);
             break;
 
         case 7: // x, z = (0, 7)
