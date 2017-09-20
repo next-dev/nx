@@ -367,15 +367,15 @@ void z80XorReg8(Z80* Z, u8* r)
 //  | C |<-+--| 7                           0 |<-+
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80RlcReg8(Z80* Z, u8* r)
+void z80RlcReg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    *r = ((*r << 1) | (*r >> 7));
-    F = (*r & F_CARRY) | gSZ53P[*r];
+    *r->w = ((*r->r << 1) | (*r->r >> 7));
+    F = (*r->r & F_CARRY) | gSZ53P[*r->r];
 }
 
 //  +-------------------------------------+
@@ -383,16 +383,16 @@ void z80RlcReg8(Z80* Z, u8* r)
 //  +->| 7                           0 |--+->| C |
 //     +---+---+---+---+---+---+---+---+     +---+
 //
-void z80RrcReg8(Z80* Z, u8* r)
+void z80RrcReg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r & F_CARRY;
-    *r = ((*r >> 1) | (*r << 7));
-    F |= gSZ53P[*r];
+    F = *r->r & F_CARRY;
+    *r->w = ((*r->r >> 1) | (*r->r << 7));
+    F |= gSZ53P[*r->r];
 }
 
 //  +-----------------------------------------------+
@@ -400,16 +400,16 @@ void z80RrcReg8(Z80* Z, u8* r)
 //  +--| C |<----| 7                           0 |<-+
 //     +---+     +---+---+---+---+---+---+---+---+
 //
-void z80RlReg8(Z80* Z, u8* r)
+void z80RlReg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    u8 t = *r;
-    *r = ((*r << 1) | (F & F_CARRY));
-    F = (t >> 7) | gSZ53P[*r];
+    u8 t = *r->r;
+    *r->w = ((*r->r << 1) | (F & F_CARRY));
+    F = (t >> 7) | gSZ53P[*r->r];
 }
 
 //  +-----------------------------------------------+
@@ -417,32 +417,32 @@ void z80RlReg8(Z80* Z, u8* r)
 //  +->| 7                           0 |---->| C |--+
 //     +---+---+---+---+---+---+---+---+     +---+
 //
-void z80RrReg8(Z80* Z, u8* r)
+void z80RrReg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    u8 t = *r;
-    *r = ((*r >> 1) | (F << 7));
-    F = (t & F_CARRY) | gSZ53P[*r];
+    u8 t = *r->r;
+    *r->w = ((*r->r >> 1) | (F << 7));
+    F = (t & F_CARRY) | gSZ53P[*r->r];
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
 //  | C |<----| 7                           0 |<---- 0
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80SlaReg8(Z80* Z, u8* r)
+void z80SlaReg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    F = *r >> 7;
-    *r = (*r << 1);
-    F |= gSZ53P[*r];
+    F = *r->r >> 7;
+    *r->w = (*r->r << 1);
+    F |= gSZ53P[*r->r];
 }
 
 //     +---+---+---+---+---+---+---+---+     +---+
@@ -452,48 +452,48 @@ void z80SlaReg8(Z80* Z, u8* r)
 //  |    |
 //  +----+
 //
-void z80SraReg8(Z80* Z, u8* r)
+void z80SraReg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r & F_CARRY;
-    *r = ((*r & 0x80) | (*r >> 1));
-    F |= gSZ53P[*r];
+    F = *r->r & F_CARRY;
+    *r->w = ((*r->r & 0x80) | (*r->r >> 1));
+    F |= gSZ53P[*r->r];
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
 //  | C |<----| 7                           0 |<---- 1
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80SllReg8(Z80* Z, u8* r)
+void z80Sl1Reg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    F = *r >> 7;
-    *r = ((*r << 1) | 0x01);
-    F |= gSZ53P[*r];
+    F = *r->r >> 7;
+    *r->w = ((*r->r << 1) | 0x01);
+    F |= gSZ53P[*r->r];
 }
 
 //         +---+---+---+---+---+---+---+---+     +---+
 //  0 ---->| 7                           0 |---->| C |
 //         +---+---+---+---+---+---+---+---+     +---+
 //
-void z80SrlReg8(Z80* Z, u8* r)
+void z80SrlReg8(Z80* Z, Ref* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r & F_CARRY;
-    *r = (*r >> 1);
-    F |= gSZ53P[*r];
+    F = *r->r & F_CARRY;
+    *r->w = (*r->r >> 1);
+    F |= gSZ53P[*r->r];
 }
 
 void z80BitReg8(Z80* Z, u8* r, int b)
@@ -509,16 +509,16 @@ void z80BitReg8(Z80* Z, u8* r, int b)
     if ((b == 7) && (*r & 0x80)) F |= F_SIGN;
 }
 
-void z80ResReg8(Z80* Z, u8* r, int b)
+void z80ResReg8(Z80* Z, Ref* r, int b)
 {
     // All flags preserved.
-    *r = *r & ~((u8)1 << b);
+    *r->w = *r->r & ~((u8)1 << b);
 }
 
-void z80SetReg8(Z80* Z, u8* r, int b)
+void z80SetReg8(Z80* Z, Ref* r, int b)
 {
     // All flags preserved.
-    *r = *r | ((u8)1 << b);
+    *r->w = *r->r | ((u8)1 << b);
 }
 
 void z80Daa(Z80* Z)
@@ -659,6 +659,25 @@ ALUFunc z80GetAlu(u8 y)
     return funcs[y];
 };
 
+typedef void(*RotShiftFunc) (Z80* Z, Ref* r);
+
+RotShiftFunc z80GetRotateShift(u8 y)
+{
+    static RotShiftFunc funcs[8] =
+    {
+        &z80RlcReg8,
+        &z80RrcReg8,
+        &z80RlReg8,
+        &z80RrReg8,
+        &z80SlaReg8,
+        &z80SraReg8,
+        &z80Sl1Reg8,
+        &z80SrlReg8,
+    };
+
+    return funcs[y];
+}
+
 
 #define PEEK(a) memoryPeek(Z->mem, (a), Z->tState)
 #define POKE(a, b) memoryPoke(Z->mem, (a), (b), Z->tState)
@@ -669,6 +688,17 @@ ALUFunc z80GetAlu(u8 y)
 // Temporary place holders
 #define ioIn(io, port) ((u8)0)
 #define ioOut(io, port, b) do { } while(0)
+
+u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q)
+{
+    u8 opCode = PEEK(PC++);
+    *x = (opCode & 0xc0) >> 6;
+    *y = (opCode & 0x38) >> 3;
+    *z = (opCode & 0x07);
+    *p = (*y & 6) >> 1;
+    *q = (*y & 1);
+    return opCode;
+}
 
 void z80Step(Z80* Z)
 {
@@ -684,12 +714,8 @@ void z80Step(Z80* Z)
     //
     // See http://www.z80.info/decoding.htm
     //
-    u8 opCode = PEEK(PC++);
-    u8 x = (opCode & 0xc0) >> 6;
-    u8 y = (opCode & 0x38) >> 3;
-    u8 z = (opCode & 0x07);
-    u8 p = (y & 6) >> 1;
-    u8 q = (y & 1);
+    u8 x, y, z, p, q;
+    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q);
 
     // Commonly used local variables
     u8 d = 0;       // Used for displacement
@@ -990,6 +1016,28 @@ void z80Step(Z80* Z)
                 break;
 
             case 1:     // CB (prefix)
+                opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q);
+                switch (x)
+                {
+                case 0:     // 00-3F: Rotate/Shift instructions
+                    r = z80GetReg(Z, z);
+                    z80GetRotateShift(y)(Z, &r);
+                    break;
+
+                case 1:     // 40-7F: BIT instructions
+                    r = z80GetReg(Z, z);
+                    z80BitReg8(Z, r.r, y);
+                    break;
+
+                case 2:     // 80-BF: RES instructions
+                    r = z80GetReg(Z, z);
+                    z80ResReg8(Z, &r, y);
+                    break;
+
+                case 3:     // C0-FF: SET instructions
+                    r = z80GetReg(Z, z);
+                    z80SetReg8(Z, &r, y);
+                }
                 break;
 
             case 2:     // D3 - OUT (n),A       A -> $AAnn
