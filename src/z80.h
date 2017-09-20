@@ -686,21 +686,10 @@ RotShiftFunc z80GetRotateShift(u8 y)
 #define CONTEND(a, t, n) memoryContend(Z->mem, (a), (t), (n), Z->tState)
 
 // Temporary place holders
-#define ioIn(io, port) ((u8)0)
+#define ioIn(io, port) ((u8)0xff)
 #define ioOut(io, port, b) do { } while(0)
 
 u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q)
-{
-    u8 opCode = PEEK(PC++);
-    *x = (opCode & 0xc0) >> 6;
-    *y = (opCode & 0x38) >> 3;
-    *z = (opCode & 0x07);
-    *p = (*y & 6) >> 1;
-    *q = (*y & 1);
-    return opCode;
-}
-
-void z80Step(Z80* Z)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
     //
@@ -714,6 +703,17 @@ void z80Step(Z80* Z)
     //
     // See http://www.z80.info/decoding.htm
     //
+    u8 opCode = PEEK(PC++);
+    *x = (opCode & 0xc0) >> 6;
+    *y = (opCode & 0x38) >> 3;
+    *z = (opCode & 0x07);
+    *p = (*y & 6) >> 1;
+    *q = (*y & 1);
+    return opCode;
+}
+
+void z80Step(Z80* Z)
+{
     u8 x, y, z, p, q;
     u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q);
 
