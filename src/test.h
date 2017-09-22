@@ -17,9 +17,8 @@ typedef struct
 }
 TestBlock;
 
-typedef struct  
+typedef struct
 {
-    String              name;
     u16                 af, bc, de, hl;
     u16                 af_, bc_, de_, hl_;
     u16                 ix, iy, sp, pc, mp;
@@ -27,13 +26,43 @@ typedef struct
     u8                  iff1, iff2, im;
     u8                  halted;
     i64                 tStates;
-    Array(TestBlock)    testBlocks;
 }
-TestIn;
+MachineState;
 
 typedef struct  
 {
-    int _;
+    String              name;
+    MachineState        state;
+    Array(TestBlock)    memBlocks;
+}
+TestIn;
+
+typedef enum
+{
+    TO_MemoryRead,
+    TO_MemoryWrite,
+    TO_MemoryContend,
+    TO_PortRead,
+    TO_PortWrite,
+    TO_PortContend
+}
+TestOp;
+
+typedef struct
+{
+    i64         time;
+    TestOp      op;
+    u16         address;
+    u8          data;
+}
+TestEvent;
+
+typedef struct  
+{
+    String              name;
+    MachineState        state;
+    Array(TestEvent)    events;
+    Array(TestBlock)    memBlocks;
 }
 TestResult;
 
@@ -75,10 +104,21 @@ bool testRun(Tests* T, int index);
 
 internal void testSkipWhitespace(const u8** s, const u8* e)
 {
-    while (*(s) < (e) && NX_IS_WHITESPACE(**(s)))
+    while (*s < e && NX_IS_WHITESPACE(**s))
     {
         (*s)++;
     }
+}
+
+internal void testNextLine(const u8** s, const u8* e)
+{
+    while (*s < e && NX_IS_WHITESPACE(**s) && (**s != '\n'))
+    {
+        (*s)++;
+    }
+
+    // Skip the \n
+    (*s)++;
 }
 
 internal bool testParseName(const u8** s, const u8* e, String* outStr)
@@ -184,7 +224,13 @@ internal bool testParseInt(const u8** s, const u8* e, i64* out)
 
 internal bool testParseError(TestIn* t)
 {
-    printf("\033[1;1mERROR: (%s) Could not parse test!\033[0m\n", t->name);
+    printf("\033[31;1mERROR: (%s) Could not parse test!\033[0m\n", t->name);
+    return NO;
+}
+
+internal bool testParseResultError(TestResult* r)
+{
+    printf("\033[31;1mERROR: (%s) Could not parse test result!\033[0m\n", r->name);
     return NO;
 }
 
@@ -205,7 +251,7 @@ internal bool testParseMemBlock(const u8** s, const u8* e, TestIn* t)
     testSkipWhitespace(s, e);
     if (testCheckEnd(s, e)) return NO;
 
-    TestBlock* blk = arrayExpand(t->testBlocks, 1);
+    TestBlock* blk = arrayExpand(t->memBlocks, 1);
     blk->bytes = 0;
 
     // Read address
@@ -223,13 +269,80 @@ internal bool testParseMemBlock(const u8** s, const u8* e, TestIn* t)
     return YES;
 }
 
+internal bool testParseMemBlockResult(const u8** s, const u8* e, TestResult* r)
+{
+    testNextLine(s, e);
+    if (**s == '\n') return NO;
+
+    TestBlock* blk = arrayExpand(r->memBlocks, 1);
+    blk->bytes = 0;
+
+    // Read address
+    if (!testParseHex16(s, e, &blk->address)) return testParseResultError(r);
+
+    // Keep reading bytes until we reach -1
+    for (;;)
+    {
+        testSkipWhitespace(s, e);
+        if (testCheckEnd(s, e)) break;
+        u8* byte = arrayExpand(blk->bytes, 1);
+        if (!testParseHex8(s, e, byte)) return testParseResultError(r);
+    }
+
+    return YES;
+}
+
+internal bool testParseOp(const u8** s, const u8* e, TestResult* r)
+{
+    testNextLine(s, e);
+    if (**s != ' ') return NO;
+
+    // Read the time stamp
+    TestEvent* ev = arrayExpand(r->events, 1);
+    if (!testParseInt(s, e, &ev->time)) return NO;
+
+    // Read the operation
+    testSkipWhitespace(s, e);
+    int op = 0;
+    if (*s + 2 > e) return NO;
+    if (**s == 'M') op = 0;
+    else if (**s == 'P') op = 3;
+    else return NO;
+    (*s)++;
+    if (**s == 'R') op += 0;
+    else if (**s == 'W') op += 1;
+    else if (**s == 'C') op += 2;
+    else return NO;
+    (*s)++;
+    ev->op = (TestOp)op;
+
+    // Read the address
+    if (!testParseHex16(s, e, &ev->address)) return NO;
+
+    // Read the data (if required)
+    if (op % 3 != 2)
+    {
+        if (!testParseHex8(s, e, &ev->data)) return NO;
+    }
+    else
+    {
+        ev->data = 0;
+    }
+
+    return YES;
+}
+
 bool testOpen(Tests* T)
 {
     TestIn* t = 0;
+    TestResult* r = 0;
     T->tests = 0;
     T->results = 0;
     windowConsole();
 
+    int phase = 0;
+
+    // Read in the tests
     Blob b = blobLoad("tests.in");
     if (b.bytes)
     {
@@ -246,29 +359,29 @@ bool testOpen(Tests* T)
             //      ...
             //  N:  -1
             t = arrayExpand(T->tests, 1);
-            t->testBlocks = 0;
+            t->memBlocks = 0;
             if (!testParseName(&s, e, &t->name)) goto error;
 
-            if (!testParseHex16(&s, e, &t->af)) goto error;
-            if (!testParseHex16(&s, e, &t->bc)) goto error;
-            if (!testParseHex16(&s, e, &t->de)) goto error;
-            if (!testParseHex16(&s, e, &t->hl)) goto error;
-            if (!testParseHex16(&s, e, &t->af_)) goto error;
-            if (!testParseHex16(&s, e, &t->bc_)) goto error;
-            if (!testParseHex16(&s, e, &t->de_)) goto error;
-            if (!testParseHex16(&s, e, &t->hl_)) goto error;
-            if (!testParseHex16(&s, e, &t->ix)) goto error;
-            if (!testParseHex16(&s, e, &t->iy)) goto error;
-            if (!testParseHex16(&s, e, &t->sp)) goto error;
-            if (!testParseHex16(&s, e, &t->pc)) goto error;
-            if (!testParseHex16(&s, e, &t->mp)) goto error;
-            if (!testParseHex8(&s, e, &t->i)) goto error;
-            if (!testParseHex8(&s, e, &t->r)) goto error;
-            if (!testParseInt1(&s, e, &t->iff1)) goto error;
-            if (!testParseInt1(&s, e, &t->iff2)) goto error;
-            if (!testParseInt1(&s, e, &t->im)) goto error;
-            if (!testParseInt1(&s, e, &t->halted)) goto error;
-            if (!testParseInt(&s, e, &t->tStates)) goto error;
+            if (!testParseHex16(&s, e, &t->state.af)) goto error;
+            if (!testParseHex16(&s, e, &t->state.bc)) goto error;
+            if (!testParseHex16(&s, e, &t->state.de)) goto error;
+            if (!testParseHex16(&s, e, &t->state.hl)) goto error;
+            if (!testParseHex16(&s, e, &t->state.af_)) goto error;
+            if (!testParseHex16(&s, e, &t->state.bc_)) goto error;
+            if (!testParseHex16(&s, e, &t->state.de_)) goto error;
+            if (!testParseHex16(&s, e, &t->state.hl_)) goto error;
+            if (!testParseHex16(&s, e, &t->state.ix)) goto error;
+            if (!testParseHex16(&s, e, &t->state.iy)) goto error;
+            if (!testParseHex16(&s, e, &t->state.sp)) goto error;
+            if (!testParseHex16(&s, e, &t->state.pc)) goto error;
+            if (!testParseHex16(&s, e, &t->state.mp)) goto error;
+            if (!testParseHex8(&s, e, &t->state.i)) goto error;
+            if (!testParseHex8(&s, e, &t->state.r)) goto error;
+            if (!testParseInt1(&s, e, &t->state.iff1)) goto error;
+            if (!testParseInt1(&s, e, &t->state.iff2)) goto error;
+            if (!testParseInt1(&s, e, &t->state.im)) goto error;
+            if (!testParseInt1(&s, e, &t->state.halted)) goto error;
+            if (!testParseInt(&s, e, &t->state.tStates)) goto error;
 
             while (testParseMemBlock(&s, e, t));
 
@@ -277,15 +390,77 @@ bool testOpen(Tests* T)
     }
     else
     {
+        printf("\033[31;1mERROR: Cannot load 'tests.in'!\033[0m\n");
+        return NO;
+    }
+    blobUnload(b);
+
+    phase = 1;
+
+    // Read in the expected results.
+    b = blobLoad("tests.expected");
+    if (b.bytes)
+    {
+        const u8* s = b.bytes;
+        const u8* e = s + b.size;
+        while (s < e)
+        {
+            // Format of results are:
+            //
+            //  1:      Name
+            //  2+:     Event
+            //          <Time> <Operation> <Address> <Data>?
+            //  N:      AF BC DE HL AF' BC' DE' HL' IX IY SP PC MP
+            //  N+1:    I R IFF1 IFF2 IM halted tStates
+            //  N+2+:   Memory blocks?
+            //          ...
+            // <Blank line>
+            //
+            r = arrayExpand(T->results, 1);
+            r->events = 0;
+            r->memBlocks = 0;
+
+            if (!testParseName(&s, e, &r->name)) goto error;
+            while (testParseOp(&s, e, r));
+
+            if (!testParseHex16(&s, e, &r->state.af)) goto error;
+            if (!testParseHex16(&s, e, &r->state.bc)) goto error;
+            if (!testParseHex16(&s, e, &r->state.de)) goto error;
+            if (!testParseHex16(&s, e, &r->state.hl)) goto error;
+            if (!testParseHex16(&s, e, &r->state.af_)) goto error;
+            if (!testParseHex16(&s, e, &r->state.bc_)) goto error;
+            if (!testParseHex16(&s, e, &r->state.de_)) goto error;
+            if (!testParseHex16(&s, e, &r->state.hl_)) goto error;
+            if (!testParseHex16(&s, e, &r->state.ix)) goto error;
+            if (!testParseHex16(&s, e, &r->state.iy)) goto error;
+            if (!testParseHex16(&s, e, &r->state.sp)) goto error;
+            if (!testParseHex16(&s, e, &r->state.pc)) goto error;
+            if (!testParseHex16(&s, e, &r->state.mp)) goto error;
+            if (!testParseHex8(&s, e, &r->state.i)) goto error;
+            if (!testParseHex8(&s, e, &r->state.r)) goto error;
+            if (!testParseInt1(&s, e, &r->state.iff1)) goto error;
+            if (!testParseInt1(&s, e, &r->state.iff2)) goto error;
+            if (!testParseInt1(&s, e, &r->state.im)) goto error;
+            if (!testParseInt1(&s, e, &r->state.halted)) goto error;
+            if (!testParseInt(&s, e, &r->state.tStates)) goto error;
+
+            while (testParseMemBlockResult(&s, e, r));
+
+            testSkipWhitespace(&s, e);
+        }
+    }
+    else
+    {
+        printf("\033[31;1mERROR: Cannot load 'tests.expected'!\033[0m\n");
         return NO;
     }
 
-    blobUnload(b);
     return YES;
 
 error:
-    testParseError(t);
+    if (phase == 0) testParseError(t); else testParseResultError(r);
     blobUnload(b);
+    testClose(T);
     return NO;
 }
 
@@ -293,13 +468,25 @@ void testClose(Tests* T)
 {
     for (int i = 0; i < arrayCount(T->tests); ++i)
     {
-        for (int j = 0; j < arrayCount(T->tests[i].testBlocks); ++j)
+        for (int j = 0; j < arrayCount(T->tests[i].memBlocks); ++j)
         {
-            arrayRelease(T->tests[i].testBlocks[j].bytes);
+            arrayRelease(T->tests[i].memBlocks[j].bytes);
         }
-        arrayRelease(T->tests[i].testBlocks);
+        arrayRelease(T->tests[i].memBlocks);
         stringRelease(T->tests[i].name);
     }
+
+    for (int i = 0; i < arrayCount(T->results); ++i)
+    {
+        arrayRelease(T->results[i].events);
+        for (int j = 0; j < arrayCount(T->results[i].memBlocks); ++j)
+        {
+            arrayRelease(T->results[i].memBlocks[j].bytes);
+        }
+        arrayRelease(T->results[i].memBlocks);
+        stringRelease(T->results[i].name);
+    }
+
     arrayRelease(T->tests);
     arrayRelease(T->results);
 }
@@ -323,9 +510,9 @@ bool testRun(Tests* T, int index)
     if (machineOpen(&M, 0))
     {
         i64 tState = 0;
-        machineAddEvent(&M, testIn->tStates, &testEnd);
+        machineAddEvent(&M, testIn->state.tStates, &testEnd);
 
-        while (tState < testIn->tStates)
+        while (tState < testIn->state.tStates)
         {
             tState = machineUpdate(&M, tState);
         }
