@@ -90,6 +90,7 @@ void machineClose(Machine* M)
 {
     videoClose(&M->video);
     memoryClose(&M->memory);
+    arrayRelease(M->events);
 }
 
 MACHINE_EVENT(machineInterrupt)

@@ -7,7 +7,7 @@
 
 #include "machine.h"
 
-#define NX_RUN_TESTS        (1)
+#define NX_RUN_TESTS        YES
 
 typedef struct
 {
@@ -77,7 +77,7 @@ bool nxOpen(Nx* N, u32* img)
         int count = testCount(&T);
         for (int i = 0; i < count; ++i)
         {
-            if (!testRun(&T, i)) break;
+            if (!testRun(&T, i)) K_BREAK();
         }
         testClose(&T);
     }

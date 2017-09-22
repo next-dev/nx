@@ -293,6 +293,10 @@ void testClose(Tests* T)
 {
     for (int i = 0; i < arrayCount(T->tests); ++i)
     {
+        for (int j = 0; j < arrayCount(T->tests[i].testBlocks); ++j)
+        {
+            arrayRelease(T->tests[i].testBlocks[j].bytes);
+        }
         arrayRelease(T->tests[i].testBlocks);
         stringRelease(T->tests[i].name);
     }
@@ -305,8 +309,32 @@ int testCount(Tests* T)
     return (int)arrayCount(T->tests);
 }
 
+MACHINE_EVENT(testEnd)
+{
+    return NO;
+}
+
 bool testRun(Tests* T, int index)
 {
+    TestIn* testIn = &T->tests[index];
+
+    // Create a machine with no display.
+    Machine M;
+    if (machineOpen(&M, 0))
+    {
+        i64 tState = 0;
+        machineAddEvent(&M, testIn->tStates, &testEnd);
+
+        while (tState < testIn->tStates)
+        {
+            tState = machineUpdate(&M, tState);
+        }
+
+        // #todo: Compare with results
+
+        machineClose(&M);
+    }
+
     return YES;
 }
 

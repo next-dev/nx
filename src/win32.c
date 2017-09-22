@@ -41,6 +41,8 @@
 
 int kmain(int argc, char** argv)
 {
+    debugBreakOnAlloc(0);
+
     // Step 1: Initialise the NX system with the platform specific callbacks.
     Nx N;
     u32* img = K_ALLOC(NX_WINDOW_WIDTH * NX_WINDOW_HEIGHT * sizeof(u32));
@@ -69,10 +71,10 @@ int kmain(int argc, char** argv)
             waitUntil(futureTime);
         }
 
-        windowClose(w);
-
         nxClose(&N);
     }
+
+    K_FREE(img, NX_WINDOW_WIDTH * NX_WINDOW_HEIGHT * sizeof(u32));
 
     return 0;
 }

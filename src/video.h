@@ -67,6 +67,8 @@ void videoRenderULA(Video* video, bool flash)
         0x000000, 0x0000ff, 0xff0000, 0xff00ff, 0x00ff00, 0x00ffff, 0xffff00, 0xffffff,
     };
 
+    if (!video->img) return;
+
     u32* img = video->img;
     int border = 7;
 
