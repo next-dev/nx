@@ -133,16 +133,12 @@ internal bool testParseHex8(const u8** s, const u8* e, u8* out)
     return YES;
 }
 
-internal bool testParseBool(const u8** s, const u8* e, u8* out)
+internal bool testParseInt1(const u8** s, const u8* e, u8* out)
 {
     testSkipWhitespace(s, e);
-    if (**s == '0')
+    if (**s >= '0' && **s <= '9')
     {
-        *out = 0;
-    }
-    else if (**s == '1')
-    {
-        *out = 1;
+        *out = **s - '0';
     }
     else
     {
@@ -252,6 +248,7 @@ bool testOpen(Tests* T)
             t = arrayExpand(T->tests, 1);
             t->testBlocks = 0;
             if (!testParseName(&s, e, &t->name)) goto error;
+
             if (!testParseHex16(&s, e, &t->af)) goto error;
             if (!testParseHex16(&s, e, &t->bc)) goto error;
             if (!testParseHex16(&s, e, &t->de)) goto error;
@@ -267,13 +264,15 @@ bool testOpen(Tests* T)
             if (!testParseHex16(&s, e, &t->mp)) goto error;
             if (!testParseHex8(&s, e, &t->i)) goto error;
             if (!testParseHex8(&s, e, &t->r)) goto error;
-            if (!testParseBool(&s, e, &t->iff1)) goto error;
-            if (!testParseBool(&s, e, &t->iff2)) goto error;
-            if (!testParseBool(&s, e, &t->im)) goto error;
-            if (!testParseBool(&s, e, &t->halted)) goto error;
+            if (!testParseInt1(&s, e, &t->iff1)) goto error;
+            if (!testParseInt1(&s, e, &t->iff2)) goto error;
+            if (!testParseInt1(&s, e, &t->im)) goto error;
+            if (!testParseInt1(&s, e, &t->halted)) goto error;
             if (!testParseInt(&s, e, &t->tStates)) goto error;
 
             while (testParseMemBlock(&s, e, t));
+
+            testSkipWhitespace(&s, e);
         }
     }
     else
