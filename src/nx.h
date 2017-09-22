@@ -7,6 +7,8 @@
 
 #include "machine.h"
 
+#define NX_RUN_TESTS        (1)
+
 typedef struct
 {
     i64         tState;
@@ -57,6 +59,8 @@ NxOut nxUpdate(Nx* N);
 
 #ifdef NX_IMPL
 
+#include "test.h"
+
 //----------------------------------------------------------------------------------------------------------------------
 // Public API
 //----------------------------------------------------------------------------------------------------------------------
@@ -64,6 +68,21 @@ NxOut nxUpdate(Nx* N);
 bool nxOpen(Nx* N, u32* img)
 {
     K_ASSERT(N);
+
+#if NX_RUN_TESTS
+
+    Tests T;
+    if (testOpen(&T))
+    {
+        int count = testCount(&T);
+        for (int i = 0; i < count; ++i)
+        {
+            if (!testRun(&T, i)) break;
+        }
+        testClose(&T);
+    }
+
+#endif // NX_RUN_TESTS
 
     N->tState = 0;
     return machineOpen(&N->machine, img);
