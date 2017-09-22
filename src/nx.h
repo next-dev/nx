@@ -5,9 +5,8 @@
 
 #pragma once
 
+#include "config.h"
 #include "machine.h"
-
-#define NX_RUN_TESTS        YES
 
 typedef struct
 {

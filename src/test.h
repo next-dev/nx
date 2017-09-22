@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include "memory.h"
-#include "z80.h"
 #include <kore/k_memory.h>
 #include <kore/k_string.h>
 
@@ -91,6 +89,9 @@ int testCount(Tests* T);
 
 // Run a test
 bool testRun(Tests* T, int index);
+
+// This global variable is used to store memory/port access operations when running the tests (NX_RUN_TESTS is YES).
+TestResult gTestResult;
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
