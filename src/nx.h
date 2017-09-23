@@ -81,6 +81,7 @@ bool testRun(Tests* T, int index)
 
     // Create a machine with no display.
     Machine M;
+    Memory initialMemory;
     i64 tStates = 0;
     if (machineOpen(&M, 0))
     {
@@ -115,6 +116,7 @@ bool testRun(Tests* T, int index)
             u16 addr = b->address;
             memoryLoad(&M.memory, addr, b->bytes, (u16)arrayCount(b->bytes));
         }
+        memorySnapshot(&M.memory, &initialMemory);
 
 #ifdef NX_DEBUG_TEST
         if (stringCompare(testIn->name, NX_DEBUG_TEST) == 0)
@@ -151,6 +153,7 @@ bool testRun(Tests* T, int index)
             (int)M.z80.halt ? 1 : 0,
             (int)tStates);
 
+        memoryDiff(&initialMemory, &M.memory);
         fprintf(gResultsFile, "\n");
 
         machineClose(&M);

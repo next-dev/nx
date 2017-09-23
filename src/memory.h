@@ -75,6 +75,14 @@ void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
 // Fill the memory with 0s everywhere.
 void memoryReset(Memory* mem);
 
+#if NX_RUN_TESTS
+// Make a snapshot of the memory
+void memorySnapshot(Memory* original, Memory* copy);
+
+// Output to a memory diff for testing purposes
+void memoryDiff(Memory* old, Memory* actual);
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -195,8 +203,10 @@ void memoryPokeNoContend(Memory* mem, u16 address, u8 b)
 {
 #if NX_RUN_TESTS
     if (gResultsFile) fprintf(gResultsFile, "%5d MW %04x %02x\n", (int)tStates, address, b);
-#endif
+    mem->memory[address] = b;
+#else
     if (address >= 0x4000) mem->memory[address] = b;
+#endif
 }
 
 void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates)
@@ -265,6 +275,32 @@ void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size)
 void memoryReset(Memory* mem)
 {
     memoryClear(mem->memory, KB(64));
+}
+
+void memorySnapshot(Memory* original, Memory* copy)
+{
+    copy->memory = K_ALLOC(KB(64));
+    memoryCopy(original->memory, copy->memory, KB(64));
+}
+
+void memoryDiff(Memory* snapshot, Memory* actual)
+{
+    for (int i = 0; i < KB(64); ++i)
+    {
+        if (actual->memory[i] != snapshot->memory[i])
+        {
+            // Start a new diff
+            fprintf(gResultsFile, "%04x ", i);
+
+            while (i < KB(64) && (actual->memory[i] != snapshot->memory[i]))
+            {
+                fprintf(gResultsFile, "%02x ", actual->memory[i++]);
+            }
+            fprintf(gResultsFile, "-1\n");
+        }
+    }
+
+    K_FREE(snapshot->memory, KB(64));
 }
 
 //----------------------------------------------------------------------------------------------------------------------
