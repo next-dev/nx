@@ -1135,6 +1135,7 @@ void z80Step(Z80* Z, i64* tState)
                         d = PEEK(HL);
                         CONTEND(HL, 1, 1);
                         z80ResReg8(Z, &d, y);
+                        POKE(HL, d);
                     }
                     else
                     {
@@ -1150,6 +1151,7 @@ void z80Step(Z80* Z, i64* tState)
                         d = PEEK(HL);
                         CONTEND(HL, 1, 1);
                         z80SetReg8(Z, &d, y);
+                        POKE(HL, d);
                     }
                     else
                     {
