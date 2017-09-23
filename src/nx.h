@@ -85,7 +85,7 @@ bool testRun(Tests* T, int index)
     i64 tStates = 0;
     if (machineOpen(&M, 0))
     {
-        memoryReset(&M.memory);
+        memoryReset(&M.memory, 0xdeadbeef);
         machineAddEvent(&M, testIn->tStates, &testEnd);
 
         // Set up the registers

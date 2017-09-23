@@ -88,6 +88,8 @@ void z80Step(Z80* Z, i64* tState);
 
 #ifdef NX_IMPL
 
+#include "memory.h"
+
 // Flags
 #define F_CARRY     0x01
 #define F_NEG       0x02
@@ -312,17 +314,17 @@ void z80SbcReg16(Z80* Z, u16* r)
         | kHalfCarrySub[x & 0x07] | (HL ? 0 : F_ZERO);
 }
 
-void z80CpReg(Z80* Z, u8* r)
+void z80CpReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Borrow from 4 during 'subtraction'
     // P: Overflow (r > A)
     // N: Set
     // C: Set if borrowed (r > A)
-    int t = (int)A - *r;
+    u16 t = (int)A - *r;
     u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
     F = ((t & 0x100) ? F_CARRY : (t ? 0 : F_ZERO)) | F_NEG | kHalfCarrySub[x & 7] | kOverflowSub[x >> 4] |
-        (*r & (F_3 | F_5)) | (t & F_SIGN);
+        (*r & (F_3 | F_5)) | ((u8)t & F_SIGN);
 }
 
 void z80AndReg8(Z80* Z, u8* r)
@@ -342,11 +344,11 @@ void z80OrReg8(Z80* Z, u8* r)
     A |= *r;
 
     // S, Z: Based on result
-    // H: Set
+    // H: Reset
     // P: Overflow
     // N: Reset
     // C: Reset
-    F = F_HALF | gSZ53P[A];
+    F = gSZ53P[A];
 }
 
 void z80XorReg8(Z80* Z, u8* r)
@@ -354,11 +356,11 @@ void z80XorReg8(Z80* Z, u8* r)
     A ^= *r;
 
     // S, Z: Based on result
-    // H: Set
+    // H: Reset
     // P: Overflow
     // N: Reset
     // C: Reset
-    F = F_HALF | gSZ53P[A];
+    F = gSZ53P[A];
 }
 
 //         +-------------------------------------+
@@ -567,8 +569,8 @@ u16 z80Pop(Z80* Z, i64* tState)
 
 void z80Push(Z80* Z, u16 x, i64* tState)
 {
-    SP -= 2;
-    memoryPoke16(Z->mem, SP, x, tState);
+    memoryPoke(Z->mem, --SP, HI(x), tState);
+    memoryPoke(Z->mem, --SP, LO(x), tState);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -649,7 +651,7 @@ ALUFunc z80GetAlu(u8 y)
         &z80AndReg8,
         &z80XorReg8,
         &z80OrReg8,
-        &z80AndReg8
+        &z80CpReg8
     };
 
     return funcs[y];

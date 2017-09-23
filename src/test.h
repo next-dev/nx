@@ -9,8 +9,6 @@
 #include <kore/k_string.h>
 #include <stdio.h>
 
-#include "z80.h"
-
 #if NX_RUN_TESTS
 
 typedef struct  
@@ -39,13 +37,6 @@ typedef struct
     Array(TestIn) tests;
 }
 Tests;
-
-typedef struct 
-{
-    Memory  memory;
-    Z80     cpu;
-}
-TestMachine;
 
 // Load the unit tests and open a console for output
 bool testOpen(Tests* T);

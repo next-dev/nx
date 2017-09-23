@@ -62,8 +62,8 @@ u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates);
 // Load a buffer into memory, ignoring write-only state of ROMs
 void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
 
-// Fill the memory with 0s everywhere.
-void memoryReset(Memory* mem);
+// Fill the whole memory with the 4 bytes in x.
+void memoryReset(Memory* mem, u32 x);
 
 #if NX_RUN_TESTS
 // Make a snapshot of the memory
@@ -256,9 +256,15 @@ void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size)
     memoryCopy(buffer, &mem->memory[address], clampedSize);
 }
 
-void memoryReset(Memory* mem)
+void memoryReset(Memory* mem, u32 x)
 {
-    memoryClear(mem->memory, KB(64));
+    for (int i = 0; i < KB(64); i += 4)
+    {
+        mem->memory[0] = (u8)((x & 0xff000000) >> 24);
+        mem->memory[1] = (u8)((x & 0x00ff0000) >> 16);
+        mem->memory[2] = (u8)((x & 0x0000ff00) >> 8);
+        mem->memory[3] = (u8)((x & 0x000000ff) >> 0);
+    }
 }
 
 void memorySnapshot(Memory* original, Memory* copy)
