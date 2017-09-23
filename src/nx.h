@@ -18,8 +18,7 @@ Nx;
 // Output structure returned by nxUpdate to communicate with the platform-specific layer.
 typedef struct 
 {
-    i64     startTState;        // Starting t-state when nxUpdate is called
-    i64     endTState;          // Ending t-state when nxUpdate is finished
+    i64     elapsedTStates;     // T-states emulated in update
 
     // Signals
     bool    redraw;
@@ -46,10 +45,13 @@ void nxClose(Nx* N);
 NxOut nxUpdate(Nx* N);
 
 //----------------------------------------------------------------------------------------------------------------------
-// Event system
+// Test system
 //----------------------------------------------------------------------------------------------------------------------
 
-
+#if NX_RUN_TESTS
+// Run a test
+bool testRun(Tests* T, int index);
+#endif
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -59,6 +61,134 @@ NxOut nxUpdate(Nx* N);
 #ifdef NX_IMPL
 
 #include "test.h"
+
+//----------------------------------------------------------------------------------------------------------------------
+// Test system
+//----------------------------------------------------------------------------------------------------------------------
+
+#if NX_RUN_TESTS
+
+MACHINE_EVENT(testEnd)
+{
+    return NO;
+}
+
+bool testRun(Tests* T, int index)
+{
+    TestIn* testIn = &T->tests[index];
+    printf("TEST: %s\n", testIn->name);
+    fprintf(gResultsFile, "%s\n", testIn->name);
+
+    // Create a machine with no display.
+    Machine M;
+    i64 tStates = 0;
+    if (machineOpen(&M, 0))
+    {
+        memoryReset(&M.memory);
+        machineAddEvent(&M, testIn->tStates, &testEnd);
+
+        while (tStates < testIn->tStates)
+        {
+            machineUpdate(&M, &tStates);
+        }
+
+        fprintf(gResultsFile, "%04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x %04x\n",
+            (int)M.z80.af.r,
+            (int)M.z80.bc.r,
+            (int)M.z80.de.r,
+            (int)M.z80.hl.r,
+            (int)M.z80.af_.r,
+            (int)M.z80.bc_.r,
+            (int)M.z80.de_.r,
+            (int)M.z80.hl_.r,
+            (int)M.z80.ix.r,
+            (int)M.z80.iy.r,
+            (int)M.z80.sp.r,
+            (int)M.z80.pc.r,
+            (int)M.z80.m.r);
+        fprintf(gResultsFile, "%02x %02x %d %d %d %d %d\n",
+            (int)M.z80.ir.h,
+            (int)M.z80.ir.l,
+            (int)M.z80.iff1,
+            (int)M.z80.iff2,
+            (int)M.z80.im,
+            (int)M.z80.halt ? 1 : 0,
+            (int)tStates);
+
+        fprintf(gResultsFile, "\n");
+
+        machineClose(&M);
+    }
+
+    return YES;
+}
+
+void testCompare()
+{
+    Blob eb = blobLoad("tests.expected");
+    if (!eb.bytes)
+    {
+        printf("\033[31;1mERROR: Cannot load 'tests.expected'\033[0m\n");
+        return;
+    }
+    Blob rb = blobLoad("tests.results");
+    if (!rb.bytes)
+    {
+        blobUnload(eb);
+        printf("\033[31;1mERROR: Cannot load 'tests.resulted'\033[0m\n");
+        return;
+    }
+
+    i64 expectedCursor = 0;
+    while (expectedCursor < eb.size)
+    {
+        // Read name
+        i64 end = expectedCursor;
+        while (end < eb.size && eb.bytes[end] != '\n') ++end;
+        if (end == eb.size)
+        {
+            printf("\033[31;1mERROR: Invalid test output!\033[0m\n");
+        }
+        String name = stringMakeRange(&eb.bytes[expectedCursor], &eb.bytes[end]);
+
+        // Find end of test
+        while ((end < eb.size + 1) && !(eb.bytes[end] == '\n' && eb.bytes[end + 1] == '\n')) ++end;
+        if (end == eb.size)
+        {
+            printf("\033[31;1mERROR: Invalid test output!\033[0m\n");
+        }
+        end += 2;
+        if (end >= rb.size)
+        {
+            printf("\033[31;1m[FAIL] %s!\033[0m\n", name);
+            stringRelease(name);
+            blobUnload(eb);
+            blobUnload(rb);
+            return;
+        }
+
+        for (i64 i = expectedCursor; i < end; ++i)
+        {
+            if (eb.bytes[i] != rb.bytes[i])
+            {
+                printf("\033[31;1m[FAIL] %s!\033[0m\n", name);
+                stringRelease(name);
+                blobUnload(eb);
+                blobUnload(rb);
+                return;
+            }
+        }
+
+        printf("\033[32;1m[PASS] %s!\033[0m\n", name);
+        expectedCursor = end;
+        stringRelease(name);
+    }
+
+    blobUnload(eb);
+    blobUnload(rb);
+}
+
+#endif // NX_RUN
 
 //----------------------------------------------------------------------------------------------------------------------
 // Public API
@@ -76,10 +206,17 @@ bool nxOpen(Nx* N, u32* img)
         int count = testCount(&T);
         for (int i = 0; i < count; ++i)
         {
-            if (!testRun(&T, i)) K_BREAK();
+            if (!testRun(&T, i))
+            {
+                testClose(&T);
+                return NO;
+            }
         }
         testClose(&T);
+        testCompare();
     }
+
+    return NO;
 
 #endif // NX_RUN_TESTS
 
@@ -97,22 +234,16 @@ NxOut nxUpdate(Nx* N)
 {
     NxOut out;
 
-    out.startTState = N->tState;
     out.redraw = NO;
 
     for(;;)
     {
-        i64 newTState = machineUpdate(&N->machine, N->tState);
-        if (newTState >= 69888)
+        out.elapsedTStates = machineUpdate(&N->machine, &N->tState);
+        if (N->machine.redraw)
         {
-            out.endTState = newTState;
+            // Interrupt occurred
             out.redraw = YES;
-            N->tState = newTState - 69888;
             break;
-        }
-        else
-        {
-            N->tState = newTState;
         }
     }
 

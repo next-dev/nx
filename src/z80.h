@@ -21,7 +21,6 @@ typedef struct
 {
     // External systems and information.
     Memory*     mem;
-    i64*        tState;
     void*       io;         // Placeholder
 
     // Base registers
@@ -38,15 +37,16 @@ typedef struct
     bool        halt;
     bool        iff1;
     bool        iff2;
+    int         im;
     bool        lastOpcodeWasEI;    // YES, if EI was executed (as no interrupt can happen immediately after it)
 }
 Z80;
 
 // Initialise the internal tables and data structure.
-void z80Init(Z80* Z, Memory* mem, i64* tStateCounter);
+void z80Init(Z80* Z, Memory* mem);
 
 // Run a single opcode
-void z80Step(Z80* Z);
+void z80Step(Z80* Z, i64* tState);
 
 // Convenient register accesses that relies on the Z80 structure variable being called Z.
 #define A       Z->af.h
@@ -132,18 +132,17 @@ void z80SetFlag(Z80* Z, u8 flags, bool value)
 // Initialisation
 //----------------------------------------------------------------------------------------------------------------------
 
-void z80Init(Z80* Z, Memory* mem, i64* tStateCounter)
+void z80Init(Z80* Z, Memory* mem)
 {
     memoryClear(Z, sizeof(*Z));
     Z->mem = mem;
-    Z->tState = tStateCounter;
 
     for (int i = 0; i < 256; ++i)
     {
         gSZ53[i] = (u8)(i & (F_3 | F_5 | F_SIGN));
 
         u8 p = 0, x = i;
-        for (int b = 0; b < 8; ++b) { p ^= (u8)(b & 1); b >>= 1; }
+        for (int bit = 0; bit < 8; ++bit) { p ^= (u8)(x & 1); x >>= 1; }
         gParity[i] = p ? 0 : F_PARITY;
 
         gSZ53P[i] = gSZ53[i] | gParity[i];
@@ -559,17 +558,17 @@ int z80Displacement(u8 x)
     return (128 ^ (int)x) - 128;
 }
 
-u16 z80Pop(Z80* Z)
+u16 z80Pop(Z80* Z, i64* tState)
 {
-    u16 x = memoryPeek16(Z->mem, SP, Z->tState);
+    u16 x = memoryPeek16(Z->mem, SP, tState);
     SP += 2;
     return x;
 }
 
-void z80Push(Z80* Z, u16 x)
+void z80Push(Z80* Z, u16 x, i64* tState)
 {
     SP -= 2;
-    memoryPoke16(Z->mem, SP, x, Z->tState);
+    memoryPoke16(Z->mem, SP, x, tState);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -577,7 +576,7 @@ void z80Push(Z80* Z, u16 x)
 // Run a single instruction
 //----------------------------------------------------------------------------------------------------------------------
 
-Ref z80GetReg(Z80* Z, u8 y)
+Ref z80GetReg(Z80* Z, u8 y, i64* tState)
 {
     Ref r;
     switch (y)
@@ -591,7 +590,7 @@ Ref z80GetReg(Z80* Z, u8 y)
     case 7:     r.r = &A;   r.w = &A;   break;
 
     case 6:
-        r = memoryRef(Z->mem, HL, Z->tState);
+        r = memoryRef(Z->mem, HL, tState);
     }
 
     return r;
@@ -679,17 +678,17 @@ RotShiftFunc z80GetRotateShift(u8 y)
 }
 
 
-#define PEEK(a) memoryPeek(Z->mem, (a), Z->tState)
-#define POKE(a, b) memoryPoke(Z->mem, (a), (b), Z->tState)
-#define PEEK16(a) memoryPeek16(Z->mem, (a), Z->tState)
-#define POKE16(a, w) memoryPoke16(Z->mem, (a), (w), Z->tState)
-#define CONTEND(a, t, n) memoryContend(Z->mem, (a), (t), (n), Z->tState)
+#define PEEK(a) memoryPeek(Z->mem, (a), tState)
+#define POKE(a, b) memoryPoke(Z->mem, (a), (b), tState)
+#define PEEK16(a) memoryPeek16(Z->mem, (a), tState)
+#define POKE16(a, w) memoryPoke16(Z->mem, (a), (w), tState)
+#define CONTEND(a, t, n) memoryContend(Z->mem, (a), (t), (n), tState)
 
 // Temporary place holders
 #define ioIn(io, port) ((u8)0xff)
 #define ioOut(io, port, b) do { } while(0)
 
-u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q)
+u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q, i64* tState)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
     //
@@ -703,7 +702,13 @@ u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q)
     //
     // See http://www.z80.info/decoding.htm
     //
-    u8 opCode = PEEK(PC++);
+    ++R;
+    CONTEND(PC, 4, 1);
+#if NX_RUN_TESTS
+    u8 opCode = memoryPeekNoContend(Z->mem, PC++, *tState);
+#else
+    u8 opCode = memoryPeekNoContend(Z->mem, PC++);
+#endif
     *x = (opCode & 0xc0) >> 6;
     *y = (opCode & 0x38) >> 3;
     *z = (opCode & 0x07);
@@ -712,10 +717,10 @@ u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q)
     return opCode;
 }
 
-void z80Step(Z80* Z)
+void z80Step(Z80* Z, i64* tState)
 {
     u8 x, y, z, p, q;
-    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q);
+    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
 
     // Commonly used local variables
     u8 d = 0;       // Used for displacement
@@ -862,19 +867,19 @@ void z80Step(Z80* Z)
 
         case 4: // x, z = (0, 4)
             // 04, 0C, 14, 1C, 24, 2C, 34, 3C - INC B/C/D/E/H/L/(HL)/A
-            r = z80GetReg(Z, y);
+            r = z80GetReg(Z, y, tState);
             z80IncReg(Z, &r);
             break;
 
         case 5: // x, z = (0, 5)
             // 05, 0D, 15, 1D, 25, 2D, 35, 3D - DEC B/C/D/E/H/L/(HL)/A
-            r = z80GetReg(Z, y);
+            r = z80GetReg(Z, y, tState);
             z80DecReg(Z, &r);
             break;
 
         case 6: // x, z = (0, 6)
             // 06, 0E, 16, 1E, 26, 2E, 36, 3E - LD B/C/D/E/H/L/(HL)/A, n
-            r = z80GetReg(Z, y);
+            r = z80GetReg(Z, y, tState);
             *r.w = PEEK(PC++);
             break;
 
@@ -936,15 +941,15 @@ void z80Step(Z80* Z)
         else
         {
             // 40 - 7F - LD R,R
-            Ref r1 = z80GetReg(Z, y);
-            Ref r2 = z80GetReg(Z, z);
+            Ref r1 = z80GetReg(Z, y, tState);
+            Ref r2 = z80GetReg(Z, z, tState);
             *r1.w = *r2.r;
         }
         break; // x == 1
 
     case 2:
         {
-            r = z80GetReg(Z, z);
+            r = z80GetReg(Z, z, tState);
             z80GetAlu(y)(Z, r.r);
         }
         break; // x == 2
@@ -957,7 +962,7 @@ void z80Step(Z80* Z)
             CONTEND(IR, 1, 1);
             if (z80GetFlag(y, F))
             {
-                PC = z80Pop(Z);
+                PC = z80Pop(Z, tState);
                 MP = PC;
             }
             break;  // x, z = (3, 0)
@@ -966,14 +971,14 @@ void z80Step(Z80* Z)
             if (0 == q)
             {
                 // C1, D1, E1, F1 - POP RR
-                *z80GetReg16_2(Z, p) = z80Pop(Z);
+                *z80GetReg16_2(Z, p) = z80Pop(Z, tState);
             }
             else
             {
                 switch (p)
                 {
                 case 0:     // C9 - RET
-                    PC = z80Pop(Z);
+                    PC = z80Pop(Z, tState);
                     MP = PC;
                     break;
 
@@ -1016,26 +1021,26 @@ void z80Step(Z80* Z)
                 break;
 
             case 1:     // CB (prefix)
-                opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q);
+                opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
                 switch (x)
                 {
                 case 0:     // 00-3F: Rotate/Shift instructions
-                    r = z80GetReg(Z, z);
+                    r = z80GetReg(Z, z, tState);
                     z80GetRotateShift(y)(Z, &r);
                     break;
 
                 case 1:     // 40-7F: BIT instructions
-                    r = z80GetReg(Z, z);
+                    r = z80GetReg(Z, z, tState);
                     z80BitReg8(Z, r.r, y);
                     break;
 
                 case 2:     // 80-BF: RES instructions
-                    r = z80GetReg(Z, z);
+                    r = z80GetReg(Z, z, tState);
                     z80ResReg8(Z, &r, y);
                     break;
 
                 case 3:     // C0-FF: SET instructions
-                    r = z80GetReg(Z, z);
+                    r = z80GetReg(Z, z, tState);
                     z80SetReg8(Z, &r, y);
                 }
                 break;
@@ -1091,7 +1096,7 @@ void z80Step(Z80* Z)
             if (z80GetFlag(y, F))
             {
                 CONTEND(PC + 1, 1, 1);
-                z80Push(Z, PC + 2);
+                z80Push(Z, PC + 2, tState);
                 PC = tt;
             }
             else
@@ -1105,7 +1110,7 @@ void z80Step(Z80* Z)
             {
                 // C5 D5 E5 F5 - PUSH RR
                 CONTEND(IR, 1, 1);
-                z80Push(Z, *z80GetReg16_2(Z, p));
+                z80Push(Z, *z80GetReg16_2(Z, p), tState);
             }
             else
             {
@@ -1115,7 +1120,7 @@ void z80Step(Z80* Z)
                     tt = PEEK16(PC);
                     MP = tt;
                     CONTEND(PC + 1, 1, 1);
-                    z80Push(Z, PC + 2);
+                    z80Push(Z, PC + 2, tState);
                     PC = tt;
                     break;
 
@@ -1140,7 +1145,7 @@ void z80Step(Z80* Z)
         case 7:
             // C7, CF, D7, DF, E7, EF, F7, FF - RST n
             CONTEND(IR, 1, 1);
-            z80Push(Z, PC);
+            z80Push(Z, PC, tState);
             PC = (u16)y * 8;
             MP = PC;
             break;  // x, z = (3, 7)

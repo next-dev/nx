@@ -6,6 +6,7 @@
 
 #include "memory.h"
 #include "video.h"
+#include "z80.h"
 
 typedef struct _Machine Machine;
 
@@ -28,6 +29,10 @@ struct _Machine
     int             frameCounter;   // incremented each frame to time flash effect
     u8              border;         // Write to port $fe will change this.
     Array(Event)    events;
+    Z80             z80;            // The cpu emulator
+
+    // Output - when the machine has stopped updating, these will reflect events that the emulator should react to
+    bool            redraw;
 };
 
 // Create a ZX Spectrum 48K machine.  The image passed will be rendered too from time to time.
@@ -37,7 +42,7 @@ bool machineOpen(Machine* M, u32* img);
 void machineClose(Machine* M);
 
 // Run a few t-states.  Returns the new t-state position
-i64 machineUpdate(Machine* M, i64 tState);
+i64 machineUpdate(Machine* M, i64* tState);
 
 // Events - events call functions when the tstate counter equals or passes a given value.  As soon as an event
 // occurs machineUpdate will return if the event function returns NO.
@@ -49,6 +54,10 @@ void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc);
 // is called and the result of that handler is returned.
 bool machineTestEvent(Machine* M, i64* inOutTState);
 
+// Macro to define machine event handlers.
+#define MACHINE_EVENT(name) internal bool name(Machine* M, i64* inOutTState)
+
+
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -57,15 +66,23 @@ bool machineTestEvent(Machine* M, i64* inOutTState);
 #ifdef NX_IMPL
 
 #include <kore/k_blob.h>
-#include "z80.h"
 
-#define MACHINE_EVENT(name) internal bool name(Machine* M, i64* inOutTState)
+MACHINE_EVENT(machineInterrupt)
+{
+    machineAddEvent(M, 69888, &machineInterrupt);
+    *inOutTState -= 69888;
+    videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
+    M->redraw = YES;
+    return NO;
+}
 
 bool machineOpen(Machine* M, u32* img)
 {
     // Initialise sub-systems
     if (!memoryOpen(&M->memory)) goto error;
+    //memoryReset(&M->memory);
     if (!videoOpen(&M->video, &M->memory, &M->border, img)) goto error;
+    z80Init(&M->z80, &M->memory);
 
     // Initialise state
     M->border = 7;
@@ -78,6 +95,9 @@ bool machineOpen(Machine* M, u32* img)
         memoryLoad(&M->memory, 0, rom.bytes, (u16)rom.size);
         blobUnload(rom);
     }
+
+    // Initial events
+    machineAddEvent(M, 69888, &machineInterrupt);
 
     return YES;
 
@@ -93,44 +113,19 @@ void machineClose(Machine* M)
     arrayRelease(M->events);
 }
 
-MACHINE_EVENT(machineInterrupt)
+i64 machineUpdate(Machine* M, i64* tState)
 {
-    //*inOutTState -= 69888;
-    videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
-    return NO;
-}
+    i64 elapsedTStates = 0;
+    M->redraw = NO;
 
-i64 machineUpdate(Machine* M, i64 tState)
-{
-    machineAddEvent(M, 69888, &machineInterrupt);
-    while (machineTestEvent(M, &tState))
+    while (machineTestEvent(M, tState))
     {
-        ++tState;
+        i64 startTState = *tState;
+        z80Step(&M->z80, tState);
+        elapsedTStates += (*tState - startTState);
     }
 
-    // # t-states per frame is (64+192+56)*(48+128+48) = 69888
-//    if (tState >= 69888)
-//    {
-//         static TimePoint t = { 0 };
-//         static bool flash = NO;
-// 
-//         if (!flash && (M->frameCounter & 16))
-//         {
-//             flash = YES;
-//             TimePoint tt = now();
-//             TimePeriod dt = period(t, tt);
-//             printf("FLASH TIME: %dms\n", (int)toMSecs(dt));
-//             t = tt;
-//         }
-//         else if ((M->frameCounter & 16) == 0)
-//         {
-//             flash = NO;
-//         }
-
-//        videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
-//    }
-
-    return tState;
+    return elapsedTStates;
 }
 
 void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc)

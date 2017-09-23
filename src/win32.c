@@ -65,8 +65,7 @@ int kmain(int argc, char** argv)
                 windowRedraw(w);
             }
 
-            i64 tStateDiff = out.endTState - out.startTState;
-            i64 msElapsed = tStateDiff * 20 / 69888;
+            i64 msElapsed = out.elapsedTStates * 20 / 69888;
             TimePoint futureTime = future(t, msecs(msElapsed));
             waitUntil(futureTime);
         }
@@ -75,6 +74,10 @@ int kmain(int argc, char** argv)
     }
 
     K_FREE(img, NX_WINDOW_WIDTH * NX_WINDOW_HEIGHT * sizeof(u32));
+
+#if NX_RUN_TESTS
+    windowConsolePause();
+#endif
 
     return 0;
 }

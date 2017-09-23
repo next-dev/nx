@@ -42,12 +42,26 @@ void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates);
 // tState counter according to contention.
 void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates);
 
+// As memoryPoke but without normal 3-tStates with contention
+#if NX_RUN_TESTS
+void memoryPokeNoContend(Memory* mem, u16 address, u8 b, i64 tStates);
+#else
+void memoryPokeNoContend(Memory* mem, u16 address, u8 b);
+#endif
+
 // Set a 16-bit value to the memory in little endian form.  Will also adjust the tState counter according to
 // contention.
 void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates);
 
 // Read an 8-bit value from the memory.
 u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates);
+
+// As memoryPeek but without contention.
+#if NX_RUN_TESTS
+u8 memoryPeekNoContend(Memory* mem, u16 address, i64 tStates);
+#else
+u8 memoryPeekNoContend(Memory* mem, u16 address);
+#endif
 
 // Read an 16-bit value from the memory.
 u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates);
@@ -58,6 +72,9 @@ Ref memoryRef(Memory* mem, u16 address, i64* inOutTStates);
 // Load a buffer into memory, ignoring write-only state of ROMs
 void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
 
+// Fill the memory with 0s everywhere.
+void memoryReset(Memory* mem);
+
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -67,6 +84,9 @@ void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
 
 #include <memory.h>
 #include <kore/k_random.h>
+#if NX_RUN_TESTS
+#   include "test.h"
+#endif
 
 #define LO(x) ((u8)((x) % 256))
 #define HI(x) ((u8)((x) / 256))
@@ -111,7 +131,7 @@ bool memoryOpen(Memory* mem)
     for (u16 a = 0; a < 0xffff; ++a)
     {
         i64 ts = 0;
-        memoryPoke(mem, a, (u8)random64(&r), &ts);
+        mem->memory[a] = (u8)random64(&r);
     }
 
     return YES;
@@ -129,6 +149,10 @@ void memoryClose(Memory* mem)
 
 i64 memoryContention(Memory* mem, u16 addr, i64 tStates)
 {
+#if NX_RUN_TESTS
+    if (gResultsFile) fprintf(gResultsFile, "%5d MC %04x\n", (int)tStates, addr);
+#endif
+
     // Check for slot 2: Address = SS00 0000 0000 0000, where SS = 01
     if ((addr & 0xc000) == 0x4000)
     {
@@ -141,6 +165,10 @@ i64 memoryContention(Memory* mem, u16 addr, i64 tStates)
 
 void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates)
 {
+#if NX_RUN_TESTS
+    if (gResultsFile) fprintf(gResultsFile, "%5d MC %04x\n", (int)*inOutTStates, addr);
+#endif
+
     // #todo: Disable this for +3
     if ((addr & 0xc000) == 0x4000)
     {
@@ -159,11 +187,26 @@ void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates)
 // Setting bytes
 //----------------------------------------------------------------------------------------------------------------------
 
+#if NX_RUN_TESTS
+void memoryPokeNoContend(Memory* mem, u16 address, u8 b, i64 tStates)
+#else
+void memoryPokeNoContend(Memory* mem, u16 address, u8 b)
+#endif
+{
+#if NX_RUN_TESTS
+    if (gResultsFile) fprintf(gResultsFile, "%5d MW %04x %02x\n", (int)tStates, address, b);
+#endif
+    if (address >= 0x4000) mem->memory[address] = b;
+}
+
 void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates)
 {
-    *inOutTStates += memoryContention(mem, address, *inOutTStates);
-    *inOutTStates += 3;
-    if (address >= 0x4000) mem->memory[address] = b;
+    memoryContend(mem, address, 3, 1, inOutTStates);
+#if NX_RUN_TESTS
+    memoryPokeNoContend(mem, address, b, *inOutTStates);
+#else
+    memoryPokeNoContend(mem, address, b);
+#endif
 }
 
 void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates)
@@ -172,11 +215,26 @@ void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates)
     memoryPoke(mem, address + 1, HI(w), inOutTStates);
 }
 
+#if NX_RUN_TESTS
+u8 memoryPeekNoContend(Memory* mem, u16 address, i64 tStates)
+#else
+u8 memoryPeekNoContend(Memory* mem, u16 address)
+#endif
+{
+#if NX_RUN_TESTS
+    if (gResultsFile) fprintf(gResultsFile, "%5d MR %04x %02x\n", (int)tStates, address, mem->memory[address]);
+#endif
+    return mem->memory[address];
+}
+
 u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates)
 {
-    *inOutTStates += memoryContention(mem, address, *inOutTStates);
-    *inOutTStates += 3;
-    return mem->memory[address];
+    memoryContend(mem, address, 3, 1, inOutTStates);
+#if NX_RUN_TESTS
+    return memoryPeekNoContend(mem, address, *inOutTStates);
+#else
+    return memoryPeekNoContend(mem, address);
+#endif
 }
 
 u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates)
@@ -202,6 +260,11 @@ void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size)
 {
     i64 clampedSize = K_MIN((i64)address + (i64)size, 65536) - address;
     memoryCopy(buffer, &mem->memory[address], clampedSize);
+}
+
+void memoryReset(Memory* mem)
+{
+    memoryClear(mem->memory, KB(64));
 }
 
 //----------------------------------------------------------------------------------------------------------------------
