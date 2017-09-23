@@ -18,13 +18,6 @@ typedef struct
 }
 Memory;
 
-typedef struct 
-{
-    u8*         r;      // Read reference
-    u8*         w;      // Write reference
-}
-Ref;
-
 // Initialise the memory.  If it fails, mem will be left in null state.
 bool memoryOpen(Memory* mem);
 
@@ -65,9 +58,6 @@ u8 memoryPeekNoContend(Memory* mem, u16 address);
 
 // Read an 16-bit value from the memory.
 u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates);
-
-// Get a reference to a memory address.
-Ref memoryRef(Memory* mem, u16 address, i64* inOutTStates);
 
 // Load a buffer into memory, ignoring write-only state of ROMs
 void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
@@ -258,20 +248,6 @@ u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates)
 u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates)
 {
     return memoryPeek(mem, address, inOutTStates) + 256 * memoryPeek(mem, address + 1, inOutTStates);
-}
-
-Ref memoryRef(Memory* mem, u16 address, i64* inOutTStates)
-{
-    static u8 dump;
-    Ref r = { &mem->memory[address], &mem->memory[address] };
-    if (address < 0x4000)
-    {
-        r.w = &dump;
-    }
-
-    *inOutTStates += memoryContention(mem, address, *inOutTStates);
-
-    return r;
 }
 
 void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size)

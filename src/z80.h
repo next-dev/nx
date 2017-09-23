@@ -180,9 +180,9 @@ void z80ExAfAf(Z80* Z)
     AF_ = t;
 }
 
-void z80IncReg(Z80* Z, Ref* reg)
+void z80IncReg(Z80* Z, u8* reg)
 {
-    *reg->w = (*reg->r + 1);
+    *reg = (*reg + 1);
 
     // S: Result is negative
     // Z: Result is zero
@@ -190,10 +190,10 @@ void z80IncReg(Z80* Z, Ref* reg)
     // P: Result is 0x80
     // N: Reset
     // C: Unaffected
-    F = (F & F_CARRY) | ((*reg->r == 0x80) ? F_PARITY : 0) | ((*reg->r & 0x0f) ? 0 : F_HALF) | gSZ53[*reg->r];
+    F = (F & F_CARRY) | ((*reg == 0x80) ? F_PARITY : 0) | ((*reg & 0x0f) ? 0 : F_HALF) | gSZ53[*reg];
 }
 
-void z80DecReg(Z80* Z, Ref* reg)
+void z80DecReg(Z80* Z, u8* reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -201,11 +201,11 @@ void z80DecReg(Z80* Z, Ref* reg)
     // P: Result is 0x7f
     // N: Set
     // C: Unaffected
-    F = (F & F_CARRY) | ((*reg->r & 0x0f) ? 0 : F_HALF) | F_NEG;
+    F = (F & F_CARRY) | ((*reg & 0x0f) ? 0 : F_HALF) | F_NEG;
 
-    *reg->w = (*reg->r - 1);
+    *reg = (*reg - 1);
 
-    F |= (*reg->r == 0x7f ? F_PARITY : 0) | gSZ53[*reg->r];
+    F |= (*reg == 0x7f ? F_PARITY : 0) | gSZ53[*reg];
 }
 
 void z80AddReg16(Z80* Z, u16* r1, u16* r2)
@@ -366,15 +366,15 @@ void z80XorReg8(Z80* Z, u8* r)
 //  | C |<-+--| 7                           0 |<-+
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80RlcReg8(Z80* Z, Ref* r)
+void z80RlcReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    *r->w = ((*r->r << 1) | (*r->r >> 7));
-    F = (*r->r & F_CARRY) | gSZ53P[*r->r];
+    *r = ((*r << 1) | (*r >> 7));
+    F = (*r & F_CARRY) | gSZ53P[*r];
 }
 
 //  +-------------------------------------+
@@ -382,16 +382,16 @@ void z80RlcReg8(Z80* Z, Ref* r)
 //  +->| 7                           0 |--+->| C |
 //     +---+---+---+---+---+---+---+---+     +---+
 //
-void z80RrcReg8(Z80* Z, Ref* r)
+void z80RrcReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r->r & F_CARRY;
-    *r->w = ((*r->r >> 1) | (*r->r << 7));
-    F |= gSZ53P[*r->r];
+    F = *r & F_CARRY;
+    *r = ((*r >> 1) | (*r << 7));
+    F |= gSZ53P[*r];
 }
 
 //  +-----------------------------------------------+
@@ -399,16 +399,16 @@ void z80RrcReg8(Z80* Z, Ref* r)
 //  +--| C |<----| 7                           0 |<-+
 //     +---+     +---+---+---+---+---+---+---+---+
 //
-void z80RlReg8(Z80* Z, Ref* r)
+void z80RlReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    u8 t = *r->r;
-    *r->w = ((*r->r << 1) | (F & F_CARRY));
-    F = (t >> 7) | gSZ53P[*r->r];
+    u8 t = *r;
+    *r = ((*r << 1) | (F & F_CARRY));
+    F = (t >> 7) | gSZ53P[*r];
 }
 
 //  +-----------------------------------------------+
@@ -416,32 +416,32 @@ void z80RlReg8(Z80* Z, Ref* r)
 //  +->| 7                           0 |---->| C |--+
 //     +---+---+---+---+---+---+---+---+     +---+
 //
-void z80RrReg8(Z80* Z, Ref* r)
+void z80RrReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    u8 t = *r->r;
-    *r->w = ((*r->r >> 1) | (F << 7));
-    F = (t & F_CARRY) | gSZ53P[*r->r];
+    u8 t = *r;
+    *r = ((*r >> 1) | (F << 7));
+    F = (t & F_CARRY) | gSZ53P[*r];
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
 //  | C |<----| 7                           0 |<---- 0
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80SlaReg8(Z80* Z, Ref* r)
+void z80SlaReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    F = *r->r >> 7;
-    *r->w = (*r->r << 1);
-    F |= gSZ53P[*r->r];
+    F = *r >> 7;
+    *r = (*r << 1);
+    F |= gSZ53P[*r];
 }
 
 //     +---+---+---+---+---+---+---+---+     +---+
@@ -451,48 +451,48 @@ void z80SlaReg8(Z80* Z, Ref* r)
 //  |    |
 //  +----+
 //
-void z80SraReg8(Z80* Z, Ref* r)
+void z80SraReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r->r & F_CARRY;
-    *r->w = ((*r->r & 0x80) | (*r->r >> 1));
-    F |= gSZ53P[*r->r];
+    F = *r & F_CARRY;
+    *r = ((*r & 0x80) | (*r >> 1));
+    F |= gSZ53P[*r];
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
 //  | C |<----| 7                           0 |<---- 1
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80Sl1Reg8(Z80* Z, Ref* r)
+void z80Sl1Reg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    F = *r->r >> 7;
-    *r->w = ((*r->r << 1) | 0x01);
-    F |= gSZ53P[*r->r];
+    F = *r >> 7;
+    *r = ((*r << 1) | 0x01);
+    F |= gSZ53P[*r];
 }
 
 //         +---+---+---+---+---+---+---+---+     +---+
 //  0 ---->| 7                           0 |---->| C |
 //         +---+---+---+---+---+---+---+---+     +---+
 //
-void z80SrlReg8(Z80* Z, Ref* r)
+void z80SrlReg8(Z80* Z, u8* r)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r->r & F_CARRY;
-    *r->w = (*r->r >> 1);
-    F |= gSZ53P[*r->r];
+    F = *r & F_CARRY;
+    *r = (*r >> 1);
+    F |= gSZ53P[*r];
 }
 
 void z80BitReg8(Z80* Z, u8* r, int b)
@@ -508,16 +508,16 @@ void z80BitReg8(Z80* Z, u8* r, int b)
     if ((b == 7) && (*r & 0x80)) F |= F_SIGN;
 }
 
-void z80ResReg8(Z80* Z, Ref* r, int b)
+void z80ResReg8(Z80* Z, u8* r, int b)
 {
     // All flags preserved.
-    *r->w = *r->r & ~((u8)1 << b);
+    *r = *r & ~((u8)1 << b);
 }
 
-void z80SetReg8(Z80* Z, Ref* r, int b)
+void z80SetReg8(Z80* Z, u8* r, int b)
 {
     // All flags preserved.
-    *r->w = *r->r | ((u8)1 << b);
+    *r = *r | ((u8)1 << b);
 }
 
 void z80Daa(Z80* Z)
@@ -576,24 +576,21 @@ void z80Push(Z80* Z, u16 x, i64* tState)
 // Run a single instruction
 //----------------------------------------------------------------------------------------------------------------------
 
-Ref z80GetReg(Z80* Z, u8 y, i64* tState)
+u8* z80GetReg(Z80* Z, u8 y)
 {
-    Ref r;
     switch (y)
     {
-    case 0:     r.r = &B;   r.w = &B;   break;
-    case 1:     r.r = &C;   r.w = &C;   break;
-    case 2:     r.r = &D;   r.w = &D;   break;
-    case 3:     r.r = &E;   r.w = &E;   break;
-    case 4:     r.r = &H;   r.w = &H;   break;
-    case 5:     r.r = &L;   r.w = &L;   break;
-    case 7:     r.r = &A;   r.w = &A;   break;
+    case 0:     return &B;
+    case 1:     return &C;
+    case 2:     return &D;
+    case 3:     return &E;
+    case 4:     return &H;
+    case 5:     return &L;
+    case 7:     return &A;
 
-    case 6:
-        r = memoryRef(Z->mem, HL, tState);
+    default:    K_ASSERT(0);
+                return 0;
     }
-
-    return r;
 }
 
 u16* z80GetReg16_1(Z80* Z, u8 p)
@@ -658,7 +655,7 @@ ALUFunc z80GetAlu(u8 y)
     return funcs[y];
 };
 
-typedef void(*RotShiftFunc) (Z80* Z, Ref* r);
+typedef void(*RotShiftFunc) (Z80* Z, u8* r);
 
 RotShiftFunc z80GetRotateShift(u8 y)
 {
@@ -725,7 +722,7 @@ void z80Step(Z80* Z, i64* tState)
     // Commonly used local variables
     u8 d = 0;       // Used for displacement
     u16 tt = 0;     // Temporary for an address
-    Ref r;          // Temporary for a reference
+    u8* r;          // Temporary for a reference
 
     // Opcode hex calculated from:
     //
@@ -877,20 +874,47 @@ void z80Step(Z80* Z, i64* tState)
 
         case 4: // x, z = (0, 4)
             // 04, 0C, 14, 1C, 24, 2C, 34, 3C - INC B/C/D/E/H/L/(HL)/A
-            r = z80GetReg(Z, y, tState);
-            z80IncReg(Z, &r);
+            if (y == 6)
+            {
+                d = PEEK(HL);
+                CONTEND(HL, 1, 1);
+                z80IncReg(Z, &d);
+                POKE(HL, d);
+            }
+            else
+            {
+                r = z80GetReg(Z, y);
+                z80IncReg(Z, r);
+            }
             break;
 
         case 5: // x, z = (0, 5)
             // 05, 0D, 15, 1D, 25, 2D, 35, 3D - DEC B/C/D/E/H/L/(HL)/A
-            r = z80GetReg(Z, y, tState);
-            z80DecReg(Z, &r);
+            if (y == 6)
+            {
+                d = PEEK(HL);
+                CONTEND(HL, 1, 1);
+                z80DecReg(Z, &d);
+                POKE(HL, d);
+            }
+            else
+            {
+                r = z80GetReg(Z, y);
+                z80DecReg(Z, r);
+            }
             break;
 
         case 6: // x, z = (0, 6)
             // 06, 0E, 16, 1E, 26, 2E, 36, 3E - LD B/C/D/E/H/L/(HL)/A, n
-            r = z80GetReg(Z, y, tState);
-            *r.w = PEEK(PC++);
+            if (y == 6)
+            {
+                POKE(HL, PEEK(PC++));
+            }
+            else
+            {
+                r = z80GetReg(Z, y);
+                *r = PEEK(PC++);
+            }
             break;
 
         case 7: // x, z = (0, 7)
@@ -951,16 +975,40 @@ void z80Step(Z80* Z, i64* tState)
         else
         {
             // 40 - 7F - LD R,R
-            Ref r1 = z80GetReg(Z, y, tState);
-            Ref r2 = z80GetReg(Z, z, tState);
-            *r1.w = *r2.r;
+            if (y == 6)
+            {
+                // LD (HL),R
+                u8* r = z80GetReg(Z, z);
+                POKE(HL, *r);
+            }
+            else if (z == 6)
+            {
+                // LD R,(HL)
+                u8* r = z80GetReg(Z, y);
+                *r = PEEK(HL);
+            }
+            else
+            {
+                u8* r1 = z80GetReg(Z, y);
+                u8* r2 = z80GetReg(Z, z);
+                *r1 = *r2;
+            }
         }
         break; // x == 1
 
     case 2:
         {
-            r = z80GetReg(Z, z, tState);
-            z80GetAlu(y)(Z, r.r);
+            if (z == 6)
+            {
+                // ALU(y) (HL)
+                d = PEEK(HL);
+                z80GetAlu(y)(Z, &d);
+            }
+            else
+            {
+                r = z80GetReg(Z, z);
+                z80GetAlu(y)(Z, r);
+            }
         }
         break; // x == 2
 
@@ -1035,23 +1083,63 @@ void z80Step(Z80* Z, i64* tState)
                 switch (x)
                 {
                 case 0:     // 00-3F: Rotate/Shift instructions
-                    r = z80GetReg(Z, z, tState);
-                    z80GetRotateShift(y)(Z, &r);
+                    if (z == 6)
+                    {
+                        d = PEEK(HL);
+                        CONTEND(HL, 1, 1);
+                        z80GetRotateShift(y)(Z, &d);
+                        POKE(HL, d);
+                    }
+                    else
+                    {
+                        r = z80GetReg(Z, z);
+                        z80GetRotateShift(y)(Z, r);
+                    }
                     break;
 
                 case 1:     // 40-7F: BIT instructions
-                    r = z80GetReg(Z, z, tState);
-                    z80BitReg8(Z, r.r, y);
+                    if (z == 6)
+                    {
+                        // BIT n,(HL)
+                        d = PEEK(HL);
+                        CONTEND(HL, 1, 1);
+                        z80BitReg8(Z, &d, y);
+                    }
+                    else
+                    {
+                        r = z80GetReg(Z, z);
+                        z80BitReg8(Z, r, y);
+                    }
                     break;
 
                 case 2:     // 80-BF: RES instructions
-                    r = z80GetReg(Z, z, tState);
-                    z80ResReg8(Z, &r, y);
+                    if (z == 6)
+                    {
+                        // RES n,(HL)
+                        d = PEEK(HL);
+                        CONTEND(HL, 1, 1);
+                        z80ResReg8(Z, &d, y);
+                    }
+                    else
+                    {
+                        r = z80GetReg(Z, z);
+                        z80ResReg8(Z, r, y);
+                    }
                     break;
 
                 case 3:     // C0-FF: SET instructions
-                    r = z80GetReg(Z, z, tState);
-                    z80SetReg8(Z, &r, y);
+                    if (z == 6)
+                    {
+                        // BIT n,(HL)
+                        d = PEEK(HL);
+                        CONTEND(HL, 1, 1);
+                        z80SetReg8(Z, &d, y);
+                    }
+                    else
+                    {
+                        r = z80GetReg(Z, z);
+                        z80SetReg8(Z, r, y);
+                    }
                 }
                 break;
 
