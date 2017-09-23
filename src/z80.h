@@ -816,7 +816,7 @@ void z80Step(Z80* Z, i64* tState)
                 break;
 
             case 2:     // 12 - LD (DE),A
-                POKE(BC, A);
+                POKE(DE, A);
                 MP = (((DE + 1) & 0xff) | (A << 8));
                 break;
 
