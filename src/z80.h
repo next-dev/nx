@@ -752,29 +752,34 @@ void z80Step(Z80* Z, i64* tState)
 
             case 2:     // 10 - DJNZ d
                 CONTEND(IR, 1, 1);
-                d = z80Displacement(PEEK(PC++));
                 --B;
                 if (B != 0)
                 {
+                    d = z80Displacement(PEEK(PC));
                     CONTEND(PC, 1, 5);
-                    PC += d;
+                    PC += (i8)(d + 1);
                     MP = PC;
+                }
+                else
+                {
+                    CONTEND(PC, 3, 1);
+                    ++PC;
                 }
                 break;
 
             case 3:     // 18 - JR d
-                d = z80Displacement(PEEK(PC++));
+                d = z80Displacement(PEEK(PC));
                 CONTEND(PC, 1, 5);
-                PC += d;
+                PC += (i8)(d + 1);
                 MP = PC;
                 break;
 
             default:    // 20, 28, 30, 38 - JR cc(y-4),d
-                d = z80Displacement(PEEK(PC++));
+                d = z80Displacement(PEEK(PC));
                 if (z80GetFlag(y - 4, F))
                 {
                     CONTEND(PC, 1, 5);
-                    PC += d;
+                    PC += (i8)(d + 1);
                     MP = PC;
                 }
             }
@@ -791,7 +796,7 @@ void z80Step(Z80* Z, i64* tState)
             else
             {
                 // 09, 19, 29, 39 - ADD HL, BC/DE/HL/SP
-                CONTEND(IR, 1, 1);
+                CONTEND(IR, 1, 7);
                 MP = HL + 1;
                 z80AddReg16(Z, &HL, z80GetReg16_1(Z, p));
             }

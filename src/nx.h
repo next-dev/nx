@@ -76,7 +76,7 @@ MACHINE_EVENT(testEnd)
 bool testRun(Tests* T, int index)
 {
     TestIn* testIn = &T->tests[index];
-    //printf("TEST: %s\n", testIn->name);
+    printf("TEST: %s\n", testIn->name);
     fprintf(gResultsFile, "%s\n", testIn->name);
 
     // Create a machine with no display.
@@ -219,7 +219,7 @@ void testCompare()
             }
         }
 
-        printf("\033[32;1m[PASS] %s!\033[0m\n", name);
+        printf("\033[32;1m[PASS] %s\033[0m\n", name);
         expectedCursor = end;
         stringRelease(name);
     }
