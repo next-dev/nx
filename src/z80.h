@@ -510,6 +510,19 @@ void z80BitReg8(Z80* Z, u8* r, int b)
     if ((b == 7) && (*r & 0x80)) F |= F_SIGN;
 }
 
+void z80BitReg8_MP(Z80* Z, u8* r, int b)
+{
+    // S: Undefined (set to bit 7 if bit 7 is checked, otherwise 0)
+    // Z: Opposite of bit b
+    // H: Set
+    // P: Undefined (same as Z)
+    // N: Reset
+    // C: Preserved
+    F = (F & F_CARRY) | F_HALF | (Z->m.h & (F_3 | F_5));
+    if (!(*r & (1 << b))) F |= F_PARITY | F_ZERO;
+    if ((b == 7) && (*r & 0x80)) F |= F_SIGN;
+}
+
 void z80ResReg8(Z80* Z, u8* r, int b)
 {
     // All flags preserved.
@@ -845,9 +858,10 @@ void z80Step(Z80* Z, i64* tState)
 
             case 6:     // 32 - LD (nn),A
                 tt = PEEK16(PC);
-                POKE(tt, A);
-                MP = (((tt + 1) & 0xff) | (A << 8));
                 PC += 2;
+                POKE(tt, A);
+                Z->m.l = (u8)(tt + 1);
+                Z->m.h = A;
                 break;
 
             case 7:     // 3A - LD A,(nn)
@@ -1105,7 +1119,7 @@ void z80Step(Z80* Z, i64* tState)
                         // BIT n,(HL)
                         d = PEEK(HL);
                         CONTEND(HL, 1, 1);
-                        z80BitReg8(Z, &d, y);
+                        z80BitReg8_MP(Z, &d, y);
                     }
                     else
                     {
