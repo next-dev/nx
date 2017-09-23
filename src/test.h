@@ -292,7 +292,11 @@ bool testOpen(Tests* T)
         return NO;
     }
     blobUnload(b);
+#ifdef NX_TEST_OUTPUT_TO_CONSOLE
+    gResultsFile = stdout;
+#else
     gResultsFile = fopen("tests.results", "wb+");
+#endif
     return YES;
 
 error:
@@ -316,7 +320,9 @@ void testClose(Tests* T)
 
     arrayRelease(T->tests);
 
+#ifndef NX_TEST_OUTPUT_TO_CONSOLE
     if (gResultsFile) fclose(gResultsFile);
+#endif
     gResultsFile = 0;
 }
 

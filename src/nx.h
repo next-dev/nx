@@ -76,7 +76,7 @@ MACHINE_EVENT(testEnd)
 bool testRun(Tests* T, int index)
 {
     TestIn* testIn = &T->tests[index];
-    printf("TEST: %s\n", testIn->name);
+    //printf("TEST: %s\n", testIn->name);
     fprintf(gResultsFile, "%s\n", testIn->name);
 
     // Create a machine with no display.
@@ -86,6 +86,42 @@ bool testRun(Tests* T, int index)
     {
         memoryReset(&M.memory);
         machineAddEvent(&M, testIn->tStates, &testEnd);
+
+        // Set up the registers
+        M.z80.af.r = testIn->af;
+        M.z80.bc.r = testIn->bc;
+        M.z80.de.r = testIn->de;
+        M.z80.hl.r = testIn->hl;
+        M.z80.af_.r = testIn->af_;
+        M.z80.bc_.r = testIn->bc_;
+        M.z80.de_.r = testIn->de_;
+        M.z80.hl_.r = testIn->hl_;
+        M.z80.ix.r = testIn->ix;
+        M.z80.iy.r = testIn->iy;
+        M.z80.sp.r = testIn->sp;
+        M.z80.pc.r = testIn->pc;
+        M.z80.m.r = testIn->mp;
+        M.z80.ir.h = testIn->i;
+        M.z80.ir.l = testIn->r;
+        M.z80.iff1 = testIn->iff1;
+        M.z80.iff2 = testIn->iff2;
+        M.z80.im = testIn->im;
+        M.z80.halt = testIn->halted;
+
+        // Set up the memory
+        for (i64 blk = 0; blk < arrayCount(testIn->memBlocks); ++blk)
+        {
+            TestBlock* b = &testIn->memBlocks[blk];
+            u16 addr = b->address;
+            memoryLoad(&M.memory, addr, b->bytes, (u16)arrayCount(b->bytes));
+        }
+
+#ifdef NX_DEBUG_TEST
+        if (stringCompare(testIn->name, NX_DEBUG_TEST) == 0)
+        {
+            K_BREAK();
+        }
+#endif
 
         while (tStates < testIn->tStates)
         {
@@ -167,6 +203,7 @@ void testCompare()
             return;
         }
 
+        // Compare expected test with results.  Should be EXACTLY the same.
         for (i64 i = expectedCursor; i < end; ++i)
         {
             if (eb.bytes[i] != rb.bytes[i])
