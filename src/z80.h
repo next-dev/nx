@@ -775,12 +775,17 @@ void z80Step(Z80* Z, i64* tState)
                 break;
 
             default:    // 20, 28, 30, 38 - JR cc(y-4),d
-                d = z80Displacement(PEEK(PC));
                 if (z80GetFlag(y - 4, F))
                 {
+                    d = z80Displacement(PEEK(PC));
                     CONTEND(PC, 1, 5);
                     PC += (i8)(d + 1);
                     MP = PC;
+                }
+                else
+                {
+                    CONTEND(PC, 3, 1);
+                    ++PC;
                 }
             }
             break;
@@ -911,7 +916,7 @@ void z80Step(Z80* Z, i64* tState)
             case 3:     // 1F - RRA
                 d = A;
                 A = (A >> 1) | (F << 7);
-                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & (F_3 | F_5)) | (A & F_CARRY);
+                F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (A & (F_3 | F_5)) | (d & F_CARRY);
                 break;
 
             case 4:     // 27 - DAA
