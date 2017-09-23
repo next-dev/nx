@@ -174,7 +174,15 @@ i64 memoryContention(Memory* mem, u16 addr, i64 tStates)
 void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates)
 {
 #if NX_RUN_TESTS
-    if (gResultsFile) fprintf(gResultsFile, "%5d MC %04x\n", (int)*inOutTStates, addr);
+    if (gResultsFile)
+    {
+        i64 ts = *inOutTStates;
+        for (int i = 0; i < n; ++i)
+        {
+            fprintf(gResultsFile, "%5d MC %04x\n", (int)ts, addr);
+            ts += t;
+        }
+    }
 #endif
 
     // #todo: Disable this for +3
