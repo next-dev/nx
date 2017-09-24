@@ -1,8 +1,11 @@
 //----------------------------------------------------------------------------------------------------------------------
-// Emualates the Z80
+// Emulates the Z80
 //----------------------------------------------------------------------------------------------------------------------
 
 #pragma once
+
+#include "memory.h"
+#include "io.h"
 
 typedef struct
 {
@@ -21,7 +24,7 @@ typedef struct
 {
     // External systems and information.
     Memory*     mem;
-    void*       io;         // Placeholder
+    Io*         io;
 
     // Base registers
     Reg         af, bc, de, hl;
@@ -43,7 +46,7 @@ typedef struct
 Z80;
 
 // Initialise the internal tables and data structure.
-void z80Init(Z80* Z, Memory* mem);
+void z80Init(Z80* Z, Memory* mem, Io* io);
 
 // Run a single opcode
 void z80Step(Z80* Z, i64* tState);
@@ -87,8 +90,6 @@ void z80Step(Z80* Z, i64* tState);
 //----------------------------------------------------------------------------------------------------------------------
 
 #ifdef NX_IMPL
-
-#include "memory.h"
 
 // Flags
 #define F_CARRY     0x01
@@ -134,10 +135,11 @@ void z80SetFlag(Z80* Z, u8 flags, bool value)
 // Initialisation
 //----------------------------------------------------------------------------------------------------------------------
 
-void z80Init(Z80* Z, Memory* mem)
+void z80Init(Z80* Z, Memory* mem, Io* io)
 {
     memoryClear(Z, sizeof(*Z));
     Z->mem = mem;
+    Z->io = io;
 
     for (int i = 0; i < 256; ++i)
     {
@@ -696,10 +698,6 @@ RotShiftFunc z80GetRotateShift(u8 y)
 #define POKE16(a, w) memoryPoke16(Z->mem, (a), (w), tState)
 #define CONTEND(a, t, n) memoryContend(Z->mem, (a), (t), (n), tState)
 
-// Temporary place holders
-#define ioIn(io, port) ((u8)0xff)
-#define ioOut(io, port, b) do { } while(0)
-
 u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q, i64* tState)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
@@ -1164,7 +1162,7 @@ void z80Step(Z80* Z, i64* tState)
             case 2:     // D3 - OUT (n),A       A -> $AAnn
                 // #todo: I/O
                 d = PEEK(PC);
-                ioOut(Z->io, (u16)d | ((u16)A << 8), A);
+                ioOut(Z->io, (u16)d | ((u16)A << 8), A, tState);
                 MP = ((u16)(d + 1)) | ((u16)A << 8);
                 ++PC;
                 break;
@@ -1173,7 +1171,7 @@ void z80Step(Z80* Z, i64* tState)
                 d = PEEK(PC);
                 tt = ((u16)A << 8) | d;
                 MP = ((u16)A << 8) + d + 1;
-                A = ioIn(Z->io, tt);
+                A = ioIn(Z->io, tt, tState);
                 ++PC;
                 break;
 

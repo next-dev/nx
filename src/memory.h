@@ -24,9 +24,8 @@ bool memoryOpen(Memory* mem);
 // Close the memory sub-system
 void memoryClose(Memory* mem);
 
-// Return the number of t-states of contention for a particular memory address at a particular t-state time from
-// video trace.
-i64 memoryContention(Memory* mem, u16 addr, i64 tStates);
+// Return YES if the memory is contended.
+bool memoryIsContended(Memory* mem, u16 addr);
 
 // Contends the machine for a given address for t t-states, for n times.
 void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates);
@@ -145,20 +144,9 @@ void memoryClose(Memory* mem)
 // Memory contention
 //----------------------------------------------------------------------------------------------------------------------
 
-i64 memoryContention(Memory* mem, u16 addr, i64 tStates)
+bool memoryIsContended(Memory* mem, u16 addr)
 {
-#if NX_RUN_TESTS
-    if (gResultsFile) fprintf(gResultsFile, "%5d MC %04x\n", (int)tStates, addr);
-#endif
-
-    // Check for slot 2: Address = SS00 0000 0000 0000, where SS = 01
-    if ((addr & 0xc000) == 0x4000)
-    {
-        K_ASSERT(tStates < 70930);
-        return mem->contention[tStates];
-    }
-
-    return 0;
+    return K_BOOL((addr & 0xc000) == 0x4000);
 }
 
 void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates)
@@ -176,7 +164,7 @@ void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates)
 #endif
 
     // #todo: Disable this for +3
-    if ((addr & 0xc000) == 0x4000)
+    if (memoryIsContended(mem, addr))
     {
         for (int i = 0; i < n; ++i)
         {

@@ -27,9 +27,9 @@ struct _Machine
     Memory          memory;
     Video           video;
     int             frameCounter;   // incremented each frame to time flash effect
-    u8              border;         // Write to port $fe will change this.
     Array(Event)    events;
     Z80             z80;            // The cpu emulator
+    Io              io;
 
     // Output - when the machine has stopped updating, these will reflect events that the emulator should react to
     bool            redraw;
@@ -80,12 +80,11 @@ bool machineOpen(Machine* M, u32* img)
 {
     // Initialise sub-systems
     if (!memoryOpen(&M->memory)) goto error;
-    //memoryReset(&M->memory);
-    if (!videoOpen(&M->video, &M->memory, &M->border, img)) goto error;
-    z80Init(&M->z80, &M->memory);
+    ioInit(&M->io, &M->memory);
+    if (!videoOpen(&M->video, &M->memory, &M->io.border, img)) goto error;
+    z80Init(&M->z80, &M->memory, &M->io);
 
     // Initialise state
-    M->border = 7;
     M->events = 0;
 
     // Load the ROM into memory.
