@@ -939,7 +939,7 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
                 CONTEND(PC, 1, 5);
                 ++PC;
                 MP = II + d;
-                POKE(MP, *z80GetReg(Z, y));
+                POKE(MP, *z80GetReg(Z, z));
                 break;
 
             default:
@@ -1023,12 +1023,8 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
         break;
     }
 
-    return;
-
 invalid_instruction:
-    --PC;
-    --R;
-    z80Step(Z, tState);
+    return;
 }
 
 void z80StepED(Z80* Z, i64* tState)
