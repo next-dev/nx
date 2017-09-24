@@ -766,21 +766,11 @@ void z80StepIndexCB(Z80* Z, i64* tState, Reg* idx)
     switch (x)
     {
     case 0:     // LD R[z],rot/shift[y] (IX+d)      or rot/shift[y] (IX+d) (z == 6)
-        if (z == 6)
-        {
-            v = PEEK(MP);
-            CONTEND(MP, 1, 1);
-            z80GetRotateShift(y)(Z, &v);
-            POKE(MP, v);
-        }
-        else
-        {
-            r = z80GetReg(Z, z);
-            *r = PEEK(MP);
-            CONTEND(MP, 1, 1);
-            z80GetRotateShift(y)(Z, r);
-            POKE(MP, *r);
-        }
+        r = (z == 6) ? &v : z80GetReg(Z, z);
+        *r = PEEK(MP);
+        CONTEND(MP, 1, 1);
+        z80GetRotateShift(y)(Z, r);
+        POKE(MP, *r);
         break;
 
     case 1:     // BIT y,(IX+d)
@@ -790,9 +780,19 @@ void z80StepIndexCB(Z80* Z, i64* tState, Reg* idx)
         break;
 
     case 2:     // LD R[z],RES y,(IX+d)             or RES y,(IX+d)  (z == 6)
+        r = (z == 6) ? &v : z80GetReg(Z, z);
+        *r = PEEK(MP);
+        z80ResReg8(Z, r, y);
+        CONTEND(MP, 1, 1);
+        POKE(MP, *r);
         break;
 
     case 3:     // LD R[z],SET y,(IX+d)             or SET y,(IX+d)  (z == 6)
+        r = (z == 6) ? &v : z80GetReg(Z, z);
+        *r = PEEK(MP);
+        z80SetReg8(Z, r, y);
+        CONTEND(MP, 1, 1);
+        POKE(MP, *r);
         break;
     }
 }
@@ -1073,6 +1073,7 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
                 CONTEND(SP + 1, 1, 1);
                 POKE(SP + 1, IXH);
                 POKE(SP, IXL);
+                CONTEND(SP, 1, 2);
                 II = Z->m.r = t.r;
             }
             break;
@@ -1559,7 +1560,8 @@ void z80Step(Z80* Z, i64* tState)
             case 4:     // E3 - EX (SP),HL
                 tt = PEEK16(SP);
                 CONTEND(SP + 1, 1, 1);
-                POKE16(SP, HL);
+                POKE(SP + 1, H);
+                POKE(SP, L);
                 CONTEND(SP, 1, 2);
                 HL = tt;
                 MP = HL;
