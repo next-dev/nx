@@ -116,6 +116,7 @@ void ioOut(Io* io, u16 port, u8 data, i64* inOutTStates)
 u8 ioIn(Io* io, u16 port, i64* inOutTStates)
 {
     u8 x = 0;
+    bool ulaPort = K_BOOL((port & 1) == 0);
 
     if (memoryIsContended(io->memory, port))
     {
@@ -124,17 +125,6 @@ u8 ioIn(Io* io, u16 port, i64* inOutTStates)
     else
     {
         ++(*inOutTStates);
-    }
-
-    //
-    // Fetch the actual value from the port
-    //
-
-    bool ulaPort = K_BOOL((port & 1) == 0);
-    if (ulaPort)
-    {
-        // Deal with in $fe.
-        x = 0xff;
     }
 
 #if NX_RUN_TESTS
@@ -156,6 +146,15 @@ u8 ioIn(Io* io, u16 port, i64* inOutTStates)
         {
             *inOutTStates += 3;
         }
+    }
+
+    //
+    // Fetch the actual value from the port
+    //
+
+    if (ulaPort)
+    {
+        // Deal with in $fe.
     }
 
     return x;
