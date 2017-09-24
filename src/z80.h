@@ -982,6 +982,44 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
         break;
 
     case 3: // x = 3
+        switch (opCode)
+        {
+        case 0xcb:  // DDCB prefixes
+            break;
+
+        case 0xe1:  // POP IX
+            II = z80Pop(Z, tState);
+            break;
+
+        case 0xe3:  // EX (SP),IX
+            {
+                Reg t;
+                t.l = PEEK(SP);
+                t.h = PEEK(SP + 1);
+                CONTEND(SP + 1, 1, 1);
+                POKE(SP + 1, IXH);
+                POKE(SP, IXL);
+                II = Z->m.r = t.r;
+            }
+            break;
+
+        case 0xe5:  // PUSH IX
+            CONTEND(IR, 1, 1);
+            z80Push(Z, II, tState);
+            break;
+
+        case 0xe9:  // JP (IX)
+            PC = II;
+            break;
+
+        case 0xf9:  // LD SP,IX
+            CONTEND(IR, 1, 2);
+            SP = II;
+            break;
+
+        default:
+            goto invalid_instruction;
+        }
         break;
     }
 
