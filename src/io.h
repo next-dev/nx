@@ -85,10 +85,15 @@ void ioOut(Io* io, u16 port, u8 data, i64* inOutTStates)
     if (gResultsFile) fprintf(gResultsFile, "%5d PW %04x %02x\n", (int)*inOutTStates, port, data);
 #endif
 
+    //
+    // Send the value to the port
+    //
+
     bool ulaPort = K_BOOL((port & 1) == 0);
     if (ulaPort)
     {
         // Deal with out $fe.
+        io->border = data & 7;
     }
 
     if (ulaPort)
@@ -110,7 +115,50 @@ void ioOut(Io* io, u16 port, u8 data, i64* inOutTStates)
 
 u8 ioIn(Io* io, u16 port, i64* inOutTStates)
 {
-    return 0xff;
+    u8 x = 0;
+
+    if (memoryIsContended(io->memory, port))
+    {
+        ioContend(io, port, 1, 1, inOutTStates);
+    }
+    else
+    {
+        ++(*inOutTStates);
+    }
+
+    //
+    // Fetch the actual value from the port
+    //
+
+    bool ulaPort = K_BOOL((port & 1) == 0);
+    if (ulaPort)
+    {
+        // Deal with in $fe.
+        x = 0xff;
+    }
+
+#if NX_RUN_TESTS
+    x = HI(port);
+    if (gResultsFile) fprintf(gResultsFile, "%5d PR %04x %02x\n", (int)*inOutTStates, port, x);
+#endif
+
+    if (ulaPort)
+    {
+        ioContend(io, port, 3, 1, inOutTStates);
+    }
+    else
+    {
+        if (memoryIsContended(io->memory, port))
+        {
+            ioContend(io, port, 1, 3, inOutTStates);
+        }
+        else
+        {
+            *inOutTStates += 3;
+        }
+    }
+
+    return x;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -1163,15 +1163,16 @@ void z80Step(Z80* Z, i64* tState)
                 // #todo: I/O
                 d = PEEK(PC);
                 ioOut(Z->io, (u16)d | ((u16)A << 8), A, tState);
-                MP = (u16)(u8)(d + 1);
-                MP |= ((u16)A << 8);
+                Z->m.h = A;
+                Z->m.l = (u8)(d + 1);
                 ++PC;
                 break;
 
             case 3:     // DB - IN A,(n)        A <- $AAnn
                 d = PEEK(PC);
                 tt = ((u16)A << 8) | d;
-                MP = ((u16)A << 8) + d + 1;
+                Z->m.h = A;
+                Z->m.l = (u8)(d + 1);
                 A = ioIn(Z->io, tt, tState);
                 ++PC;
                 break;
