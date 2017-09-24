@@ -806,13 +806,13 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
                 {
                     // 23 - INC IX
                     CONTEND(IR, 1, 2);
-                    ++I;
+                    ++II;
                 }
                 else
                 {
                     // 2B - DEC IX
                     CONTEND(IR, 1, 2);
-                    --I;
+                    --II;
                 }
             }
             else goto invalid_instruction;
@@ -920,6 +920,7 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
                 case 5:     r2 = &IL;   break;  // 65/6D - LD IXH/IXL,IXL
                 case 6:
                     // 66/6E - LD H/L,(IX+d)
+                    r1 = z80GetReg(Z, y);
                     d = PEEK(PC);
                     CONTEND(PC, 1, 5);
                     ++PC;
@@ -949,6 +950,16 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
                 case 5:     // LD R,IXL
                     r2 = z == 4 ? &IH : &IL;
                     r1 = z80GetReg(Z, y);
+                    break;
+
+                case 6:     // LD R,(IX+d)
+                    r1 = z80GetReg(Z, y);
+                    d = PEEK(PC);
+                    CONTEND(PC, 1, 5);
+                    ++PC;
+                    MP = II + d;
+                    x = PEEK(MP);
+                    r2 = &x;
                     break;
 
                 default:
