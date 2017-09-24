@@ -1098,13 +1098,45 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
         break;
     }
 
+    return;
+
 invalid_instruction:
     return;
 }
 
 void z80StepED(Z80* Z, i64* tState)
 {
+    u8 x, y, z, p, q;
+    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
 
+    u8* r = 0;
+    u8 v = 0;
+
+    switch (x)
+    {
+    case 0:     // x = 0: 00-3F
+        goto invalid_instruction;
+
+    case 1:     // x = 1: 40-7F
+        switch (z)
+        {
+        case 0:
+            r = (y == 6) ? &v : z80GetReg(Z, y);
+            *r = ioIn(Z->io, BC, tState);
+        }
+        break;
+
+    case 2:     // x = 2: 80-BF
+        break;
+
+    case 3:     // x = 3: C0-FF
+        goto invalid_instruction;
+    }
+
+    return;
+
+invalid_instruction:
+    return;
 }
 
 void z80Step(Z80* Z, i64* tState)
