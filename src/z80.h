@@ -84,13 +84,6 @@ void z80Step(Z80* Z, i64* tState);
 
 #define MP      Z->m.r
 
-//----------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------------------
-
-#ifdef NX_IMPL
-
 // Flags
 #define F_CARRY     0x01
 #define F_NEG       0x02
@@ -100,6 +93,13 @@ void z80Step(Z80* Z, i64* tState);
 #define F_5         0x20
 #define F_ZERO      0x40
 #define F_SIGN      0x80
+
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+
+#ifdef NX_IMPL
 
 // These tables generated everytime z80Init() is called.  It doesn't matter if you generate them multiple times since
 // they never change.
@@ -727,6 +727,277 @@ u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q, i64* tState)
     return opCode;
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+// Basic opcode interpretation
+//----------------------------------------------------------------------------------------------------------------------
+
+#define II idx->r
+#define IH idx->h
+#define IL idx->l
+
+void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
+{
+    u8 x, y, z, p, q;
+    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
+
+    i8 d = 0;
+    u8 v = 0;
+    u16 tt = 0;
+    u8* r = 0;
+    u16* rr = 0;
+
+    switch (x)
+    {
+    case 0: // x = 0
+        switch (z)
+        {
+        case 1:
+            if (0 == q)
+            {
+                // 21 - LD IX,nn
+                if (2 == p)
+                {
+                    II = PEEK16(PC);
+                    PC += 2;
+                }
+                else goto invalid_instruction;
+            }
+            else
+            {
+                // 09 19 29 39 - ADD IX,BC/DE/IX/SP
+                CONTEND(IR, 1, 7);
+                MP = II + 1;
+                rr = z80GetReg16_1(Z, p);
+                rr = (rr == &HL) ? &II : rr;
+                z80AddReg16(Z, &II, rr);
+            }
+            break;
+
+        case 2:
+            if (2 == p)
+            {
+                if (0 == q)
+                {
+                    // 22 - LD (nn),IX
+                    tt = PEEK16(PC);
+                    POKE16(tt, II);
+                    MP = tt + 1;
+                    PC += 2;
+                }
+                else
+                {
+                    // 2A - LD IX,(nn)
+                    tt = PEEK16(PC);
+                    II = PEEK16(tt);
+                    PC += 2;
+                    MP = tt + 1;
+                }
+            }
+            else
+            {
+                goto invalid_instruction;
+            }
+            break;
+
+        case 3:
+            if (p == 2)
+            {
+                if (0 == q)
+                {
+                    // 23 - INC IX
+                    CONTEND(IR, 1, 2);
+                    ++I;
+                }
+                else
+                {
+                    // 2B - DEC IX
+                    CONTEND(IR, 1, 2);
+                    --I;
+                }
+            }
+            else goto invalid_instruction;
+            break;
+
+        case 4:
+            switch (y)
+            {
+            case 4: // 24 - INC IXH
+                z80IncReg(Z, &IH);
+                break;
+
+            case 5: // 2C - INC IXL
+                z80IncReg(Z, &IL);
+                break;
+
+            case 6: // 34 - INC (IX+d)
+                d = PEEK(PC);
+                CONTEND(PC, 1, 5);
+                ++PC;
+                MP = II + d;
+                d = PEEK(MP);
+                CONTEND(MP, 1, 1);
+                z80IncReg(Z, &d);
+                POKE(MP, d);
+                break;
+
+            default:
+                goto invalid_instruction;
+            }
+            break;
+
+        case 5:
+            switch (y)
+            {
+            case 4: // 25 - DEC IXH
+                z80DecReg(Z, &IH);
+                break;
+
+            case 5: // 2D - DEC IXL
+                z80DecReg(Z, &IL);
+                break;
+
+            case 6: // 35 - DEC (IX+d)
+                d = PEEK(PC);
+                CONTEND(PC, 1, 5);
+                ++PC;
+                MP = II + d;
+                d = PEEK(MP);
+                CONTEND(MP, 1, 1);
+                z80DecReg(Z, &d);
+                POKE(MP, d);
+                break;
+
+            default:
+                goto invalid_instruction;
+            }
+            break;
+
+        case 6: // z = 6
+            switch (y)
+            {
+            case 4: // 26 - LD IXH,n
+                IH = PEEK(PC++);
+                break;
+
+            case 5: // 2E - LD IXL,n
+                IL = PEEK(PC++);
+                break;
+
+            case 6: // 36 - LD (IX+d),n
+                d = PEEK(PC++);
+                v = PEEK(PC);
+                CONTEND(PC, 1, 2);
+                ++PC;
+                MP = II + d;
+                POKE(MP, v);
+                break;
+
+            default:
+                goto invalid_instruction;
+            }
+            break;
+
+        default:
+            goto invalid_instruction;
+        } // switch(z), x = 0
+        break;
+
+    case 1: // x = 1
+        // LD R,R
+        if (y != 6 || z != 6)
+        {
+            u8* r1 = 0;
+            u8* r2 = 0;
+
+            switch (y)
+            {
+            case 4:     // LD IXH,R
+            case 5:     // LD IXL,R
+                r1 = y == 4 ? &IH : &IL;
+                switch (z)
+                {
+                case 4:     r2 = &IH;   break;  // 64/6C - LD IXH/IXL,IXH
+                case 5:     r2 = &IL;   break;  // 65/6D - LD IXH/IXL,IXL
+                case 6:
+                    // 66/6E - LD H/L,(IX+d)
+                    d = PEEK(PC);
+                    CONTEND(PC, 1, 5);
+                    ++PC;
+                    MP = II + d;
+                    x = PEEK(MP);
+                    r2 = &x;
+                    break;
+
+                default:
+                    // LD IXH,R
+                    r2 = z80GetReg(Z, z);
+                }
+                break;
+
+            case 6:     // LD (IX+d),R
+                d = PEEK(PC);
+                CONTEND(PC, 1, 5);
+                ++PC;
+                MP = II + d;
+                POKE(MP, *z80GetReg(Z, y));
+                break;
+
+            default:
+                switch (z)
+                {
+                case 4:     // LD R,IXH
+                case 5:     // LD R,IXL
+                    r2 = z == 4 ? &IH : &IL;
+                    r1 = z80GetReg(Z, y);
+                    break;
+
+                default:
+                    goto invalid_instruction;
+                }
+            }
+            if (r1) *r1 = *r2;
+        }
+        else goto invalid_instruction;
+        break;
+
+    case 2: // x = 2
+        switch (z)
+        {
+        case 4: r = &IH; break;
+        case 5: r = &IL; break;
+        case 6:
+            d = PEEK(PC);
+            CONTEND(PC, 1, 5);
+            ++PC;
+            MP = II + d;
+            v = PEEK(MP);
+            r = &v;
+            break;
+
+        default:
+            goto invalid_instruction;
+        }
+
+        z80GetAlu(y)(Z, r);
+        break;
+
+    case 3: // x = 3
+        break;
+    }
+
+    return;
+
+invalid_instruction:
+    --PC;
+    --R;
+    z80Step(Z, tState);
+}
+
+void z80StepED(Z80* Z, i64* tState)
+{
+
+}
+
 void z80Step(Z80* Z, i64* tState)
 {
     u8 x, y, z, p, q;
@@ -1241,12 +1512,15 @@ void z80Step(Z80* Z, i64* tState)
                     break;
 
                 case 1:     // DD - IX prefix
+                    z80StepIndex(Z, tState, &Z->ix);
                     break;
 
                 case 2:     // ED - extensions prefix
+                    z80StepED(Z, tState);
                     break;
 
                 case 3:     // FD - IY prefix
+                    z80StepIndex(Z, tState, &Z->iy);
                     break;
                 }
             }
@@ -1277,14 +1551,9 @@ void z80Step(Z80* Z, i64* tState)
 #undef POKE16
 #undef CONTEND
 
-#undef F_CARRY
-#undef F_NEG
-#undef F_PARITY
-#undef F_3
-#undef F_HALF
-#undef F_5
-#undef F_ZERO
-#undef F_SIGN
+#undef I
+#undef IH
+#undef IL
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
