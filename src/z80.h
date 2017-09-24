@@ -67,6 +67,10 @@ void z80Step(Z80* Z, i64* tState);
 #define I       Z->ir.h
 #define R       Z->ir.l
 
+#define IFF1    Z->iff1
+#define IFF2    Z->iff2
+#define IM      Z->im
+
 #define AF      Z->af.r
 #define BC      Z->bc.r
 #define DE      Z->de.r
@@ -253,6 +257,7 @@ void z80AdcReg16(Z80* Z, u16* r)
     // C: Carry from bit 15
     u32 t = (u32)HL + (u32)*r + (F & F_CARRY);
     u8 x = (u8)(((HL & 0x8800) >> 11) | ((*r & 0x8800) >> 10) | ((t & 0x8800) >> 9));
+    MP = HL + 1;
     HL = (u16)t;
     F = ((t & 0x10000) ? F_CARRY : 0) | kOverflowAdd[x >> 4] | (H & (F_3 | F_5 | F_SIGN)) | kHalfCarryAdd[x & 0x07] |
         (HL ? 0 : F_ZERO);
@@ -311,6 +316,7 @@ void z80SbcReg16(Z80* Z, u16* r)
     // C: Set if borrowed
     u32 t = (u32)HL - *r - (F & F_CARRY);
     u8 x = (u8)(((HL & 0x8800) >> 11) | ((*r & 0x8800) >> 10) | ((t & 0x8800) >> 9));
+    MP = HL + 1;
     HL = (u16)t;
     F = ((t & 0x10000) ? F_CARRY : 0) | F_NEG | kOverflowSub[x >> 4] | (H & (F_3 | F_5 | F_SIGN))
         | kHalfCarrySub[x & 0x07] | (HL ? 0 : F_ZERO);
@@ -1122,7 +1128,120 @@ void z80StepED(Z80* Z, i64* tState)
         {
         case 0:
             r = (y == 6) ? &v : z80GetReg(Z, y);
+            MP = BC + 1;
             *r = ioIn(Z->io, BC, tState);
+            F = (F & F_CARRY) | gSZ53P[*r];
+            break;
+
+        case 1:
+            v = 0;
+            r = (y == 6) ? &v : z80GetReg(Z, y);
+            ioOut(Z->io, BC, *r, tState);
+            MP = BC + 1;
+            break;
+
+        case 2:
+            if (0 == q)
+            {
+                // SBC HL,RR
+                CONTEND(IR, 1, 7);
+                z80SbcReg16(Z, z80GetReg16_1(Z, p));
+            }
+            else
+            {
+                // ADC HL,RR
+                CONTEND(IR, 1, 7);
+                z80AdcReg16(Z, z80GetReg16_1(Z, p));
+            }
+            break;
+
+        case 3:
+            if (0 == q)
+            {
+                // LD (nn),RR
+                u16 tt = PEEK16(PC);
+                u16* rr = z80GetReg16_1(Z, p);
+                PC += 2;
+                POKE16(tt, *rr);
+                MP = tt + 1;
+            }
+            else
+            {
+                // LD RR,(nn)
+                u16 tt = PEEK16(PC);
+                u16* rr = z80GetReg16_1(Z, p);
+                PC += 2;
+                *rr = PEEK16(tt);
+                MP = tt + 1;
+            }
+            break;
+
+        case 4:
+            v = A;
+            A = 0;
+            z80SubReg8(Z, &v);
+            break;
+
+        case 5:
+            IFF1 = IFF2;
+            PC = z80Pop(Z, tState);
+            MP = PC;
+            break;
+
+        case 6:
+            y &= 3;
+            IM = (y == 0) ? 0 : y - 1;
+            break;
+
+        case 7:
+            switch (y)
+            {
+            case 0: // LD I,A
+                CONTEND(IR, 1, 1);
+                I = A;
+                break;
+
+            case 1: // LD R,A
+                CONTEND(IR, 1, 1);
+                R = A;
+                break;
+
+            case 2: // LD A,I
+                CONTEND(IR, 1, 1);
+                A = I;
+                F = (F & F_CARRY) | gSZ53[A] | (IFF2 ? F_PARITY : 0);
+                // #todo: handle IFF2 event
+                break;
+
+            case 3: // LD A,R
+                CONTEND(IR, 1, 1);
+                A = R;
+                F = (F & F_CARRY) | gSZ53[A] | (IFF2 ? F_PARITY : 0);
+                break;
+
+            case 4: // RRD
+                v = PEEK(HL);
+                CONTEND(HL, 1, 4);
+                POKE(HL, (A << 4) | (v >> 4));
+                A = (A & 0xf0) | (v & 0x0f);
+                F = (F & F_CARRY) | gSZ53P[A];
+                MP = HL + 1;
+                break;
+
+            case 5: // RLD
+                v = PEEK(HL);
+                CONTEND(HL, 1, 4);
+                POKE(HL, (v << 4) | (A & 0x0f));
+                A = (A & 0xf0) | (v >> 4);
+                F = (F & F_CARRY) | gSZ53P[A];
+                MP = HL + 1;
+                break;
+
+            case 6:
+            case 7: // NOP
+                break;
+            }
+            break;
         }
         break;
 
@@ -1572,7 +1691,6 @@ void z80Step(Z80* Z, i64* tState)
                 break;
 
             case 2:     // D3 - OUT (n),A       A -> $AAnn
-                // #todo: I/O
                 d = PEEK(PC);
                 ioOut(Z->io, (u16)d | ((u16)A << 8), A, tState);
                 Z->m.h = A;

@@ -248,10 +248,10 @@ void memoryReset(Memory* mem, u32 x)
 {
     for (int i = 0; i < KB(64); i += 4)
     {
-        mem->memory[0] = (u8)((x & 0xff000000) >> 24);
-        mem->memory[1] = (u8)((x & 0x00ff0000) >> 16);
-        mem->memory[2] = (u8)((x & 0x0000ff00) >> 8);
-        mem->memory[3] = (u8)((x & 0x000000ff) >> 0);
+        mem->memory[i+0] = (u8)((x & 0xff000000) >> 24);
+        mem->memory[i+1] = (u8)((x & 0x00ff0000) >> 16);
+        mem->memory[i+2] = (u8)((x & 0x0000ff00) >> 8);
+        mem->memory[i+3] = (u8)((x & 0x000000ff) >> 0);
     }
 }
 
