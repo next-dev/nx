@@ -1163,7 +1163,8 @@ void z80Step(Z80* Z, i64* tState)
                 // #todo: I/O
                 d = PEEK(PC);
                 ioOut(Z->io, (u16)d | ((u16)A << 8), A, tState);
-                MP = ((u16)(d + 1)) | ((u16)A << 8);
+                MP = (u16)(u8)(d + 1);
+                MP |= ((u16)A << 8);
                 ++PC;
                 break;
 
