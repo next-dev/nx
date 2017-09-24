@@ -783,7 +783,10 @@ void z80StepIndexCB(Z80* Z, i64* tState, Reg* idx)
         }
         break;
 
-    case 1:     // BIT y,R[z]
+    case 1:     // BIT y,(IX+d)
+        v = PEEK(MP);
+        CONTEND(MP, 1, 1);
+        z80BitReg8_MP(Z, &v, y);
         break;
 
     case 2:     // LD R[z],RES y,(IX+d)             or RES y,(IX+d)  (z == 6)
