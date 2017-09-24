@@ -735,6 +735,65 @@ u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q, i64* tState)
 #define IH idx->h
 #define IL idx->l
 
+void z80StepIndexCB(Z80* Z, i64* tState, Reg* idx)
+{
+    u8 x, y, z;
+    u8 opCode;
+
+    CONTEND(PC, 3, 1);
+    MP = II + (i8)memoryPeekNoContend(Z->mem, PC
+#if NX_RUN_TESTS
+        , *tState
+#endif
+    );
+    ++PC;
+    CONTEND(PC, 3, 1);
+    opCode = memoryPeekNoContend(Z->mem, PC
+#if NX_RUN_TESTS
+        , *tState
+#endif
+    );
+    CONTEND(PC, 1, 2);
+    ++PC;
+
+    x = (opCode & 0xc0) >> 6;
+    y = (opCode & 0x38) >> 3;
+    z = (opCode & 0x07);
+
+    u8* r = 0;
+    u8 v = 0;
+
+    switch (x)
+    {
+    case 0:     // LD R[z],rot/shift[y] (IX+d)      or rot/shift[y] (IX+d) (z == 6)
+        if (z == 6)
+        {
+            v = PEEK(MP);
+            CONTEND(MP, 1, 1);
+            z80GetRotateShift(y)(Z, &v);
+            POKE(MP, v);
+        }
+        else
+        {
+            r = z80GetReg(Z, z);
+            *r = PEEK(MP);
+            CONTEND(MP, 1, 1);
+            z80GetRotateShift(y)(Z, r);
+            POKE(MP, *r);
+        }
+        break;
+
+    case 1:     // BIT y,R[z]
+        break;
+
+    case 2:     // LD R[z],RES y,(IX+d)             or RES y,(IX+d)  (z == 6)
+        break;
+
+    case 3:     // LD R[z],SET y,(IX+d)             or SET y,(IX+d)  (z == 6)
+        break;
+    }
+}
+
 void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
 {
     u8 x, y, z, p, q;
@@ -996,6 +1055,7 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
         switch (opCode)
         {
         case 0xcb:  // DDCB prefixes
+            z80StepIndexCB(Z, tState, idx);
             break;
 
         case 0xe1:  // POP IX
