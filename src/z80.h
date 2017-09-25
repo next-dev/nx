@@ -1319,6 +1319,68 @@ void z80StepED(Z80* Z, i64* tState)
             }
             break;
 
+        case 0xa8:  // LDD
+            v = PEEK(HL);
+            --BC;
+            POKE(DE, v);
+            CONTEND(DE, 1, 2);
+            --DE;
+            --HL;
+            v += A;
+            F = (F & (F_CARRY | F_ZERO | F_SIGN)) | (BC ? F_PARITY : 0) |
+                (v & F_3) | ((v & 0x02) ? F_5 : 0);
+            break;
+
+        case 0xa9:  // CPD
+            {
+                v = PEEK(HL);
+                u8 t = A - v;
+                u8 lookup = ((A & 0x08) >> 3) | ((v & 0x08) >> 2) | ((t & 0x08) >> 1);
+                CONTEND(HL, 1, 5);
+                --HL;
+                --BC;
+                F = (F & F_CARRY) | (BC ? (F_PARITY | F_NEG) : F_NEG) |
+                    kHalfCarrySub[lookup] | (t ? 0 : F_ZERO) | (t & F_SIGN);
+                if (F & F_HALF) --t;
+                F |= (t & F_3) | ((t & 0x02) ? F_5 : 0);
+                --MP;
+            }
+            break;
+
+        case 0xaa:  // IND
+            {
+                u8 t1, t2;
+                CONTEND(IR, 1, 1);
+                t1 = ioIn(Z->io, BC, tState);
+                POKE(HL, t1);
+                MP = BC - 1;
+                --B;
+                --HL;
+                t2 = t1 + C - 1;
+                F = (t1 & 0x80 ? F_NEG : 0) |
+                    ((t2 < t1) ? F_HALF | F_CARRY : 0) |
+                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    gSZ53[B];
+            }
+            break;
+
+        case 0xab:  // OUTD
+            {
+                u8 t1, t2;
+                CONTEND(IR, 1, 1);
+                t1 = PEEK(HL);
+                --B;
+                MP = BC - 1;
+                ioOut(Z->io, BC, t1, tState);
+                --HL;
+                t2 = t1 + L;
+                F = (t1 & 0x80 ? F_NEG : 0) |
+                    ((t2 < t1) ? F_HALF | F_CARRY : 0) |
+                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    gSZ53[B];
+            }
+            break;
+
         default:
             goto invalid_instruction;
         }
