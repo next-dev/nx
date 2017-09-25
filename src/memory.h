@@ -255,6 +255,8 @@ void memoryReset(Memory* mem, u32 x)
     }
 }
 
+#if NX_RUN_TESTS
+
 void memorySnapshot(Memory* original, Memory* copy)
 {
     copy->memory = K_ALLOC(KB(64));
@@ -280,6 +282,8 @@ void memoryDiff(Memory* snapshot, Memory* actual)
 
     K_FREE(snapshot->memory, KB(64));
 }
+
+#endif // NX_RUN_TESTS
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

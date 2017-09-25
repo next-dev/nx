@@ -5,7 +5,7 @@
 #pragma once
 
 // Define to YES to switch on the Z80 core test, otherwise set to NO.
-#define NX_RUN_TESTS        YES
+#define NX_RUN_TESTS        NO
 
 // Define to break on a test
 //#define NX_DEBUG_TEST       "02"
