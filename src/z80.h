@@ -704,7 +704,16 @@ RotShiftFunc z80GetRotateShift(u8 y)
 #define POKE16(a, w) memoryPoke16(Z->mem, (a), (w), tState)
 #define CONTEND(a, t, n) memoryContend(Z->mem, (a), (t), (n), tState)
 
-u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q, i64* tState)
+void z80DecodeInstruction(u8 opCode, u8* x, u8* y, u8* z, u8* p, u8* q)
+{
+    *x = (opCode & 0xc0) >> 6;
+    *y = (opCode & 0x38) >> 3;
+    *z = (opCode & 0x07);
+    *p = (*y & 6) >> 1;
+    *q = (*y & 1);
+}
+
+u8 z80FetchInstruction(Z80* Z, i64* tState)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
     //
@@ -725,11 +734,6 @@ u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q, i64* tState)
 #else
     u8 opCode = memoryPeekNoContend(Z->mem, PC++);
 #endif
-    *x = (opCode & 0xc0) >> 6;
-    *y = (opCode & 0x38) >> 3;
-    *z = (opCode & 0x07);
-    *p = (*y & 6) >> 1;
-    *q = (*y & 1);
     return opCode;
 }
 
@@ -740,6 +744,8 @@ u8 z80FetchInstruction(Z80* Z, u8* x, u8* y, u8* z, u8* p, u8* q, i64* tState)
 #define II idx->r
 #define IH idx->h
 #define IL idx->l
+
+void z80Execute(Z80* Z, i64* tState, u8 opCode);
 
 void z80StepIndexCB(Z80* Z, i64* tState, Reg* idx)
 {
@@ -806,7 +812,8 @@ void z80StepIndexCB(Z80* Z, i64* tState, Reg* idx)
 void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
 {
     u8 x, y, z, p, q;
-    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
+    u8 opCode = z80FetchInstruction(Z, tState);
+    z80DecodeInstruction(opCode, &x, &y, &z, &p, &q);
 
     i8 d = 0;
     u8 v = 0;
@@ -1107,13 +1114,15 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
     return;
 
 invalid_instruction:
+    z80Execute(Z, tState, opCode);
     return;
 }
 
 void z80StepED(Z80* Z, i64* tState)
 {
     u8 x, y, z, p, q;
-    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
+    u8 opCode = z80FetchInstruction(Z, tState);
+    z80DecodeInstruction(opCode, &x, &y, &z, &p, &q);
 
     u8* r = 0;
     u8 v = 0;
@@ -1246,6 +1255,15 @@ void z80StepED(Z80* Z, i64* tState)
         break;
 
     case 2:     // x = 2: 80-BF
+        if (z <= 3)
+        {
+            if (y >= 4)
+            {
+
+            }
+            else goto invalid_instruction;
+        }
+        else goto invalid_instruction;
         break;
 
     case 3:     // x = 3: C0-FF
@@ -1255,13 +1273,14 @@ void z80StepED(Z80* Z, i64* tState)
     return;
 
 invalid_instruction:
+    z80Execute(Z, tState, opCode);
     return;
 }
 
-void z80Step(Z80* Z, i64* tState)
+void z80Execute(Z80* Z, i64* tState, u8 opCode)
 {
     u8 x, y, z, p, q;
-    u8 opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
+    z80DecodeInstruction(opCode, &x, &y, &z, &p, &q);
 
     // Commonly used local variables
     u8 d = 0;       // Used for displacement
@@ -1624,7 +1643,9 @@ void z80Step(Z80* Z, i64* tState)
                 break;
 
             case 1:     // CB (prefix)
-                opCode = z80FetchInstruction(Z, &x, &y, &z, &p, &q, tState);
+                opCode = z80FetchInstruction(Z, tState);
+                z80DecodeInstruction(opCode, &x, &y, &z, &p, &q);
+
                 switch (x)
                 {
                 case 0:     // 00-3F: Rotate/Shift instructions
@@ -1803,6 +1824,12 @@ void z80Step(Z80* Z, i64* tState)
         }
         break; // x == 3
     } // switch(x)
+}
+
+void z80Step(Z80* Z, i64* tState)
+{
+    u8 opCode = z80FetchInstruction(Z, tState);
+    z80Execute(Z, tState, opCode);
 }
 
 #undef PEEK
