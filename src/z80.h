@@ -1084,8 +1084,8 @@ void z80StepIndex(Z80* Z, i64* tState, Reg* idx)
                 t.l = PEEK(SP);
                 t.h = PEEK(SP + 1);
                 CONTEND(SP + 1, 1, 1);
-                POKE(SP + 1, IXH);
-                POKE(SP, IXL);
+                POKE(SP + 1, IH);
+                POKE(SP, IL);
                 CONTEND(SP, 1, 2);
                 II = Z->m.r = t.r;
             }
@@ -1907,7 +1907,7 @@ void z80Execute(Z80* Z, i64* tState, u8 opCode)
                     break;
 
                 case 3:     // F9 - LD SP, HL
-                    CONTEND(IR, 1, 1);
+                    CONTEND(IR, 1, 2);
                     SP = HL;
                     break;
                 }

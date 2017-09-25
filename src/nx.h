@@ -197,7 +197,7 @@ void testCompare()
             printf("\033[31;1mERROR: Invalid test output!\033[0m\n");
         }
         end += 2;
-        if (end >= rb.size)
+        if (end > rb.size)
         {
             printf("\033[31;1m[FAIL] %s!\033[0m\n", name);
             stringRelease(name);
