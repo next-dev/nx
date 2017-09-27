@@ -113,7 +113,7 @@ void videoRenderULA(Video* video, bool flash)
                     u32 ink = 0xff000000 + colours[(attr & 7) + ((attr & 0x40) >> 3)];
                     u32 paper = 0xff000000 + colours[(attr & 0x7f) >> 3];
 
-                    if (flash & (attr & 0x80))
+                    if (flash && (attr & 0x80))
                     {
                         u32 t = ink;
                         ink = paper;

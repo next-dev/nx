@@ -34,6 +34,9 @@ void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates);
 // tState counter according to contention.
 void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates);
 
+// Write values into memory at an absolute value.  No contention, no ROM protection.
+void memoryWrite(Memory* mem, u16 address, u8 b);
+
 // As memoryPoke but without normal 3-tStates with contention
 #if NX_RUN_TESTS
 void memoryPokeNoContend(Memory* mem, u16 address, u8 b, i64 tStates);
@@ -203,6 +206,11 @@ void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates)
 #else
     memoryPokeNoContend(mem, address, b);
 #endif
+}
+
+void memoryWrite(Memory* mem, u16 address, u8 b)
+{
+    mem->memory[address] = b;
 }
 
 void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates)
