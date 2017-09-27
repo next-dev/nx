@@ -68,7 +68,7 @@ bool machineTestEvent(Machine* M, i64* inOutTState);
 
 #include <kore/k_blob.h>
 
-MACHINE_EVENT(machineInterrupt)
+MACHINE_EVENT(machineFrame)
 {
     machineAddEvent(M, 69888, &machineFrame, "frame");
     *inOutTState -= 69888;
