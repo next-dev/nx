@@ -19,6 +19,7 @@ typedef struct
 {
     i64         tState;
     EventFunc   eventFunc;
+    const char* name;
 }
 Event;
 
@@ -48,7 +49,7 @@ i64 machineUpdate(Machine* M, i64* tState);
 // occurs machineUpdate will return if the event function returns NO.
 
 // Add a new event
-void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc);
+void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc, const char* name);
 
 // Test for an event for a given t-state.  If there is no event, YES is returned.  Otherwise the event handler
 // is called and the result of that handler is returned.
@@ -69,7 +70,7 @@ bool machineTestEvent(Machine* M, i64* inOutTState);
 
 MACHINE_EVENT(machineInterrupt)
 {
-    machineAddEvent(M, 69888, &machineInterrupt);
+    machineAddEvent(M, 69888, &machineFrame, "frame");
     *inOutTState -= 69888;
     videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
     M->redraw = YES;
@@ -96,7 +97,7 @@ bool machineOpen(Machine* M, u32* img)
     }
 
     // Initial events
-    machineAddEvent(M, 69888, &machineInterrupt);
+    machineAddEvent(M, 69888, &machineFrame, "frame");
 
     return YES;
 
@@ -127,11 +128,16 @@ i64 machineUpdate(Machine* M, i64* tState)
     return elapsedTStates;
 }
 
-void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc)
+void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc, const char* name)
 {
+#if NX_DEBUG_EVENTS
+    printf("Add Event: (%d) %s\n", (int)tState, name);
+#endif
+
     Event* e = arrayExpand(M->events, 1);
     e->tState = tState;
     e->eventFunc = eventFunc;
+    e->name = name;
 
     // Sort the array
     i64 size = arrayCount(M->events);
@@ -164,6 +170,10 @@ bool machineTestEvent(Machine* M, i64* inOutTState)
         if (M->events[0].tState <= tState)
         {
             // We need to run this event.
+#if NX_DEBUG_EVENTS
+            printf("\033[33;1mRun Event: (%d) %s\033[0m\n", (int)tState, M->events[0].name);
+#endif
+
             if (!M->events[0].eventFunc(M, inOutTState)) result = NO;
             if (*inOutTState < tState)
             {

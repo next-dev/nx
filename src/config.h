@@ -13,3 +13,5 @@
 // Define to output to console instead of file for tests
 //#define NX_TEST_OUTPUT_TO_CONSOLE
 
+// Set to YES to debug events
+#define NX_DEBUG_EVENTS     NO

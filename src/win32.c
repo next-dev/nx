@@ -43,6 +43,10 @@ int kmain(int argc, char** argv)
 {
     debugBreakOnAlloc(0);
 
+#if NX_DEBUG_EVENTS
+    windowConsole();
+#endif
+
     // Step 1: Initialise the NX system with the platform specific callbacks.
     Nx N;
     u32* img = K_ALLOC(NX_WINDOW_WIDTH * NX_WINDOW_HEIGHT * sizeof(u32));
