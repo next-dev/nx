@@ -41,26 +41,24 @@ typedef struct
     bool        iff1;
     bool        iff2;
     int         im;
-    i64         interruptsAt;       // T-states when interrupts are enabled
+    bool        interrupt;      // Set to YES when interrupt is supposed to be triggered.
+    bool        nmi;            // Set to YES when nmi occurs.
+    bool        eiHappened;     // Set to YES when EI is called.  This stops the interrupt occurring for at least one
+                                // instruction afterwards.
 }
 Z80;
-
-// Z80 events
-typedef struct
-{
-    enum {
-        ZE_None,
-        ZE_EnabledInterrupts,
-    } event;
-    i64 timeStamp;
-}
-Z80Event;
 
 // Initialise the internal tables and data structure.
 void z80Init(Z80* Z, Memory* mem, Io* io);
 
 // Run a single opcode
-Z80Event z80Step(Z80* Z, i64* tState);
+void z80Step(Z80* Z, i64* tState);
+
+// Trigger a software interrupt.
+void z80Interrupt(Z80* Z);
+
+// Trigger a NMI.
+void z80Nmi(Z80* Z);
 
 // Convenient register accesses that relies on the Z80 structure variable being called Z.
 #define A       Z->af.h
@@ -155,7 +153,6 @@ void z80Init(Z80* Z, Memory* mem, Io* io)
     memoryClear(Z, sizeof(*Z));
     Z->mem = mem;
     Z->io = io;
-    Z->interruptsAt = -1;
 
     for (int i = 0; i < 256; ++i)
     {
@@ -757,7 +754,7 @@ u8 z80FetchInstruction(Z80* Z, i64* tState)
 #define IH idx->h
 #define IL idx->l
 
-Z80Event z80Execute(Z80* Z, i64* tState, u8 opCode);
+void z80Execute(Z80* Z, i64* tState, u8 opCode);
 
 void z80StepIndexCB(Z80* Z, i64* tState, Reg* idx)
 {
@@ -1583,10 +1580,9 @@ invalid_instruction:
     return;
 }
 
-Z80Event z80Execute(Z80* Z, i64* tState, u8 opCode)
+void z80Execute(Z80* Z, i64* tState, u8 opCode)
 {
     u8 x, y, z, p, q;
-    Z80Event ev = { ZE_None, 0 };
     z80DecodeInstruction(opCode, &x, &y, &z, &p, &q);
 
     // Commonly used local variables
@@ -2059,9 +2055,7 @@ Z80Event z80Execute(Z80* Z, i64* tState, u8 opCode)
             case 7:     // FB - EI
                 IFF1 = YES;
                 IFF2 = YES;
-                Z->interruptsAt = *tState;
-                ev.timeStamp = *tState + 1;
-                ev.event = ZE_EnabledInterrupts;
+                Z->eiHappened = YES;
                 break;
             }
             break;  // x, z = (3, 3)
@@ -2133,14 +2127,53 @@ Z80Event z80Execute(Z80* Z, i64* tState, u8 opCode)
         }
         break; // x == 3
     } // switch(x)
-
-    return ev;
 }
 
-Z80Event z80Step(Z80* Z, i64* tState)
+void z80Step(Z80* Z, i64* tState)
 {
+    K_ASSERT(*tState >= 0);
+    if (IFF1 && /*(*tState < 32)*/ Z->interrupt && !Z->eiHappened)
+    {
+        IFF1 = NO;
+        IFF2 = NO;
+
+        if (Z->halt)
+        {
+            Z->halt = NO;
+            ++PC;
+        }
+
+        if (Z->im < 2)
+        {
+            z80Push(Z, PC, tState);
+            *tState += 7;
+            PC = 0x0038;
+        }
+        else
+        {
+            u16 p = (I << 8) | 0xff;
+            z80Push(Z, PC, tState);
+            PC = memoryPeek16(Z->mem, p, tState);
+            *tState += 7;
+        }
+        MP = PC;
+        Z->interrupt = NO;
+    }
+    Z->eiHappened = NO;
+    Z->nmi = NO;
+
     u8 opCode = z80FetchInstruction(Z, tState);
-    return z80Execute(Z, tState, opCode);
+    z80Execute(Z, tState, opCode);
+}
+
+void z80Interrupt(Z80* Z)
+{
+    Z->interrupt = YES;
+}
+
+void z80Nmi(Z80* Z)
+{
+    Z->nmi = YES;
 }
 
 #undef PEEK

@@ -74,6 +74,7 @@ MACHINE_EVENT(machineFrame)
     *inOutTState -= 69888;
     videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
     M->redraw = YES;
+    z80Interrupt(&M->z80);
     return NO;
 }
 
@@ -175,15 +176,6 @@ bool machineTestEvent(Machine* M, i64* inOutTState)
 #endif
 
             if (!M->events[0].eventFunc(M, inOutTState)) result = NO;
-            if (*inOutTState < tState)
-            {
-                // We've gone back in time.  Process the following events
-                i64 diff = *inOutTState - tState;
-                for (int i = 1; i < arrayCount(M->events); ++i)
-                {
-                    M->events[i].tState += diff;
-                }
-            }
 
             // Remove this event
             arrayDelete(M->events, 0);
