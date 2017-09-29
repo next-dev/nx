@@ -41,57 +41,69 @@
 
 void key(Nx* N, u8 vkCode, bool down)
 {
-    int key = K_COUNT;
+    int key1 = K_COUNT;
+    int key2 = K_COUNT;
 
     switch (vkCode)
     {
-    case '1':           key = K_1;          break;
-    case '2':           key = K_2;          break;
-    case '3':           key = K_3;          break;
-    case '4':           key = K_4;          break;
-    case '5':           key = K_5;          break;
-    case '6':           key = K_6;          break;
-    case '7':           key = K_7;          break;
-    case '8':           key = K_8;          break;
-    case '9':           key = K_9;          break;
-    case '0':           key = K_0;          break;
+    case '1':           key1 = K_1;         break;
+    case '2':           key1 = K_2;         break;
+    case '3':           key1 = K_3;         break;
+    case '4':           key1 = K_4;         break;
+    case '5':           key1 = K_5;         break;
+    case '6':           key1 = K_6;         break;
+    case '7':           key1 = K_7;         break;
+    case '8':           key1 = K_8;         break;
+    case '9':           key1 = K_9;         break;
+    case '0':           key1 = K_0;         break;
 
-    case 'A':           key = K_A;          break;
-    case 'B':           key = K_B;          break;
-    case 'C':           key = K_C;          break;
-    case 'D':           key = K_D;          break;
-    case 'E':           key = K_E;          break;
-    case 'F':           key = K_F;          break;
-    case 'G':           key = K_G;          break;
-    case 'H':           key = K_H;          break;
-    case 'I':           key = K_I;          break;
-    case 'J':           key = K_J;          break;
-    case 'K':           key = K_K;          break;
-    case 'L':           key = K_L;          break;
-    case 'M':           key = K_M;          break;
-    case 'N':           key = K_N;          break;
-    case 'O':           key = K_O;          break;
-    case 'P':           key = K_P;          break;
-    case 'Q':           key = K_Q;          break;
-    case 'R':           key = K_R;          break;
-    case 'S':           key = K_S;          break;
-    case 'T':           key = K_T;          break;
-    case 'U':           key = K_U;          break;
-    case 'V':           key = K_V;          break;
-    case 'W':           key = K_W;          break;
-    case 'X':           key = K_X;          break;
-    case 'Y':           key = K_Y;          break;
-    case 'Z':           key = K_Z;          break;
+    case 'A':           key1 = K_A;         break;
+    case 'B':           key1 = K_B;         break;
+    case 'C':           key1 = K_C;         break;
+    case 'D':           key1 = K_D;         break;
+    case 'E':           key1 = K_E;         break;
+    case 'F':           key1 = K_F;         break;
+    case 'G':           key1 = K_G;         break;
+    case 'H':           key1 = K_H;         break;
+    case 'I':           key1 = K_I;         break;
+    case 'J':           key1 = K_J;         break;
+    case 'K':           key1 = K_K;         break;
+    case 'L':           key1 = K_L;         break;
+    case 'M':           key1 = K_M;         break;
+    case 'N':           key1 = K_N;         break;
+    case 'O':           key1 = K_O;         break;
+    case 'P':           key1 = K_P;         break;
+    case 'Q':           key1 = K_Q;         break;
+    case 'R':           key1 = K_R;         break;
+    case 'S':           key1 = K_S;         break;
+    case 'T':           key1 = K_T;         break;
+    case 'U':           key1 = K_U;         break;
+    case 'V':           key1 = K_V;         break;
+    case 'W':           key1 = K_W;         break;
+    case 'X':           key1 = K_X;         break;
+    case 'Y':           key1 = K_Y;         break;
+    case 'Z':           key1 = K_Z;         break;
 
-    case VK_SHIFT:      key = K_Shift;      break;
-    case VK_CONTROL:    key = K_SymShift;   break;
-    case VK_RETURN:     key = K_Enter;      break;
-    case VK_SPACE:      key = K_Space;      break;
+    case VK_SHIFT:      key1 = K_Shift;     break;
+    case VK_CONTROL:    key1 = K_SymShift;  break;
+    case VK_RETURN:     key1 = K_Enter;     break;
+    case VK_SPACE:      key1 = K_Space;     break;
+
+    case VK_BACK:       key1 = K_Shift;     key2 = K_0;         break;
+    case VK_ESCAPE:     key1 = K_Shift;     key2 = K_Space;     break;
+    case VK_LEFT:       key1 = K_Shift;     key2 = K_5;         break;
+    case VK_DOWN:       key1 = K_Shift;     key2 = K_6;         break;
+    case VK_UP:         key1 = K_Shift;     key2 = K_7;         break;
+    case VK_RIGHT:      key1 = K_Shift;     key2 = K_8;         break;
     }
 
-    if (key < K_COUNT)
+    if (key1 < K_COUNT)
     {
-        N->keys[key] = down;
+        N->keys[key1] = down ? 1 : 0;
+    }
+    if (key2 < K_COUNT)
+    {
+        N->keys[key2] = down ? 1 : 0;
     }
 }
 
