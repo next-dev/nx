@@ -95,6 +95,13 @@ void key(Nx* N, u8 vkCode, bool down)
     case VK_DOWN:       key1 = K_Shift;     key2 = K_6;         break;
     case VK_UP:         key1 = K_Shift;     key2 = K_7;         break;
     case VK_RIGHT:      key1 = K_Shift;     key2 = K_8;         break;
+
+    default:
+        // If releasing a non-speccy key, clear all key map.
+        if (!down) for (int i = 0; i < K_COUNT; ++i)
+        {
+            N->keys[i] = 0;
+        }
     }
 
     if (key1 < K_COUNT)
@@ -107,16 +114,59 @@ void key(Nx* N, u8 vkCode, bool down)
     }
 }
 
-void keyDown(Window wnd, u8 vkCode, void* data)
+bool keyDown(Window wnd, u8 vkCode, void* data)
 {
+    printf("KEY DOWN: %d\n", (int)vkCode);
     Nx* N = (Nx *)data;
     key(N, vkCode, YES);
+    return NO;
 }
 
-void keyUp(Window wnd, u8 vkCode, void* data)
+bool keyUp(Window wnd, u8 vkCode, void* data)
 {
+    printf("  KEY UP: %d\n", (int)vkCode);
     Nx* N = (Nx *)data;
     key(N, vkCode, NO);
+    return NO;
+}
+
+bool keyChar(Window wnd, char ch, void* data)
+{
+    printf("    CHAR: %c\n", ch);
+    Nx* N = (Nx *)data;
+    u8 key1 = K_SymShift;
+    u8 key2 = K_COUNT;
+
+    switch (ch)
+    {
+    case '-':   key2 = K_J;     break;
+    case '_':   key2 = K_0;     break;
+    case ';':   key2 = K_O;     break;
+    case ':':   key2 = K_Z;     break;
+    case '\'':  key2 = K_7;     break;
+    case '"':   key2 = K_P;     break;
+    case ',':   key2 = K_N;     break;
+    case '<':   key2 = K_R;     break;
+    case '.':   key2 = K_M;     break;
+    case '>':   key2 = K_T;     break;
+    case '/':   key2 = K_V;     break;
+    case '?':   key2 = K_C;     break;
+
+    default:
+        key1 = K_COUNT;
+    }
+
+    if (key1 < K_COUNT)
+    {
+        N->keys[key1] = 1;
+    }
+    if (key2 < K_COUNT)
+    {
+        N->keys[K_Shift] = 0;
+        N->keys[key2] = 1;
+    }
+
+    return NO;
 }
 
 int kmain(int argc, char** argv)
@@ -136,6 +186,7 @@ int kmain(int argc, char** argv)
         Window w = windowMake("NX (" NX_VERSION ")", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3, &N);
         windowHandleKeyDownEvent(w, &keyDown);
         windowHandleKeyUpEvent(w, &keyUp);
+        windowHandleCharEvent(w, &keyChar);
         TimePoint t = { 0 };
 
         LARGE_INTEGER qpf;
