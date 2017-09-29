@@ -7,6 +7,7 @@
 #include "memory.h"
 #include "video.h"
 #include "z80.h"
+#include "io.h"
 
 typedef struct _Machine Machine;
 
@@ -23,6 +24,13 @@ typedef struct
 }
 Event;
 
+typedef struct
+{
+    u32*    img;        // The image to render to.
+    u8*     keys;       // The key state.
+}
+MachineConfig;
+
 struct _Machine
 {
     Memory          memory;
@@ -37,7 +45,7 @@ struct _Machine
 };
 
 // Create a ZX Spectrum 48K machine.  The image passed will be rendered too from time to time.
-bool machineOpen(Machine* M, u32* img);
+bool machineOpen(Machine* M, MachineConfig* config);
 
 // Destroy a machine.
 void machineClose(Machine* M);
@@ -78,12 +86,12 @@ MACHINE_EVENT(machineFrame)
     return NO;
 }
 
-bool machineOpen(Machine* M, u32* img)
+bool machineOpen(Machine* M, MachineConfig* config)
 {
     // Initialise sub-systems
     if (!memoryOpen(&M->memory)) goto error;
-    ioInit(&M->io, &M->memory);
-    if (!videoOpen(&M->video, &M->memory, &M->io.border, img)) goto error;
+    ioInit(&M->io, &M->memory, config->keys);
+    if (!videoOpen(&M->video, &M->memory, &M->io.border, config->img)) goto error;
     z80Init(&M->z80, &M->memory, &M->io);
 
     // Initialise state

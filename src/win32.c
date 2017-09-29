@@ -39,11 +39,79 @@
 // Main entry point
 //----------------------------------------------------------------------------------------------------------------------
 
+void key(Nx* N, u8 vkCode, bool down)
+{
+    int key = K_COUNT;
+
+    switch (vkCode)
+    {
+    case '1':           key = K_1;          break;
+    case '2':           key = K_2;          break;
+    case '3':           key = K_3;          break;
+    case '4':           key = K_4;          break;
+    case '5':           key = K_5;          break;
+    case '6':           key = K_6;          break;
+    case '7':           key = K_7;          break;
+    case '8':           key = K_8;          break;
+    case '9':           key = K_9;          break;
+    case '0':           key = K_0;          break;
+
+    case 'A':           key = K_A;          break;
+    case 'B':           key = K_B;          break;
+    case 'C':           key = K_C;          break;
+    case 'D':           key = K_D;          break;
+    case 'E':           key = K_E;          break;
+    case 'F':           key = K_F;          break;
+    case 'G':           key = K_G;          break;
+    case 'H':           key = K_H;          break;
+    case 'I':           key = K_I;          break;
+    case 'J':           key = K_J;          break;
+    case 'K':           key = K_K;          break;
+    case 'L':           key = K_L;          break;
+    case 'M':           key = K_M;          break;
+    case 'N':           key = K_N;          break;
+    case 'O':           key = K_O;          break;
+    case 'P':           key = K_P;          break;
+    case 'Q':           key = K_Q;          break;
+    case 'R':           key = K_R;          break;
+    case 'S':           key = K_S;          break;
+    case 'T':           key = K_T;          break;
+    case 'U':           key = K_U;          break;
+    case 'V':           key = K_V;          break;
+    case 'W':           key = K_W;          break;
+    case 'X':           key = K_X;          break;
+    case 'Y':           key = K_Y;          break;
+    case 'Z':           key = K_Z;          break;
+
+    case VK_SHIFT:      key = K_Shift;      break;
+    case VK_CONTROL:    key = K_SymShift;   break;
+    case VK_RETURN:     key = K_Enter;      break;
+    case VK_SPACE:      key = K_Space;      break;
+    }
+
+    if (key < K_COUNT)
+    {
+        N->keys[key] = down;
+    }
+}
+
+void keyDown(Window wnd, u8 vkCode, void* data)
+{
+    Nx* N = (Nx *)data;
+    key(N, vkCode, YES);
+}
+
+void keyUp(Window wnd, u8 vkCode, void* data)
+{
+    Nx* N = (Nx *)data;
+    key(N, vkCode, NO);
+}
+
 int kmain(int argc, char** argv)
 {
     debugBreakOnAlloc(0);
 
-#if NX_DEBUG_EVENTS
+#if NX_DEBUG_EVENTS || NX_DEBUG_HARDWARE
     windowConsole();
 #endif
 
@@ -53,8 +121,9 @@ int kmain(int argc, char** argv)
 
     if (nxOpen(&N, img))
     {
-        Window w = windowMake("NX (" NX_VERSION ")", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3);
-        //windowConsole();
+        Window w = windowMake("NX (" NX_VERSION ")", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3, &N);
+        windowHandleKeyDownEvent(w, &keyDown);
+        windowHandleKeyUpEvent(w, &keyUp);
         TimePoint t = { 0 };
 
         LARGE_INTEGER qpf;

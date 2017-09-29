@@ -8,56 +8,6 @@
 #include "config.h"
 #include "machine.h"
 
-typedef enum
-{
-    // Keys related to Spectrum keyboard
-    K_1,
-    K_2,
-    K_3,
-    K_4,
-    K_5,
-    K_6,
-    K_7,
-    K_8,
-    K_9,
-    K_0,
-
-    K_A,
-    K_B,
-    K_C,
-    K_D,
-    K_E,
-    K_F,
-    K_G,
-    K_H,
-    K_I,
-    K_J,
-    K_K,
-    K_L,
-    K_M,
-    K_N,
-    K_O,
-    K_P,
-    K_Q,
-    K_R,
-    K_S,
-    K_T,
-    K_U,
-    K_V,
-    K_W,
-    K_X,
-    K_Y,
-    K_Z,
-
-    K_Shift,
-    K_SymShift,
-    K_Space,
-    K_Enter,
-
-    K_COUNT
-}
-Keys;
-
 typedef struct
 {
     i64         tState;
@@ -134,7 +84,8 @@ bool testRun(Tests* T, int index)
     Machine M;
     Memory initialMemory;
     i64 tStates = 0;
-    if (machineOpen(&M, 0))
+    MachineConfig mc = { 0, 0 };
+    if (machineOpen(&M, &mc))
     {
         memoryReset(&M.memory, 0xdeadbeef);
         machineAddEvent(&M, testIn->tStates, &testEnd);
@@ -311,8 +262,9 @@ bool nxOpen(Nx* N, u32* img)
 
 #endif // NX_RUN_TESTS
 
+    MachineConfig mc = { img, N->keys };
     N->tState = 0;
-    return machineOpen(&N->machine, img);
+    return machineOpen(&N->machine, &mc);
 }
 
 void nxClose(Nx* N)

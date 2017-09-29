@@ -15,3 +15,6 @@
 
 // Set to YES to debug events
 #define NX_DEBUG_EVENTS     NO
+
+// Set to YES to debug hardware events
+#define NX_DEBUG_HARDWARE   NO
