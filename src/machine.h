@@ -78,8 +78,8 @@ bool machineTestEvent(Machine* M, i64* inOutTState);
 
 MACHINE_EVENT(machineFrame)
 {
-    machineAddEvent(M, 69888, &machineFrame, "frame");
-    *inOutTState -= 69888;
+    machineAddEvent(M, (69888 * NX_SPEED), &machineFrame, "frame");
+    *inOutTState -= (69888 * NX_SPEED);
     videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
     M->redraw = YES;
     z80Interrupt(&M->z80);
@@ -106,7 +106,7 @@ bool machineOpen(Machine* M, MachineConfig* config)
     }
 
     // Initial events
-    machineAddEvent(M, 69888, &machineFrame, "frame");
+    machineAddEvent(M, (69888 * NX_SPEED), &machineFrame, "frame");
 
     return YES;
 

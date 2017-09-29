@@ -101,9 +101,9 @@ bool memoryOpen(Memory* mem)
     if (!mem->memory) return NO;
 
     // Build contention table
-    mem->contention = K_ALLOC_CLEAR(sizeof(*mem->contention) * 70930);
-    int contentionStart = 14335;
-    int contentionEnd = contentionStart + (192 * 224);
+    mem->contention = K_ALLOC_CLEAR(sizeof(*mem->contention) * (70930 * NX_SPEED));
+    int contentionStart = 14335 * NX_SPEED;
+    int contentionEnd = contentionStart + (192 * 224 * NX_SPEED);
     int t = contentionStart;
 
     while (t < contentionEnd)
@@ -111,18 +111,18 @@ bool memoryOpen(Memory* mem)
         // Calculate contention for the next 128 t-states (i.e. a single pixel line)
         for (int i = 0; i < 128; i += 8)
         {
-            mem->contention[t++] = 6;
-            mem->contention[t++] = 5;
-            mem->contention[t++] = 4;
-            mem->contention[t++] = 3;
-            mem->contention[t++] = 2;
-            mem->contention[t++] = 1;
-            mem->contention[t++] = 0;
-            mem->contention[t++] = 0;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 6;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 5;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 4;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 3;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 2;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 1;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 0;
+            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 0;
         }
 
         // Skip the time the border is being drawn: 96 t-states (24 left, 24 right, 48 retrace)
-        t += (224 - 128);
+        t += ((224 - 128) * NX_SPEED);
     }
 
     // Fill memory up with random stuff
@@ -139,7 +139,7 @@ bool memoryOpen(Memory* mem)
 
 void memoryClose(Memory* mem)
 {
-    K_FREE(mem->contention, sizeof(*mem->contention) * 70930);
+    K_FREE(mem->contention, sizeof(*mem->contention) * 70930 * NX_SPEED);
     K_FREE(mem->memory, KB(64));
 }
 

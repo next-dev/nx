@@ -141,6 +141,8 @@ bool keyChar(Window wnd, char ch, void* data)
     {
     case '-':   key2 = K_J;     break;
     case '_':   key2 = K_0;     break;
+    case '=':   key2 = K_L;     break;
+    case '+':   key2 = K_K;     break;
     case ';':   key2 = K_O;     break;
     case ':':   key2 = K_Z;     break;
     case '\'':  key2 = K_7;     break;
@@ -201,7 +203,7 @@ int kmain(int argc, char** argv)
                 windowRedraw(w);
             }
 
-            i64 msElapsed = out.elapsedTStates * 20 / 69888;
+            i64 msElapsed = out.elapsedTStates * 20 / (69888 * NX_SPEED);
             TimePoint futureTime = future(t, msecs(msElapsed));
             waitUntil(futureTime);
         }
