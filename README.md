@@ -34,6 +34,13 @@ Disk-drive support.
 
 Will support all the new video modes, 3 AYs, hardware sprites and scrolling and extra memory.  Also support SD access.
 
+# Keyboard Controls
+
+| Key              | Description                                           |
+|------------------|-------------------------------------------------------|
+| Ctrl             | Symbol shift                                          |
+| F1               | Open file                                             |
+
 # Source code organisation.
 
 My style is to use a single .c file with all the platform specific code in it (thanks Casey from handmadehero.org) and
