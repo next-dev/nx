@@ -62,7 +62,7 @@ u8 memoryPeekNoContend(Memory* mem, u16 address);
 u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates);
 
 // Load a buffer into memory, ignoring write-only state of ROMs
-void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size);
+void memoryLoad(Memory* mem, u16 address, const void* buffer, u16 size);
 
 // Fill the whole memory with the 4 bytes in x.
 void memoryReset(Memory* mem, u32 x);
@@ -246,7 +246,7 @@ u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates)
     return memoryPeek(mem, address, inOutTStates) + 256 * memoryPeek(mem, address + 1, inOutTStates);
 }
 
-void memoryLoad(Memory* mem, u16 address, void* buffer, u16 size)
+void memoryLoad(Memory* mem, u16 address, const void* buffer, u16 size)
 {
     i64 clampedSize = K_MIN((i64)address + (i64)size, 65536) - address;
     memoryCopy(buffer, &mem->memory[address], clampedSize);

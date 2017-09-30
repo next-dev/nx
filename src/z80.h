@@ -2182,7 +2182,7 @@ void z80Nmi(Z80* Z)
 #undef POKE16
 #undef CONTEND
 
-#undef I
+#undef II
 #undef IH
 #undef IL
 

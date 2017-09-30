@@ -212,9 +212,50 @@ bool machineTestEvent(Machine* M, i64* inOutTState)
 // File loading
 //----------------------------------------------------------------------------------------------------------------------
 
+#define BYTE_OF(arr, offset) arr[offset]
+#define WORD_OF(arr, offset) (*(u16 *)&arr[offset])
+
+bool machineLoadSna(Machine* M, const u8* data, i64 size, i64* outTState)
+{
+    Z80* Z = &M->z80;
+
+    if (size != 49179) return NO;
+
+    I = BYTE_OF(data, 0);
+    HL_ = WORD_OF(data, 1);
+    DE_ = WORD_OF(data, 3);
+    BC_ = WORD_OF(data, 5);
+    AF_ = WORD_OF(data, 7);
+    HL = WORD_OF(data, 9);
+    DE = WORD_OF(data, 11);
+    BC = WORD_OF(data, 13);
+    IX = WORD_OF(data, 15);
+    IY = WORD_OF(data, 17);
+    IFF1 = K_BOOL(BYTE_OF(data, 19) & 0x01);
+    IFF2 = K_BOOL(BYTE_OF(data, 19) & 0x04);
+    R = BYTE_OF(data, 20);
+    AF = WORD_OF(data, 21);
+    SP = WORD_OF(data, 23);
+    Z->im = BYTE_OF(data, 25);
+    M->io.border = BYTE_OF(data, 26);
+    memoryLoad(&M->memory, 0x4000, data + 27, 0xc000);
+
+    PC = z80Pop(Z, outTState);
+
+    return YES;
+}
+
+#undef BYTE_OF
+#undef WORD_OF
+
 bool machineLoad(Machine* M, const u8* data, i64 size, FileType typeHint, i64* outTState)
 {
-    return NO;
+    switch (typeHint)
+    {
+    case FT_Sna:    return machineLoadSna(M, data, size, outTState);
+    default:
+        return NO;
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
