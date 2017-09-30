@@ -114,25 +114,90 @@ void key(Nx* N, u8 vkCode, bool down)
     }
 }
 
+typedef struct
+{
+    Nx*     N;
+    bool    commandMode;
+}
+WindowData;
+
 bool keyDown(Window wnd, u8 vkCode, void* data)
 {
-    printf("KEY DOWN: %d\n", (int)vkCode);
-    Nx* N = (Nx *)data;
-    key(N, vkCode, YES);
+    //printf("KEY DOWN: %d\n", (int)vkCode);
+    WindowData* wd = (WindowData *)data;
+    if (vkCode == VK_CONTROL)
+    {
+        wd->commandMode = YES;
+    }
+    else
+    {
+        if (wd->commandMode)
+        {
+            if (vkCode == 'O')
+            {
+                static char path[2048] = { 0 };
+
+                // Open file
+                WindowFileOpenConfig cfg = {
+                    "Open file",
+                    path,
+                    "NX files",
+                    "*.sna"
+                };
+                const i8* fileName = windowFileOpen(&cfg);
+
+                // Store the path for next time
+                String fn = stringMake(fileName);
+                String p = pathDirectory(fn);
+                memoryCopy(p, path, K_MAX(2047, stringSize(p)));
+                path[K_MAX(2047, stringSize(p))] = 0;
+                stringRelease(p);
+                stringRelease(fn);
+
+                Blob b = blobLoad(fileName);
+                if (b.bytes && machineLoad(&wd->N->machine, b.bytes, b.size, FT_Sna, &wd->N->tState))
+                {
+                    blobUnload(b);
+                }
+                else
+                {
+                    MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
+                }
+                wd->commandMode = NO;
+            }
+        }
+        else
+        {
+            key(wd->N, vkCode, YES);
+        }
+    }
     return NO;
 }
 
 bool keyUp(Window wnd, u8 vkCode, void* data)
 {
-    printf("  KEY UP: %d\n", (int)vkCode);
-    Nx* N = (Nx *)data;
-    key(N, vkCode, NO);
+    //printf("  KEY UP: %d\n", (int)vkCode);
+    WindowData* wd = (WindowData *)data;
+    if (vkCode == VK_CONTROL)
+    {
+        wd->commandMode = NO;
+    }
+    else
+    {
+        if (wd->commandMode)
+        {
+        }
+        else
+        {
+            key(wd->N, vkCode, NO);
+        }
+    }
     return NO;
 }
 
 bool keyChar(Window wnd, char ch, void* data)
 {
-    printf("    CHAR: %c\n", ch);
+    //printf("    CHAR: %c\n", ch);
     Nx* N = (Nx *)data;
     u8 key1 = K_SymShift;
     u8 key2 = K_COUNT;
@@ -181,14 +246,16 @@ int kmain(int argc, char** argv)
 
     // Step 1: Initialise the NX system with the platform specific callbacks.
     Nx N;
+    WindowData windowData = { &N, NO };
     u32* img = K_ALLOC(NX_WINDOW_WIDTH * NX_WINDOW_HEIGHT * sizeof(u32));
 
     if (nxOpen(&N, img))
     {
-        Window w = windowMake("NX (" NX_VERSION ")", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3, &N);
+        Window w = windowMake("NX (" NX_VERSION ")", img, NX_WINDOW_WIDTH, NX_WINDOW_HEIGHT, 3, &windowData);
         windowHandleKeyDownEvent(w, &keyDown);
         windowHandleKeyUpEvent(w, &keyUp);
         windowHandleCharEvent(w, &keyChar);
+
         TimePoint t = { 0 };
 
         LARGE_INTEGER qpf;

@@ -66,6 +66,16 @@ bool machineTestEvent(Machine* M, i64* inOutTState);
 // Macro to define machine event handlers.
 #define MACHINE_EVENT(name) internal bool name(Machine* M, i64* inOutTState)
 
+// Load in a file
+typedef enum
+{
+    FT_Sna,
+    FT_Tap,
+    FT_Psz,
+}
+FileType;
+
+bool machineLoad(Machine* M, const u8* data, i64 size, FileType typeHint, i64* outTState);
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -196,6 +206,15 @@ bool machineTestEvent(Machine* M, i64* inOutTState)
     }
 
     return result;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// File loading
+//----------------------------------------------------------------------------------------------------------------------
+
+bool machineLoad(Machine* M, const u8* data, i64 size, FileType typeHint, i64* outTState)
+{
+    return NO;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
