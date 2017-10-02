@@ -70,6 +70,8 @@ public:
     int getClockScale() const { return m_clockScale; }
     int getFrameCounter() const { return m_frameCounter; }
 
+    void setFrameCounter(int fc) { m_frameCounter = fc; }
+
     // Access to systems.
     EventManager& getEvents() { return m_events; }
     Memory& getMemory() { return m_memory; }
@@ -149,6 +151,7 @@ bool machineFrame(Machine& M, i64& inOutTState)
     i64 time = 69888 * M.getClockScale();
     M.getEvents().addEvent(time, "frame", &machineFrame);
     inOutTState -= time;
+    M.setFrameCounter(M.getFrameCounter() + 1);
     M.getVideo().render((M.getFrameCounter() & 16) != 0);
     M.getHost().redraw();
     M.getZ80().interrupt();
