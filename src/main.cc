@@ -132,6 +132,87 @@ private:
     bool m_redraw;
 };
 
+//----------------------------------------------------------------------------------------------------------------------
+// Keyboard handling
+//----------------------------------------------------------------------------------------------------------------------
+
+void key(Nx& N, sf::Keyboard::Key key, bool down)
+{
+    Key key1 = Key::COUNT;
+    Key key2 = Key::COUNT;
+
+    using K = sf::Keyboard;
+
+    switch (key)
+    {
+    case K::Num1:       key1 = Key::_1;         break;
+    case K::Num2:       key1 = Key::_2;         break;
+    case K::Num3:       key1 = Key::_3;         break;
+    case K::Num4:       key1 = Key::_4;         break;
+    case K::Num5:       key1 = Key::_5;         break;
+    case K::Num6:       key1 = Key::_6;         break;
+    case K::Num7:       key1 = Key::_7;         break;
+    case K::Num8:       key1 = Key::_8;         break;
+    case K::Num9:       key1 = Key::_9;         break;
+    case K::Num0:       key1 = Key::_0;         break;
+
+    case K::A:          key1 = Key::A;          break;
+    case K::B:          key1 = Key::B;          break;
+    case K::C:          key1 = Key::C;          break;
+    case K::D:          key1 = Key::D;          break;
+    case K::E:          key1 = Key::E;          break;
+    case K::F:          key1 = Key::F;          break;
+    case K::G:          key1 = Key::G;          break;
+    case K::H:          key1 = Key::H;          break;
+    case K::I:          key1 = Key::I;          break;
+    case K::J:          key1 = Key::J;          break;
+    case K::K:          key1 = Key::K;          break;
+    case K::L:          key1 = Key::L;          break;
+    case K::M:          key1 = Key::M;          break;
+    case K::N:          key1 = Key::N;          break;
+    case K::O:          key1 = Key::O;          break;
+    case K::P:          key1 = Key::P;          break;
+    case K::Q:          key1 = Key::Q;          break;
+    case K::R:          key1 = Key::R;          break;
+    case K::S:          key1 = Key::S;          break;
+    case K::T:          key1 = Key::T;          break;
+    case K::U:          key1 = Key::U;          break;
+    case K::V:          key1 = Key::V;          break;
+    case K::W:          key1 = Key::W;          break;
+    case K::X:          key1 = Key::X;          break;
+    case K::Y:          key1 = Key::Y;          break;
+    case K::Z:          key1 = Key::Z;          break;
+
+    case K::LShift:     key1 = Key::Shift;      break;
+    case K::RShift:     key1 = Key::SymShift;   break;
+    case K::Return:     key1 = Key::Enter;      break;
+    case K::Space:      key1 = Key::Space;      break;
+
+    case K::BackSpace:  key1 = Key::Shift;      key2 = Key::_0;     break;
+    case K::Escape:     key1 = Key::Shift;      key2 = Key::Space;  break;
+    case K::Left:       key1 = Key::Shift;      key2 = Key::_5;     break;
+    case K::Down:       key1 = Key::Shift;      key2 = Key::_6;     break;
+    case K::Up:         key1 = Key::Shift;      key2 = Key::_7;     break;
+    case K::Right:      key1 = Key::Shift;      key2 = Key::_8;     break;
+
+    default:
+        // If releasing a non-speccy key, clear all key map.
+        N.keysClear();
+    }
+
+    if (key1 != Key::COUNT)
+    {
+        N.keyPress(key1, down);
+    }
+    if (key2 != Key::COUNT)
+    {
+        N.keyPress(key2, down);
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Main loop
+//----------------------------------------------------------------------------------------------------------------------
 
 int main()
 {
@@ -144,18 +225,32 @@ int main()
 
     u32* img = new u32[kWindowWidth * kWindowHeight];
 
-    Nx nx(host, img);
+    Nx N(host, img);
 
     while (window.isOpen())
     {
         sf::Event event;
         while (window.pollEvent(event))
         {
-            if (event.type == sf::Event::Closed)
+            switch (event.type)
+            {
+            case sf::Event::Closed:
                 window.close();
+                break;
+
+            case sf::Event::KeyPressed:
+                key(N, event.key.code, true);
+                break;
+
+            case sf::Event::KeyReleased:
+                key(N, event.key.code, false);
+                break;
+            }
         }
 
-        nx.update();
+        sf::Clock clk;
+
+        N.update();
 
         if (host.getRedraw())
         {
@@ -164,6 +259,10 @@ int main()
             window.draw(sprite);
             window.display();
         }
+
+        sf::Time elapsedTime = clk.getElapsedTime();
+        sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
+        sf::sleep(timeLeft);
     }
 
     delete[] img;
