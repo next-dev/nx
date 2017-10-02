@@ -64,7 +64,7 @@ solution "nx"
         }
 
         libdirs {
-            "../lib/%{cfg.buildcfg}/msvc",
+            "../lib/msvc",
             "../lib/Exts/msvc"
         }
 
