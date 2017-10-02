@@ -4,76 +4,49 @@
 
 #pragma once
 
-#include <kore/k_platform.h>
-#include <kore/k_memory.h>
+#include <vector>
 
-//----------------------------------------------------------------------------------------------------------------------
-// Memory state
-//----------------------------------------------------------------------------------------------------------------------
-
-typedef struct 
+class Memory
 {
-    u8*         memory;
-    u8*         contention;
-}
-Memory;
+public:
+    Memory(int clockScale);
+    ~Memory();
 
-// Initialise the memory.  If it fails, mem will be left in null state.
-bool memoryOpen(Memory* mem);
+    //
+    // Contention
+    //
+    bool isContended(u16 addr);
+    void contend(u16 addr, i64 t, int n, i64& inOutTStates);
+    i64 contention(i64 tStates);
 
-// Close the memory sub-system
-void memoryClose(Memory* mem);
+    //
+    // ROM control
+    //
+    void setRomWriteState(bool writeable);
 
-// Return YES if the memory is contended.
-bool memoryIsContended(Memory* mem, u16 addr);
+    //
+    // Writing (poking)
+    //
+    void poke(u16 address, u8 b, i64& inOutTStates);        // 8-bit poke with contention
+    void poke(u16 address, u8 b);                           // 8-bit poke without contention
+    void poke16(u16 address, u16 w, i64& inOutTStates);     // 16-bit poke with contention
+    void load(u16 address, const void* buffer, i64 size);   // Writes a buffer to memory, ignores ROM write state
 
-// Contends the machine for a given address for t t-states, for n times.
-void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates);
+    //
+    // Reading (peeking)
+    //
+    u8 peek(u16 address, i64& inOutTStates);                // 8-bit peek with contention
+    u8 peek(u16 address);                                   // 8-bit peek without contention
+    u16 peek16(u16 address, i64& inOutTStates);             // 16-bit peek with contention
 
-// Set an 8-bit value to the memory.  Will not write if the memory address points to ROM.  Will also adjust the
-// tState counter according to contention.
-void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates);
+private:
+    bool                m_romWritable;
+    std::vector<u8>     m_memory;
+    std::vector<u8>     m_contention;
+};
 
-// Write values into memory at an absolute value.  No contention, no ROM protection.
-void memoryWrite(Memory* mem, u16 address, u8 b);
-
-// As memoryPoke but without normal 3-tStates with contention
-#if NX_RUN_TESTS
-void memoryPokeNoContend(Memory* mem, u16 address, u8 b, i64 tStates);
-#else
-void memoryPokeNoContend(Memory* mem, u16 address, u8 b);
-#endif
-
-// Set a 16-bit value to the memory in little endian form.  Will also adjust the tState counter according to
-// contention.
-void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates);
-
-// Read an 8-bit value from the memory.
-u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates);
-
-// As memoryPeek but without contention.
-#if NX_RUN_TESTS
-u8 memoryPeekNoContend(Memory* mem, u16 address, i64 tStates);
-#else
-u8 memoryPeekNoContend(Memory* mem, u16 address);
-#endif
-
-// Read an 16-bit value from the memory.
-u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates);
-
-// Load a buffer into memory, ignoring write-only state of ROMs
-void memoryLoad(Memory* mem, u16 address, const void* buffer, u16 size);
-
-// Fill the whole memory with the 4 bytes in x.
-void memoryReset(Memory* mem, u32 x);
-
-#if NX_RUN_TESTS
-// Make a snapshot of the memory
-void memorySnapshot(Memory* original, Memory* copy);
-
-// Output to a memory diff for testing purposes
-void memoryDiff(Memory* old, Memory* actual);
-#endif
+#define LO(x) ((u8)((x) % 256))
+#define HI(x) ((u8)((x) / 256))
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -82,28 +55,19 @@ void memoryDiff(Memory* old, Memory* actual);
 
 #ifdef NX_IMPL
 
-#include <memory.h>
-#include <kore/k_random.h>
-#if NX_RUN_TESTS
-#   include "test.h"
-#endif
+#include <random>
+#include <algorithm>
 
-#define LO(x) ((u8)((x) % 256))
-#define HI(x) ((u8)((x) / 256))
+#define KB(x) ((x) * 1024)
 
-//----------------------------------------------------------------------------------------------------------------------
-// Management
-//----------------------------------------------------------------------------------------------------------------------
-
-bool memoryOpen(Memory* mem)
+Memory::Memory(int clockScale)
+    : m_romWritable(false)
+    , m_memory(KB(64))
+    , m_contention(70930 * clockScale)
 {
-    mem->memory = K_ALLOC(KB(64));
-    if (!mem->memory) return NO;
-
     // Build contention table
-    mem->contention = K_ALLOC_CLEAR(sizeof(*mem->contention) * (70930 * NX_SPEED));
-    int contentionStart = 14335 * NX_SPEED;
-    int contentionEnd = contentionStart + (192 * 224 * NX_SPEED);
+    int contentionStart = 14335 * clockScale;
+    int contentionEnd = contentionStart + (192 * 224 * clockScale);
     int t = contentionStart;
 
     while (t < contentionEnd)
@@ -111,187 +75,109 @@ bool memoryOpen(Memory* mem)
         // Calculate contention for the next 128 t-states (i.e. a single pixel line)
         for (int i = 0; i < 128; i += 8)
         {
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 6;
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 5;
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 4;
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 3;
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 2;
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 1;
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 0;
-            for (int c = 0; c < NX_SPEED; ++c) mem->contention[t++] = 0;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 6;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 5;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 4;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 3;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 2;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 1;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 0;
+            for (int c = 0; c < clockScale; ++c) m_contention[t++] = 0;
         }
 
         // Skip the time the border is being drawn: 96 t-states (24 left, 24 right, 48 retrace)
-        t += ((224 - 128) * NX_SPEED);
+        t += ((224 - 128) * clockScale);
     }
 
-    // Fill memory up with random stuff
-    Random r;
-    randomInit(&r);
-    for (u16 a = 0; a < 0xffff; ++a)
+    // Fill up the memory with random bytes
+    std::mt19937 rng;
+    rng.seed(std::random_device()());
+    std::uniform_int_distribution<int> dist(0, 255);
+    for (int a = 0; a < 0xffff; ++a)
     {
-        i64 ts = 0;
-        mem->memory[a] = (u8)random64(&r);
+        m_memory[a] = (u8)dist(rng);
     }
-
-    return YES;
 }
 
-void memoryClose(Memory* mem)
+Memory::~Memory()
 {
-    K_FREE(mem->contention, sizeof(*mem->contention) * 70930 * NX_SPEED);
-    K_FREE(mem->memory, KB(64));
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// Memory contention
+// Contention
 //----------------------------------------------------------------------------------------------------------------------
 
-bool memoryIsContended(Memory* mem, u16 addr)
+bool Memory::isContended(u16 addr)
 {
-    return K_BOOL((addr & 0xc000) == 0x4000);
+    return ((addr & 0xc000) == 0x4000);
 }
 
-void memoryContend(Memory* mem, u16 addr, i64 t, int n, i64* inOutTStates)
+void Memory::contend(u16 addr, i64 t, int n, i64& inOutTStates)
 {
-#if NX_RUN_TESTS
-    if (gResultsFile)
-    {
-        i64 ts = *inOutTStates;
-        for (int i = 0; i < n; ++i)
-        {
-            fprintf(gResultsFile, "%5d MC %04x\n", (int)ts, addr);
-            ts += t;
-        }
-    }
-#endif
-
-    // #todo: Disable this for +3
-    if (memoryIsContended(mem, addr))
+    if (isContended(addr))
     {
         for (int i = 0; i < n; ++i)
         {
-            *inOutTStates += mem->contention[*inOutTStates] + t;
+            inOutTStates += contention(inOutTStates) + t;
         }
     }
     else
     {
-        *inOutTStates += t * n;
+        inOutTStates += t * n;
     }
+}
+
+i64 Memory::contention(i64 tStates)
+{
+    return m_contention[tStates];
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// Setting bytes
+// Poking
 //----------------------------------------------------------------------------------------------------------------------
 
-#if NX_RUN_TESTS
-void memoryPokeNoContend(Memory* mem, u16 address, u8 b, i64 tStates)
-#else
-void memoryPokeNoContend(Memory* mem, u16 address, u8 b)
-#endif
+void Memory::poke(u16 address, u8 b)
 {
-#if NX_RUN_TESTS
-    if (gResultsFile) fprintf(gResultsFile, "%5d MW %04x %02x\n", (int)tStates, address, b);
-    mem->memory[address] = b;
-#else
-    if (address >= 0x4000) mem->memory[address] = b;
-#endif
+    if (m_romWritable || address > -0x4000) m_memory[address] = b;
 }
 
-void memoryPoke(Memory* mem, u16 address, u8 b, i64* inOutTStates)
+void Memory::poke(u16 address, u8 b, i64& inOutTStates)
 {
-    memoryContend(mem, address, 3, 1, inOutTStates);
-#if NX_RUN_TESTS
-    memoryPokeNoContend(mem, address, b, *inOutTStates);
-#else
-    memoryPokeNoContend(mem, address, b);
-#endif
+    contend(address, 3, 1, inOutTStates);
+    poke(address, b);
 }
 
-void memoryWrite(Memory* mem, u16 address, u8 b)
+void Memory::poke16(u16 address, u16 w, i64& inOutTStates)
 {
-    mem->memory[address] = b;
+    poke(address, LO(w), inOutTStates);
+    poke(address + 1, HI(w), inOutTStates);
 }
 
-void memoryPoke16(Memory* mem, u16 address, u16 w, i64* inOutTStates)
+void Memory::load(u16 address, const void* buffer, i64 size)
 {
-    memoryPoke(mem, address, LO(w), inOutTStates);
-    memoryPoke(mem, address + 1, HI(w), inOutTStates);
+    i64 clampedSize = std::min((i64)address + (i64)size, (i64)KB(64)) - address;
+    std::copy((const u8 *)buffer, (const u8 *)buffer + size, m_memory.begin() + address);
 }
 
-#if NX_RUN_TESTS
-u8 memoryPeekNoContend(Memory* mem, u16 address, i64 tStates)
-#else
-u8 memoryPeekNoContend(Memory* mem, u16 address)
-#endif
+//----------------------------------------------------------------------------------------------------------------------
+// Peeking
+//----------------------------------------------------------------------------------------------------------------------
+
+u8 Memory::peek(u16 address)
 {
-#if NX_RUN_TESTS
-    if (gResultsFile) fprintf(gResultsFile, "%5d MR %04x %02x\n", (int)tStates, address, mem->memory[address]);
-#endif
-    return mem->memory[address];
+    return m_memory[address];
 }
 
-u8 memoryPeek(Memory* mem, u16 address, i64* inOutTStates)
+u8 Memory::peek(u16 address, i64& inOutTStates)
 {
-    memoryContend(mem, address, 3, 1, inOutTStates);
-#if NX_RUN_TESTS
-    return memoryPeekNoContend(mem, address, *inOutTStates);
-#else
-    return memoryPeekNoContend(mem, address);
-#endif
+    contend(address, 3, 1, inOutTStates);
+    return peek(address);
 }
 
-u16 memoryPeek16(Memory* mem, u16 address, i64* inOutTStates)
+u16 Memory::peek16(u16 address, i64& inOutTStates)
 {
-    return memoryPeek(mem, address, inOutTStates) + 256 * memoryPeek(mem, address + 1, inOutTStates);
+    return peek(address, inOutTStates) + 256 * peek(address + 1, inOutTStates);
 }
-
-void memoryLoad(Memory* mem, u16 address, const void* buffer, u16 size)
-{
-    i64 clampedSize = K_MIN((i64)address + (i64)size, 65536) - address;
-    memoryCopy(buffer, &mem->memory[address], clampedSize);
-}
-
-void memoryReset(Memory* mem, u32 x)
-{
-    for (int i = 0; i < KB(64); i += 4)
-    {
-        mem->memory[i+0] = (u8)((x & 0xff000000) >> 24);
-        mem->memory[i+1] = (u8)((x & 0x00ff0000) >> 16);
-        mem->memory[i+2] = (u8)((x & 0x0000ff00) >> 8);
-        mem->memory[i+3] = (u8)((x & 0x000000ff) >> 0);
-    }
-}
-
-#if NX_RUN_TESTS
-
-void memorySnapshot(Memory* original, Memory* copy)
-{
-    copy->memory = K_ALLOC(KB(64));
-    memoryCopy(original->memory, copy->memory, KB(64));
-}
-
-void memoryDiff(Memory* snapshot, Memory* actual)
-{
-    for (int i = 0; i < KB(64); ++i)
-    {
-        if (actual->memory[i] != snapshot->memory[i])
-        {
-            // Start a new diff
-            fprintf(gResultsFile, "%04x ", i);
-
-            while (i < KB(64) && (actual->memory[i] != snapshot->memory[i]))
-            {
-                fprintf(gResultsFile, "%02x ", actual->memory[i++]);
-            }
-            fprintf(gResultsFile, "-1\n");
-        }
-    }
-
-    K_FREE(snapshot->memory, KB(64));
-}
-
-#endif // NX_RUN_TESTS
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

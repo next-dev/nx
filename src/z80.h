@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "memory.h"
-#include "io.h"
+class Memory;
+class Io;
 
 typedef struct
 {
@@ -20,92 +20,132 @@ typedef struct
 }
 Reg;
 
-typedef struct  
+class Z80
 {
-    // External systems and information.
-    Memory*     mem;
-    Io*         io;
+public:
+    Z80(Memory& memory, Io& io);
+
+    void step(i64& tState);
+    void interrupt();
+    void nmi();
+
+    u8& A() { return m_af.h; }
+    u8& F() { return m_af.l; }
+    u8& B() { return m_bc.h; }
+    u8& C() { return m_bc.l; }
+    u8& D() { return m_de.h; }
+    u8& E() { return m_de.l; }
+    u8& H() { return m_hl.h; }
+    u8& L() { return m_hl.l; }
+    u8& IXH() { return m_ix.h; }
+    u8& IXL() { return m_ix.l; }
+    u8& IYH() { return m_iy.h; }
+    u8& IYL() { return m_iy.l; }
+    u8& I() { return m_ir.h; }
+    u8& R() { return m_ir.l; }
+
+    u16& AF() { return m_af.r; }
+    u16& BC() { return m_bc.r; }
+    u16& DE() { return m_de.r; }
+    u16& HL() { return m_hl.r; }
+    u16& IX() { return m_ix.r; }
+    u16& IY() { return m_iy.r; }
+    u16& SP() { return m_sp.r; }
+    u16& PC() { return m_pc.r; }
+    u16& IR() { return m_ir.r; }
+
+    u16& AF_() { return m_af_.r; }
+    u16& BC_() { return m_bc_.r; }
+    u16& DE_() { return m_de_.r; }
+    u16& HL_() { return m_hl_.r; }
+
+    u16& MP() { return m_m.r; }
+
+    bool& IFF1() { return m_iff1; }
+    bool& IFF2() { return m_iff2; }
+    int& IM() { return m_im; }
+
+    static const u8 F_CARRY    = 0x01;
+    static const u8 F_NEG      = 0x02;
+    static const u8 F_PARITY   = 0x04;
+    static const u8 F_3        = 0x08;
+    static const u8 F_HALF     = 0x10;
+    static const u8 F_5        = 0x20;
+    static const u8 F_ZERO     = 0x40;
+    static const u8 F_SIGN     = 0x80;
+
+private:
+    void setFlags(u8 flags, bool value);
+
+    void exx();
+    void exAfAf();
+
+    void incReg8(u8& reg);
+    void decReg8(u8& reg);
+    void addReg16(u16& r1, u16& r2);
+    void addReg8(u8& reg);
+    void adcReg16(u16& reg);
+    void adcReg8(u8& reg);
+    void subReg8(u8& reg);
+    void sbcReg8(u8& reg);
+    void sbcReg16(u16& reg);
+    void cpReg8(u8& reg);
+    void andReg8(u8& reg);
+    void orReg8(u8& reg);
+    void xorReg8(u8& reg);
+    void rlcReg8(u8& reg);
+    void rrcReg8(u8& reg);
+    void rlReg8(u8& reg);
+    void rrReg8(u8& reg);
+    void slaReg8(u8& reg);
+    void sraReg8(u8& reg);
+    void sl1Reg8(u8& reg);
+    void srlReg8(u8& reg);
+    void bitReg8(u8& reg, int b);
+    void bitReg8MP(u8& reg, int b);
+    void resReg8(u8& reg, int b);
+    void setReg8(u8& reg, int b);
+    void daa();
+    int displacement(u8 x);
+
+    u16 pop(i64& inOutTState);
+    void push(u16 x, i64& inOutTState);
+
+private:
+    Memory&     m_memory;
+    Io&         m_io;
 
     // Base registers
-    Reg         af, bc, de, hl;
-    Reg         sp, pc, ix, iy;
-    Reg         ir;
+    Reg         m_af, m_bc, m_de, m_hl;
+    Reg         m_sp, m_pc, m_ix, m_iy;
+    Reg         m_ir;
 
     // Alternate registers
-    Reg         af_, bc_, de_, hl_;
+    Reg         m_af_, m_bc_, m_de_, m_hl_;
 
     // Internal registers
-    Reg         m;
+    Reg         m_m;
 
-    bool        halt;
-    bool        iff1;
-    bool        iff2;
-    int         im;
-    bool        interrupt;      // Set to YES when interrupt is supposed to be triggered.
-    bool        nmi;            // Set to YES when nmi occurs.
-    bool        eiHappened;     // Set to YES when EI is called.  This stops the interrupt occurring for at least one
+    bool        m_halt;
+    bool        m_iff1;
+    bool        m_iff2;
+    int         m_im;
+    bool        m_interrupt;    // Set to false when interrupt is supposed to be triggered.
+    bool        m_nmi;          // Set to false when nmi occurs.
+    bool        m_eiHappened;   // Set to false when EI is called.  This stops the interrupt occurring for at least one
                                 // instruction afterwards.
-}
-Z80;
 
-// Initialise the internal tables and data structure.
-void z80Init(Z80* Z, Memory* mem, Io* io);
-
-// Run a single opcode
-void z80Step(Z80* Z, i64* tState);
-
-// Trigger a software interrupt.
-void z80Interrupt(Z80* Z);
-
-// Trigger a NMI.
-void z80Nmi(Z80* Z);
-
-// Convenient register accesses that relies on the Z80 structure variable being called Z.
-#define A       Z->af.h
-#define F       Z->af.l
-#define B       Z->bc.h
-#define C       Z->bc.l
-#define D       Z->de.h
-#define E       Z->de.l
-#define H       Z->hl.h
-#define L       Z->hl.l
-#define IXH     Z->ix.h
-#define IXL     Z->ix.l
-#define IYH     Z->iy.h
-#define IYL     Z->iy.l
-#define I       Z->ir.h
-#define R       Z->ir.l
-
-#define IFF1    Z->iff1
-#define IFF2    Z->iff2
-#define IM      Z->im
-
-#define AF      Z->af.r
-#define BC      Z->bc.r
-#define DE      Z->de.r
-#define HL      Z->hl.r
-#define SP      Z->sp.r
-#define PC      Z->pc.r
-#define IX      Z->ix.r
-#define IY      Z->iy.r
-#define IR      Z->ir.r
-
-#define AF_     Z->af_.r
-#define BC_     Z->bc_.r
-#define DE_     Z->de_.r
-#define HL_     Z->hl_.r
-
-#define MP      Z->m.r
-
-// Flags
-#define F_CARRY     0x01
-#define F_NEG       0x02
-#define F_PARITY    0x04
-#define F_3         0x08
-#define F_HALF      0x10
-#define F_5         0x20
-#define F_ZERO      0x40
-#define F_SIGN      0x80
+    u8          m_parity[256];
+    u8          m_SZ53[256];
+    u8          m_SZ53P[256];
+    
+    static u8   kIoIncParityTable[16] = { 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0 };
+    static u8   kIoDecParityTable[16] = { 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1 };
+    static u8   kHalfCarryAdd[8] = { 0, F_HALF, F_HALF, F_HALF, 0, 0, 0, F_HALF };
+    static u8   kHalfCarrySub[8] = { 0, 0, F_HALF, 0, F_HALF, 0, F_HALF, F_HALF };
+    static u8   kOverflowAdd[8] = { 0, 0, 0, F_PARITY, F_PARITY, 0, 0, 0 };
+    static u8   kOverflowSub[8] = { 0, F_PARITY, 0, 0, 0, 0, F_PARITY, 0 };
+};
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -114,33 +154,21 @@ void z80Nmi(Z80* Z);
 
 #ifdef NX_IMPL
 
-// These tables generated everytime z80Init() is called.  It doesn't matter if you generate them multiple times since
-// they never change.
-u8 gParity[256];
-u8 gSZ53[256];
-u8 gSZ53P[256];
-
-// Other constantly defined tables
-u8 kIoIncParityTable[16] = { 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0 };
-u8 kIoDecParityTable[16] = { 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1 };
-u8 kHalfCarryAdd[8] = { 0, F_HALF, F_HALF, F_HALF, 0, 0, 0, F_HALF };
-u8 kHalfCarrySub[8] = { 0, 0, F_HALF, 0, F_HALF, 0, F_HALF, F_HALF };
-u8 kOverflowAdd[8] = { 0, 0, 0, F_PARITY, F_PARITY, 0, 0, 0 };
-u8 kOverflowSub[8] = { 0, F_PARITY, 0, 0, 0, 0, F_PARITY, 0 };
+#include <algorithm>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Flag manipulation
 //----------------------------------------------------------------------------------------------------------------------
 
-void z80SetFlag(Z80* Z, u8 flags, bool value)
+void Z80::setFlags(u8 flags, bool value)
 {
     if (value)
     {
-        F |= flags;
+        F() |= flags;
     }
     else
     {
-        F &= ~flags;
+        F() &= ~flags;
     }
 }
 
@@ -148,58 +176,67 @@ void z80SetFlag(Z80* Z, u8 flags, bool value)
 // Initialisation
 //----------------------------------------------------------------------------------------------------------------------
 
-void z80Init(Z80* Z, Memory* mem, Io* io)
+Z80::Z80(Memory& memory, Io& io)
+    : m_memory(memory)
+    , m_io(io)
+    , m_halt(false)
+    , m_iff1(true)
+    , m_iff2(true)
+    , m_im(0)
+    , m_interrupt(false)
+    , m_nmi(false)
+    , m_eiHappened(false)
 {
-    memoryClear(Z, sizeof(*Z));
-    Z->mem = mem;
-    Z->io = io;
+    // #todo: Check these values
+    AF() = 0xffff;
+    BC() = 0xffff;
+    DE() = 0xffff;
+    HL() = 0xffff;
+    SP() = 0x0000;
+    PC() = 0x0000;
+    IX() = 0xffff;
+    IY() = 0xffff;
+    IR() = 0x0000;
+    AF_() = 0xffff;
+    BC_() = 0xffff;
+    DE_() = 0xffff;
+    HL_() = 0xffff;
+    MP() = 0x0000;
 
     for (int i = 0; i < 256; ++i)
     {
-        gSZ53[i] = (u8)(i & (F_3 | F_5 | F_SIGN));
+        m_SZ53[i] = (u8)(i & (F_3 | F_5 | F_SIGN));
 
         u8 p = 0, x = i;
         for (int bit = 0; bit < 8; ++bit) { p ^= (u8)(x & 1); x >>= 1; }
-        gParity[i] = p ? 0 : F_PARITY;
+        m_parity[i] = p ? 0 : F_PARITY;
 
-        gSZ53P[i] = gSZ53[i] | gParity[i];
+        m_SZ53P[i] = m_SZ53[i] | m_parity[i];
     }
 
-    gSZ53[0] |= F_ZERO;
-    gSZ53P[0] |= F_ZERO;
+    m_SZ53[0] |= F_ZERO;
+    m_SZ53P[0] |= F_ZERO;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 // Instruction utilities
 //----------------------------------------------------------------------------------------------------------------------
 
-void z80Exx(Z80* Z)
+void Z80::exx()
 {
-    u16 t;
-
-    t = BC;
-    BC = BC_;
-    BC_ = t;
-
-    t = DE;
-    DE = DE_;
-    DE_ = t;
-
-    t = HL;
-    HL = HL_;
-    HL_ = t;
+    std::swap(BC(), BC_());
+    std::swap(DE(), DE_());
+    std::swap(HL(), HL_());
 }
 
-void z80ExAfAf(Z80* Z)
+void Z80::exAfAf()
 {
-    u16 t = AF;
-    AF = AF_;
-    AF_ = t;
+    std::swap(AF(), AF_());
 }
 
-void z80IncReg(Z80* Z, u8* reg)
+void Z80::incReg8(u8& reg)
 {
-    *reg = (*reg + 1);
+    ++reg;
 
     // S: Result is negative
     // Z: Result is zero
@@ -207,10 +244,10 @@ void z80IncReg(Z80* Z, u8* reg)
     // P: Result is 0x80
     // N: Reset
     // C: Unaffected
-    F = (F & F_CARRY) | ((*reg == 0x80) ? F_PARITY : 0) | ((*reg & 0x0f) ? 0 : F_HALF) | gSZ53[*reg];
+    F() = (F() & F_CARRY) | ((reg == 0x80) ? F_PARITY : 0) | ((reg & 0x0f) ? 0 : F_HALF) | m_SZ53[reg];
 }
 
-void z80DecReg(Z80* Z, u8* reg)
+void Z80::decReg8(u8& reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -218,16 +255,14 @@ void z80DecReg(Z80* Z, u8* reg)
     // P: Result is 0x7f
     // N: Set
     // C: Unaffected
-    F = (F & F_CARRY) | ((*reg & 0x0f) ? 0 : F_HALF) | F_NEG;
-
-    *reg = (*reg - 1);
-
-    F |= (*reg == 0x7f ? F_PARITY : 0) | gSZ53[*reg];
+    F() = (F() & F_CARRY) | ((reg & 0x0f) ? 0 : F_HALF) | F_NEG;
+    --reg;
+    F() |= (reg == 0x7f ? F_PARITY : 0) | m_SZ53[reg];
 }
 
-void z80AddReg16(Z80* Z, u16* r1, u16* r2)
+void Z80::addReg16(u16& r1, u16& r2)
 {
-    u32 add = (u32)*r1 + (u32)*r2;
+    u32 add = (u32)r1 + (u32)r2;
 
     // S: Not affected
     // Z: Not affected
@@ -235,13 +270,13 @@ void z80AddReg16(Z80* Z, u16* r1, u16* r2)
     // P: Not affected
     // N: Reset
     // C: Carry from bit 15
-    u8 x = (u8)(((*r1 & 0x0800) >> 11) | ((*r2 & 0x0800) >> 10) | ((add & 0x0800) >> 9));
-    F = (F & (F_PARITY | F_ZERO | F_SIGN)) | (add & 0x10000 ? F_CARRY : 0) | ((add >> 8) & (F_3 | F_5)) | kHalfCarryAdd[x];
-    *r1 = (u16)add;
+    u8 x = (u8)(((r1 & 0x0800) >> 11) | ((r2 & 0x0800) >> 10) | ((add & 0x0800) >> 9));
+    F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (add & 0x10000 ? F_CARRY : 0) | ((add >> 8) & (F_3 | F_5)) | kHalfCarryAdd[x];
+    r1 = (u16)add;
 }
 
 // Result always goes into A.
-void z80AddReg8(Z80* Z, u8* r)
+void Z80::addReg8(u8& reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -249,14 +284,14 @@ void z80AddReg8(Z80* Z, u8* r)
     // P: Set if overflow
     // N: Reset
     // C: Carry from bit 7
-    u16 t = A + *r;
-    u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
-    A = (u8)t;
-    F = ((t & 0x100) ? F_CARRY : 0) | kHalfCarryAdd[x & 0x07] | kOverflowAdd[x >> 4] | gSZ53[A];
+    u16 t = A() + reg;
+    u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
+    A() = (u8)t;
+    ()F = ((t & 0x100) ? F_CARRY : 0) | kHalfCarryAdd[x & 0x07] | kOverflowAdd[x >> 4] | m_SZ53[A()];
 }
 
 // Result always goes into HL
-void z80AdcReg16(Z80* Z, u16* r)
+void Z80::adcReg16(u16& reg)
 {
     // S: Not affected
     // Z: Not affected
@@ -264,16 +299,16 @@ void z80AdcReg16(Z80* Z, u16* r)
     // P: Not affected
     // N: Reset
     // C: Carry from bit 15
-    u32 t = (u32)HL + (u32)*r + (F & F_CARRY);
-    u8 x = (u8)(((HL & 0x8800) >> 11) | ((*r & 0x8800) >> 10) | ((t & 0x8800) >> 9));
-    MP = HL + 1;
-    HL = (u16)t;
-    F = ((t & 0x10000) ? F_CARRY : 0) | kOverflowAdd[x >> 4] | (H & (F_3 | F_5 | F_SIGN)) | kHalfCarryAdd[x & 0x07] |
-        (HL ? 0 : F_ZERO);
+    u32 t = (u32)HL() + (u32)reg + (F() & F_CARRY);
+    u8 x = (u8)(((HL() & 0x8800) >> 11) | ((reg & 0x8800) >> 10) | ((t & 0x8800) >> 9));
+    MP() = HL() + 1;
+    HL() = (u16)t;
+    F() = ((t & 0x10000) ? F_CARRY : 0) | kOverflowAdd[x >> 4] | (H() & (F_3 | F_5 | F_SIGN)) | kHalfCarryAdd[x & 0x07] |
+        (HL() ? 0 : F_ZERO);
 }
 
 // Result always goes into A
-void z80AdcReg8(Z80* Z, u8* r)
+void Z80::adcReg8(u8& reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -281,13 +316,13 @@ void z80AdcReg8(Z80* Z, u8* r)
     // P: Set if overflow
     // N: Reset
     // C: Carry from bit 7
-    u16 t = (u16)A + *r + (F & F_CARRY);
-    u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
-    A = (u8)t;
-    F = ((t & 0x100) ? F_CARRY : 0) | kHalfCarryAdd[x & 0x07] | kOverflowAdd[x >> 4] | gSZ53[A];
+    u16 t = (u16)A() + reg + (F() & F_CARRY);
+    u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
+    A() = (u8)t;
+    F() = ((t & 0x100) ? F_CARRY : 0) | kHalfCarryAdd[x & 0x07] | kOverflowAdd[x >> 4] | m_SZ53[A()];
 }
 
-void z80SubReg8(Z80* Z, u8* r)
+void Z80::subReg8(u8& reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -295,13 +330,13 @@ void z80SubReg8(Z80* Z, u8* r)
     // P: Set if overflow
     // N: Set
     // C: Set if borrowed
-    u16 t = (u16)A - *r;
-    u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
-    A = (u8)t;
-    F = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | gSZ53[A];
+    u16 t = (u16)A() - reg;
+    u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
+    A() = (u8)t;
+    F() = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | m_SZ53[A()];
 }
 
-void z80SbcReg8(Z80* Z, u8* r)
+void Z80::sbcReg8(u8& reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -309,13 +344,13 @@ void z80SbcReg8(Z80* Z, u8* r)
     // P: Set if overflow
     // N: Set
     // C: Set if borrowed
-    u16 t = (u16)A - *r - (F & F_CARRY);
-    u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
-    A = (u8)t;
-    F = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | gSZ53[A];
+    u16 t = (u16)A() - reg - (F() & F_CARRY);
+    u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
+    A() = (u8)t;
+    F() = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | m_SZ53[A()];
 }
 
-void z80SbcReg16(Z80* Z, u16* r)
+void Z80::sbcReg16(u16& reg)
 {
     // S: Result is negative
     // Z: Result is zero
@@ -323,61 +358,61 @@ void z80SbcReg16(Z80* Z, u16* r)
     // P: Set if overflow
     // N: Set
     // C: Set if borrowed
-    u32 t = (u32)HL - *r - (F & F_CARRY);
-    u8 x = (u8)(((HL & 0x8800) >> 11) | ((*r & 0x8800) >> 10) | ((t & 0x8800) >> 9));
-    MP = HL + 1;
-    HL = (u16)t;
-    F = ((t & 0x10000) ? F_CARRY : 0) | F_NEG | kOverflowSub[x >> 4] | (H & (F_3 | F_5 | F_SIGN))
-        | kHalfCarrySub[x & 0x07] | (HL ? 0 : F_ZERO);
+    u32 t = (u32)HL() - reg - (F() & F_CARRY);
+    u8 x = (u8)(((HL() & 0x8800) >> 11) | ((*r & 0x8800) >> 10) | ((t & 0x8800) >> 9));
+    MP() = HL() + 1;
+    HL() = (u16)t;
+    F() = ((t & 0x10000) ? F_CARRY : 0) | F_NEG | kOverflowSub[x >> 4] | (H() & (F_3 | F_5 | F_SIGN))
+        | kHalfCarrySub[x & 0x07] | (HL() ? 0 : F_ZERO);
 }
 
-void z80CpReg8(Z80* Z, u8* r)
+void Z80::cpReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Borrow from 4 during 'subtraction'
     // P: Overflow (r > A)
     // N: Set
     // C: Set if borrowed (r > A)
-    u16 t = (int)A - *r;
-    u8 x = (u8)(((A & 0x88) >> 3) | ((*r & 0x88) >> 2) | ((t & 0x88) >> 1));
-    F = ((t & 0x100) ? F_CARRY : (t ? 0 : F_ZERO)) | F_NEG | kHalfCarrySub[x & 7] | kOverflowSub[x >> 4] |
-        (*r & (F_3 | F_5)) | ((u8)t & F_SIGN);
+    u16 t = (int)A() - reg;
+    u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
+    F() = ((t & 0x100) ? F_CARRY : (t ? 0 : F_ZERO)) | F_NEG | kHalfCarrySub[x & 7] | kOverflowSub[x >> 4] |
+        (reg & (F_3 | F_5)) | ((u8)t & F_SIGN);
 }
 
-void z80AndReg8(Z80* Z, u8* r)
+void Z80::andReg8(u8& reg)
 {
-    A &= *r;
+    A() &= reg;
 
     // S, Z: Based on result
     // H: Set
     // P: Overflow
     // N: Reset
     // C: Reset
-    F = F_HALF | gSZ53P[A];
+    F() = F_HALF | m_SZ53P[A()];
 }
 
-void z80OrReg8(Z80* Z, u8* r)
+void Z80::orReg8(u8& reg)
 {
-    A |= *r;
+    A() |= reg;
 
     // S, Z: Based on result
     // H: Reset
     // P: Overflow
     // N: Reset
     // C: Reset
-    F = gSZ53P[A];
+    F() = m_SZ53P[A()];
 }
 
-void z80XorReg8(Z80* Z, u8* r)
+void Z80::xorReg8(u8& reg)
 {
-    A ^= *r;
+    A() ^= reg;
 
     // S, Z: Based on result
     // H: Reset
     // P: Overflow
     // N: Reset
     // C: Reset
-    F = gSZ53P[A];
+    F() = m_SZ53P[A()];
 }
 
 //         +-------------------------------------+
@@ -385,15 +420,15 @@ void z80XorReg8(Z80* Z, u8* r)
 //  | C |<-+--| 7                           0 |<-+
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80RlcReg8(Z80* Z, u8* r)
+void Z80::rlcReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    *r = ((*r << 1) | (*r >> 7));
-    F = (*r & F_CARRY) | gSZ53P[*r];
+    reg = ((reg << 1) | (reg >> 7));
+    F() = (reg & F_CARRY) | m_SZ53P[reg];
 }
 
 //  +-------------------------------------+
@@ -401,16 +436,16 @@ void z80RlcReg8(Z80* Z, u8* r)
 //  +->| 7                           0 |--+->| C |
 //     +---+---+---+---+---+---+---+---+     +---+
 //
-void z80RrcReg8(Z80* Z, u8* r)
+void Z80::rrcReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r & F_CARRY;
-    *r = ((*r >> 1) | (*r << 7));
-    F |= gSZ53P[*r];
+    F() = reg & F_CARRY;
+    reg = ((reg >> 1) | (reg << 7));
+    F() |= m_SZ53P[reg];
 }
 
 //  +-----------------------------------------------+
@@ -418,16 +453,16 @@ void z80RrcReg8(Z80* Z, u8* r)
 //  +--| C |<----| 7                           0 |<-+
 //     +---+     +---+---+---+---+---+---+---+---+
 //
-void z80RlReg8(Z80* Z, u8* r)
+void Z80::rlReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    u8 t = *r;
-    *r = ((*r << 1) | (F & F_CARRY));
-    F = (t >> 7) | gSZ53P[*r];
+    u8 t = reg;
+    reg = ((reg << 1) | (F() & F_CARRY));
+    F() = (t >> 7) | m_SZ53P[reg];
 }
 
 //  +-----------------------------------------------+
@@ -435,32 +470,32 @@ void z80RlReg8(Z80* Z, u8* r)
 //  +->| 7                           0 |---->| C |--+
 //     +---+---+---+---+---+---+---+---+     +---+
 //
-void z80RrReg8(Z80* Z, u8* r)
+void Z80::rrReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    u8 t = *r;
-    *r = ((*r >> 1) | (F << 7));
-    F = (t & F_CARRY) | gSZ53P[*r];
+    u8 t = reg;
+    reg = ((reg >> 1) | (F() << 7));
+    F() = (t & F_CARRY) | m_SZ53P[reg];
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
 //  | C |<----| 7                           0 |<---- 0
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80SlaReg8(Z80* Z, u8* r)
+void Z80::slaReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    F = *r >> 7;
-    *r = (*r << 1);
-    F |= gSZ53P[*r];
+    F() = reg >> 7;
+    reg = (reg << 1);
+    F() |= m_SZ53P[reg];
 }
 
 //     +---+---+---+---+---+---+---+---+     +---+
@@ -470,51 +505,51 @@ void z80SlaReg8(Z80* Z, u8* r)
 //  |    |
 //  +----+
 //
-void z80SraReg8(Z80* Z, u8* r)
+void Z80::sraReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r & F_CARRY;
-    *r = ((*r & 0x80) | (*r >> 1));
-    F |= gSZ53P[*r];
+    F() = reg & F_CARRY;
+    reg = ((reg & 0x80) | (reg >> 1));
+    F() |= m_SZ53P[reg];
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
 //  | C |<----| 7                           0 |<---- 1
 //  +---+     +---+---+---+---+---+---+---+---+
 //
-void z80Sl1Reg8(Z80* Z, u8* r)
+void Z80::sl1Reg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 7
-    F = *r >> 7;
-    *r = ((*r << 1) | 0x01);
-    F |= gSZ53P[*r];
+    F() = reg >> 7;
+    reg = ((reg << 1) | 0x01);
+    F() |= m_SZ53P[reg];
 }
 
 //         +---+---+---+---+---+---+---+---+     +---+
 //  0 ---->| 7                           0 |---->| C |
 //         +---+---+---+---+---+---+---+---+     +---+
 //
-void z80SrlReg8(Z80* Z, u8* r)
+void Z80::srlReg8(u8& reg)
 {
     // S, Z: Based on result
     // H: Reset
     // P: Set on even parity
     // N: Reset
     // C: bit 0
-    F = *r & F_CARRY;
-    *r = (*r >> 1);
-    F |= gSZ53P[*r];
+    F() = reg & F_CARRY;
+    reg = (reg >> 1);
+    F() |= m_SZ53P[reg];
 }
 
-void z80BitReg8(Z80* Z, u8* r, int b)
+void Z80::bitReg8(u8& reg, int b)
 {
     // S: Undefined (set to bit 7 if bit 7 is checked, otherwise 0)
     // Z: Opposite of bit b
@@ -522,12 +557,12 @@ void z80BitReg8(Z80* Z, u8* r, int b)
     // P: Undefined (same as Z)
     // N: Reset
     // C: Preserved
-    F = (F & F_CARRY) | F_HALF | (*r & (F_3 | F_5));
-    if (!(*r & (1 << b))) F |= F_PARITY | F_ZERO;
-    if ((b == 7) && (*r & 0x80)) F |= F_SIGN;
+    F() = (F() & F_CARRY) | F_HALF | (reg & (F_3 | F_5));
+    if (!(reg & (1 << b))) F() |= F_PARITY | F_ZERO;
+    if ((b == 7) && (reg & 0x80)) F() |= F_SIGN;
 }
 
-void z80BitReg8_MP(Z80* Z, u8* r, int b)
+void Z80::bitReg8MP(u8& reg, int b)
 {
     // S: Undefined (set to bit 7 if bit 7 is checked, otherwise 0)
     // Z: Opposite of bit b
@@ -535,30 +570,30 @@ void z80BitReg8_MP(Z80* Z, u8* r, int b)
     // P: Undefined (same as Z)
     // N: Reset
     // C: Preserved
-    F = (F & F_CARRY) | F_HALF | (Z->m.h & (F_3 | F_5));
-    if (!(*r & (1 << b))) F |= F_PARITY | F_ZERO;
-    if ((b == 7) && (*r & 0x80)) F |= F_SIGN;
+    F() = (F() & F_CARRY) | F_HALF | (Z->m.h & (F_3 | F_5));
+    if (!(reg & (1 << b))) F() |= F_PARITY | F_ZERO;
+    if ((b == 7) && (reg & 0x80)) F() |= F_SIGN;
 }
 
-void z80ResReg8(Z80* Z, u8* r, int b)
+void Z80::resReg8(u8& reg, int b)
 {
     // All flags preserved.
-    *r = *r & ~((u8)1 << b);
+    reg = reg & ~((u8)1 << b);
 }
 
-void z80SetReg8(Z80* Z, u8* r, int b)
+void Z80::setReg8(u8& reg, int b)
 {
     // All flags preserved.
-    *r = *r | ((u8)1 << b);
+    reg = reg | ((u8)1 << b);
 }
 
-void z80Daa(Z80* Z)
+void Z80::daa()
 {
-    u8 result = A;
+    u8 result = A();
     u8 incr = 0;
-    bool carry = K_BOOL(F & F_CARRY);
+    bool carry = (F() & F_CARRY) != 0;
 
-    if (((F & F_HALF) != 0) || ((result & 0x0f) > 0x09))
+    if (((F() & F_HALF) != 0) || ((result & 0x0f) > 0x09))
     {
         incr |= 0x06;
     }
@@ -568,39 +603,39 @@ void z80Daa(Z80* Z)
         incr |= 0x60;
     }
 
-    if (result > 0x99) carry = YES;
+    if (result > 0x99) carry = true;
 
-    if ((F & F_NEG) != 0)
+    if ((F() & F_NEG) != 0)
     {
-        z80SubReg8(Z, &incr);
+        subReg8(incr);
     }
     else
     {
-        z80AddReg8(Z, &incr);
+        addReg8(incr);
     }
 
-    result = A;
+    result = A();
 
-    z80SetFlag(Z, F_CARRY, carry);
-    z80SetFlag(Z, F_PARITY, gParity[result]);
+    setFlags(F_CARRY, carry);
+    setFlags(F_PARITY, m_parity[result]);
 }
 
-int z80Displacement(u8 x)
+int Z80::displacement(u8 x)
 {
     return (128 ^ (int)x) - 128;
 }
 
-u16 z80Pop(Z80* Z, i64* tState)
+u16 Z80::pop(i64& inOutTState)
 {
-    u16 x = memoryPeek16(Z->mem, SP, tState);
-    SP += 2;
+    u16 x = m_memory.peek16(SP(), inOutTState);
+    SP() += 2;
     return x;
 }
 
-void z80Push(Z80* Z, u16 x, i64* tState)
+void Z80::push(u16 x, i64& inOutTState)
 {
-    memoryPoke(Z->mem, --SP, HI(x), tState);
-    memoryPoke(Z->mem, --SP, LO(x), tState);
+    m_memory.poke(--SP(), HI(x), inOutTState);
+    m_memory.poke(--SP(), LO(x), inOutTState);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1148,7 +1183,7 @@ void z80StepED(Z80* Z, i64* tState)
             r = (y == 6) ? &v : z80GetReg(Z, y);
             MP = BC + 1;
             *r = ioIn(Z->io, BC, tState);
-            F = (F & F_CARRY) | gSZ53P[*r];
+            F = (F & F_CARRY) | m_SZ53P[*r];
             break;
 
         case 1:
@@ -1227,14 +1262,14 @@ void z80StepED(Z80* Z, i64* tState)
             case 2: // LD A,I
                 CONTEND(IR, 1, 1);
                 A = I;
-                F = (F & F_CARRY) | gSZ53[A] | (IFF2 ? F_PARITY : 0);
+                F = (F & F_CARRY) | m_SZ53[A] | (IFF2 ? F_PARITY : 0);
                 // #todo: handle IFF2 event
                 break;
 
             case 3: // LD A,R
                 CONTEND(IR, 1, 1);
                 A = R;
-                F = (F & F_CARRY) | gSZ53[A] | (IFF2 ? F_PARITY : 0);
+                F = (F & F_CARRY) | m_SZ53[A] | (IFF2 ? F_PARITY : 0);
                 break;
 
             case 4: // RRD
@@ -1242,7 +1277,7 @@ void z80StepED(Z80* Z, i64* tState)
                 CONTEND(HL, 1, 4);
                 POKE(HL, (A << 4) | (v >> 4));
                 A = (A & 0xf0) | (v & 0x0f);
-                F = (F & F_CARRY) | gSZ53P[A];
+                F = (F & F_CARRY) | m_SZ53P[A];
                 MP = HL + 1;
                 break;
 
@@ -1251,7 +1286,7 @@ void z80StepED(Z80* Z, i64* tState)
                 CONTEND(HL, 1, 4);
                 POKE(HL, (v << 4) | (A & 0x0f));
                 A = (A & 0xf0) | (v >> 4);
-                F = (F & F_CARRY) | gSZ53P[A];
+                F = (F & F_CARRY) | m_SZ53P[A];
                 MP = HL + 1;
                 break;
 
@@ -1306,8 +1341,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + C + 1;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
             }
             break;
 
@@ -1323,8 +1358,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + L;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
             }
             break;
 
@@ -1368,8 +1403,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + C - 1;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
             }
             break;
 
@@ -1385,8 +1420,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + L;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
             }
             break;
 
@@ -1444,8 +1479,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + C + 1;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
                 if (B)
                 {
                     CONTEND(HL, 1, 5);
@@ -1467,8 +1502,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + L;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
                 if (B)
                 {
                     CONTEND(BC, 1, 5);
@@ -1531,8 +1566,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + C - 1;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
                 if (B)
                 {
                     CONTEND(HL, 1, 5);
@@ -1554,8 +1589,8 @@ void z80StepED(Z80* Z, i64* tState)
                 t2 = t1 + L;
                 F = (t1 & 0x80 ? F_NEG : 0) |
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
-                    (gParity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
-                    gSZ53[B];
+                    (m_parity[(t2 & 0x07) ^ B] ? F_PARITY : 0) |
+                    m_SZ53[B];
                 if (B)
                 {
                     CONTEND(BC, 1, 5);

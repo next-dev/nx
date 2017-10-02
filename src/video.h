@@ -4,40 +4,39 @@
 
 #pragma once
 
-#include <kore/k_platform.h>
-#include "memory.h"
+class Memory;
+class Io;
 
 // The width and height of the actual pixel area of the screen
-#define NX_SCREEN_WIDTH     256
-#define NX_SCREEN_HEIGHT    192
+const int kScreenWidth = 256;
+const int kScreenHeight = 192;
+
 // The width and height of the TV
 // Image comprises of 64 lines of border, 192 lines of pixel data, and 56 lines of border.
 // Each line comprises of 48 pixels of border, 256 pixels of pixel data, followed by another 48 pixels of border.
 // Timing of a line is 24T for each border, 128T for the pixel data and 48T for the horizontal retrace (224 t-states).
-#define NX_TV_WIDTH         352
-#define NX_TV_HEIGHT        312
+const int kTvWidth = 352;
+const int kTvHeight = 312;
+
 // The width and height of the window that displays the emulated image (can be smalled than the TV size)
-#define NX_WINDOW_WIDTH     320
-#define NX_WINDOW_HEIGHT    256
-#define NX_BORDER_WIDTH     ((NX_WINDOW_WIDTH - NX_SCREEN_WIDTH) / 2)
-#define NX_BORDER_HEIGHT    ((NX_WINDOW_HEIGHT - NX_SCREEN_HEIGHT) / 2)
+const int kWindowWidth = 320;
+const int kWindowHeight = 256;
 
-typedef struct
+const int kBorderWidth = (kWindowWidth - kScreenWidth) / 2;
+const int kBorderHeight = (kWindowHeight - kScreenHeight) / 2;
+
+class Video
 {
-    Memory*     mem;        // Memory interface (weak pointer)
-    u8*         border;     // Border colour
-    u32*        img;        // 24-bit image for storing the screen.  Should be NX_WINDOW_WIDTH/HEIGHT in size.
-}
-Video;
+public:
+    Video(Memory& memory, Io& io, u32* img);
 
-// Initialise the video sub-system.
-bool videoOpen(Video* video, Memory* mem, u8* border, u32* img);
+    void render(bool flash);
 
-// Close the video
-void videoClose(Video* video);
-
-// Render the ULA video.
-void videoRenderULA(Video* video, bool flash);
+private:
+    Memory&     m_memory;   // Memory interface for reading VRAM
+    Io&         m_io;       // I/O interface for border colour
+    u32*        m_image;    // 24-bit image for storing the screen.  Should be kWindowWidth/Height in size.
+};
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -46,20 +45,16 @@ void videoRenderULA(Video* video, bool flash);
 
 #ifdef NX_IMPL
 
-bool videoOpen(Video* video, Memory* mem, u8* border, u32* img)
-{
-    video->mem = mem;
-    video->border = border;
-    video->img = img;
+#include "io.h"
 
-    return YES;
-}
-
-void videoClose(Video* video)
+Video::Video(Memory& memory, Io& io, u32* img)
+    : m_memory(memory)
+    , m_io(io)
+    , m_image(img)
 {
 }
 
-void videoRenderULA(Video* video, bool flash)
+void Video::render(bool flash)
 {
     static const u32 colours[16] =
     {
@@ -67,18 +62,18 @@ void videoRenderULA(Video* video, bool flash)
         0x000000, 0x0000ff, 0xff0000, 0xff00ff, 0x00ff00, 0x00ffff, 0xffff00, 0xffffff,
     };
 
-    if (!video->img) return;
+    if (!m_image) return;
 
-    u32* img = video->img;
+    u32* img = m_image;
     int border = 7;
 
-    for (int r = -NX_BORDER_HEIGHT; r < (NX_SCREEN_HEIGHT + NX_BORDER_HEIGHT); ++r)
+    for (int r = -kBorderHeight; r < (kScreenHeight + kBorderHeight); ++r)
     {
-        if (r < 0 || r >= NX_SCREEN_HEIGHT)
+        if (r < 0 || r >= kScreenHeight)
         {
-            for (int c = -NX_BORDER_WIDTH; c < (NX_SCREEN_WIDTH + NX_BORDER_WIDTH); ++c)
+            for (int c = -kBorderWidth; c < (kScreenWidth + kBorderWidth); ++c)
             {
-                *img++ = colours[*video->border & 0x7];
+                *img++ = colours[m_io.getBorder() & 0x7];
             }
         }
         else
@@ -98,18 +93,18 @@ void videoRenderULA(Video* video, bool flash)
             u16 p = 0x4000 + ((r & 0x0c0) << 5) + ((r & 0x7) << 8) + ((r & 0x38) << 2);
             u16 a = 0x5800 + ((r & 0xf8) << 2);
 
-            for (int c = -NX_BORDER_WIDTH; c < (NX_SCREEN_WIDTH + NX_BORDER_WIDTH); ++c)
+            for (int c = -kBorderWidth; c < (kScreenWidth + kBorderWidth); ++c)
             {
-                if (c < 0 || c >= NX_SCREEN_WIDTH)
+                if (c < 0 || c >= kScreenWidth)
                 {
-                    *img++ = colours[*video->border & 0x7];
+                    *img++ = colours[m_io.getBorder() & 0x7];
                 }
                 else
                 {
                     i64 ts = 0;
                     // #todo: add API for direct page/address access
-                    u8 data = memoryPeek(video->mem, p++, &ts);
-                    u8 attr = memoryPeek(video->mem, a++, &ts);
+                    u8 data = m_memory.peek(p++, ts);
+                    u8 attr = m_memory.peek(a++, ts);
                     u32 ink = 0xff000000 + colours[(attr & 7) + ((attr & 0x40) >> 3)];
                     u32 paper = 0xff000000 + colours[(attr & 0x7f) >> 3];
 

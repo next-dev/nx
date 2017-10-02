@@ -20,7 +20,7 @@ solution "nx"
 		"_CRT_SECURE_NO_WARNINGS",
 	}
 
-    linkoptions "/opt:ref"
+    --linkoptions "/opt:ref"
     editandcontinue "off"
 
     rtti "off"
@@ -42,12 +42,51 @@ solution "nx"
         kind "WindowedApp"
 		files {
             "../src/**.h",
-			"../src/**.c",
-            "../include/**.h",
+			"../src/**.cc",
 		}
         includedirs {
             "../include",
         }
+        links {
+            "flac.lib",
+            "freetype.lib",
+            "ogg.lib",
+            "openal32.lib",
+            "vorbis.lib",
+            "vorbisenc.lib",
+            "vorbisfile.lib",
+            "opengl32.lib",
+            "winmm.lib",
+            "gdi32.lib",
+        }
+        defines {
+            "SFML_STATIC",
+        }
+
+        libdirs {
+            "../lib/%{cfg.buildcfg}/msvc",
+            "../lib/Exts/msvc"
+        }
+
+        configuration "Debug"
+            links {
+                "sfml-audio-s-d.lib",
+                "sfml-graphics-s-d.lib",
+                "sfml-main-d.lib",
+                "sfml-network-s-d.lib",
+                "sfml-system-s-d.lib",
+                "sfml-window-s-d.lib"
+            }
+
+        configuration "Release"
+            links {
+                "sfml-audio-s.lib",
+                "sfml-graphics-s.lib",
+                "sfml-main.lib",
+                "sfml-network-s.lib",
+                "sfml-system-s.lib",
+                "sfml-window-s.lib"
+            }
 
         -- postbuildcommands {
         --     "copy \"" .. path.translate(path.join(rootdir, "data", "*.*")) .. '" "' ..
@@ -59,8 +98,7 @@ solution "nx"
 				"WIN32",
 			}
 			flags {
-				"StaticRuntime",
-				"NoMinimalRebuild",
-				"NoIncrementalLink",
-                "WinMain",
+				--"StaticRuntime",
+				--"NoMinimalRebuild",
+				--"NoIncrementalLink",
 			}

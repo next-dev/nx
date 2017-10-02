@@ -4,6 +4,31 @@
 
 #pragma once
 
+class Memory;
+class Video;
+class Z80;
+class Io;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #include "memory.h"
 #include "video.h"
 #include "z80.h"
