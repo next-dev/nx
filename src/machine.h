@@ -4,103 +4,102 @@
 
 #pragma once
 
-class Memory;
-class Video;
-class Z80;
-class Io;
+#include <functional>
+#include <string>
+#include <vector>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#include "memory.h"
 #include "video.h"
 #include "z80.h"
-#include "io.h"
 
-typedef struct _Machine Machine;
+//----------------------------------------------------------------------------------------------------------------------
+// Events
+//----------------------------------------------------------------------------------------------------------------------
 
-// This is the signature of an event handler.  The handler can change the number of t-states.  Return YES if you
-// want machineUpdate to continue.  If the output tState count is less than the original, all events trigger points
-// will be decreased by the same amount.
-typedef bool(*EventFunc) (Machine* M, i64* inOutTState);
+class Machine;
 
-typedef struct  
+class EventManager
 {
-    i64         tState;
-    EventFunc   eventFunc;
-    const char* name;
-}
-Event;
+public:
+    class Event
+    {
+    public:
+        // An event function to return false to exit the emulation loop so that the host can get updates.
+        using Func = std::function<bool(Machine&, i64&)>;
 
-typedef struct
-{
-    u32*    img;        // The image to render to.
-    u8*     keys;       // The key state.
-}
-MachineConfig;
+        Event(i64 tState, std::string name, Func func)
+            : m_tState(tState)
+            , m_name(name)
+            , m_func(func)
+        {}
 
-struct _Machine
-{
-    Memory          memory;
-    Video           video;
-    int             frameCounter;   // incremented each frame to time flash effect
-    Array(Event)    events;
-    Z80             z80;            // The cpu emulator
-    Io              io;
+        bool trigger(Machine& M, i64& inOutTState)
+        {
+            return m_func(M, inOutTState);
+        }
 
-    // Output - when the machine has stopped updating, these will reflect events that the emulator should react to
-    bool            redraw;
+        i64 getTState() const { return m_tState; }
+        const std::string& getName() const { return m_name; }
+        Func getFunc() { return m_func; }
+
+    private:
+        i64             m_tState;
+        std::string     m_name;
+        Func            m_func;
+    };
+
+    void addEvent(i64 tState, std::string name, Event::Func func);
+    bool testEvent(Machine& M, i64& inOutTState);
+
+private:
+    std::vector<Event>  m_events;
 };
 
-// Create a ZX Spectrum 48K machine.  The image passed will be rendered too from time to time.
-bool machineOpen(Machine* M, MachineConfig* config);
+//----------------------------------------------------------------------------------------------------------------------
+// Emulated Machine
+//----------------------------------------------------------------------------------------------------------------------
 
-// Destroy a machine.
-void machineClose(Machine* M);
-
-// Run a few t-states.  Returns the new t-state position
-i64 machineUpdate(Machine* M, i64* tState);
-
-// Events - events call functions when the tstate counter equals or passes a given value.  As soon as an event
-// occurs machineUpdate will return if the event function returns NO.
-
-// Add a new event
-void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc, const char* name);
-
-// Test for an event for a given t-state.  If there is no event, YES is returned.  Otherwise the event handler
-// is called and the result of that handler is returned.
-bool machineTestEvent(Machine* M, i64* inOutTState);
-
-// Macro to define machine event handlers.
-#define MACHINE_EVENT(name) internal bool name(Machine* M, i64* inOutTState)
-
-// Load in a file
-typedef enum
+class Machine
 {
-    FT_Sna,
-    FT_Tap,
-    FT_Psz,
-}
-FileType;
+public:
+    Machine(IHost& host, u32* img, std::vector<bool>& keys);
 
-bool machineLoad(Machine* M, const u8* data, i64 size, FileType typeHint, i64* outTState);
+    // Returns the number of t-states that have passed.
+    i64 update(i64& inOutTState);
+
+    // Return various attributes of the machine
+    int getClockScale() const { return m_clockScale; }
+    int getFrameCounter() const { return m_frameCounter; }
+
+    // Access to systems.
+    EventManager& getEvents() { return m_events; }
+    Memory& getMemory() { return m_memory; }
+    Io& getIo() { return m_io; }
+    Video& getVideo() { return m_video; }
+    Z80& getZ80() { return m_z80; }
+    IHost& getHost() { return m_host; }
+
+    // File loading.
+    enum class FileType
+    {
+        Sna,
+        Tap,
+        Pzx,
+    };
+    bool load(const u8* data, i64 size, FileType typeHint, i64& outTState);
+
+private:
+    bool loadSna(const u8* data, i64 size, i64& outTState);
+
+private:
+    IHost&          m_host;
+    int             m_clockScale;
+    Memory          m_memory;
+    Io              m_io;
+    Video           m_video;
+    Z80             m_z80;
+    int             m_frameCounter;
+    EventManager    m_events;
+};
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -109,128 +108,93 @@ bool machineLoad(Machine* M, const u8* data, i64 size, FileType typeHint, i64* o
 
 #ifdef NX_IMPL
 
-#include <kore/k_blob.h>
+#include <algorithm>
 
-MACHINE_EVENT(machineFrame)
+//----------------------------------------------------------------------------------------------------------------------
+// Event manager
+//----------------------------------------------------------------------------------------------------------------------
+
+void EventManager::addEvent(i64 tState, std::string name, Event::Func func)
 {
-    machineAddEvent(M, (69888 * NX_SPEED), &machineFrame, "frame");
-    *inOutTState -= (69888 * NX_SPEED);
-    videoRenderULA(&M->video, K_BOOL(M->frameCounter++ & 16));
-    M->redraw = YES;
-    z80Interrupt(&M->z80);
-    return NO;
-}
-
-bool machineOpen(Machine* M, MachineConfig* config)
-{
-    // Initialise sub-systems
-    if (!memoryOpen(&M->memory)) goto error;
-    ioInit(&M->io, &M->memory, config->keys);
-    if (!videoOpen(&M->video, &M->memory, &M->io.border, config->img)) goto error;
-    z80Init(&M->z80, &M->memory, &M->io);
-
-    // Initialise state
-    M->events = 0;
-
-    // Load the ROM into memory.
-    Blob rom = blobLoad("48.rom");
-    if (rom.bytes)
-    {
-        memoryLoad(&M->memory, 0, rom.bytes, (u16)rom.size);
-        blobUnload(rom);
-    }
-
-    // Initial events
-    machineAddEvent(M, (69888 * NX_SPEED), &machineFrame, "frame");
-
-    return YES;
-
-error:
-    machineClose(M);
-    return NO;
-}
-
-void machineClose(Machine* M)
-{
-    videoClose(&M->video);
-    memoryClose(&M->memory);
-    arrayRelease(M->events);
-}
-
-i64 machineUpdate(Machine* M, i64* tState)
-{
-    i64 elapsedTStates = 0;
-    M->redraw = NO;
-
-    while (machineTestEvent(M, tState))
-    {
-        i64 startTState = *tState;
-        z80Step(&M->z80, tState);
-        elapsedTStates += (*tState - startTState);
-    }
-
-    return elapsedTStates;
-}
-
-void machineAddEvent(Machine* M, i64 tState, EventFunc eventFunc, const char* name)
-{
-#if NX_DEBUG_EVENTS
-    printf("Add Event: (%d) %s\n", (int)tState, name);
-#endif
-
-    Event* e = arrayExpand(M->events, 1);
-    e->tState = tState;
-    e->eventFunc = eventFunc;
-    e->name = name;
+    m_events.emplace_back(tState, name, func);
 
     // Sort the array
-    i64 size = arrayCount(M->events);
-    if (size > 1)
-    {
-        for (i64 i = size - 1; i > 0; --i)
-        {
-            Event* e1 = &M->events[i - 1];
-            Event* e2 = &M->events[i];
-
-            // Check to see if the element is in the right place.
-            if (e1->tState < e2->tState) break;
-
-            // No!  Swap and continue.
-            Event t = *e1;
-            *e1 = *e2;
-            *e2 = t;
-        }
-    }
+    std::sort(m_events.begin(), m_events.end(), [](Event& ev1, Event& ev2) -> bool {
+        return ev1.getTState() < ev2.getTState();
+    });
 }
 
-bool machineTestEvent(Machine* M, i64* inOutTState)
+bool EventManager::testEvent(Machine& M, i64& inOutTState)
 {
-    bool result = YES;
+    bool result = true;
 
-    // Keep looping until all events have been processed
-    while(arrayCount(M->events) > 0)
+    // Keep looping until all passed events have been processed.
+    while (result &&
+        (m_events.size() > 0) &&
+        (m_events[0].getTState() <= inOutTState))
     {
-        i64 tState = *inOutTState;
-        if (M->events[0].tState <= tState)
-        {
-            // We need to run this event.
-#if NX_DEBUG_EVENTS
-            printf("\033[33;1mRun Event: (%d) %s\033[0m\n", (int)tState, M->events[0].name);
-#endif
-
-            if (!M->events[0].eventFunc(M, inOutTState)) result = NO;
-
-            // Remove this event
-            arrayDelete(M->events, 0);
-        }
-        else
-        {
-            // No events just yet.
-            break;
-        }
+        if (!m_events[0].trigger(M, inOutTState)) result = false;
+        m_events.erase(m_events.begin());
     }
 
     return result;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Events
+//----------------------------------------------------------------------------------------------------------------------
+
+bool machineFrame(Machine& M, i64& inOutTState)
+{
+    i64 time = 69888 * M.getClockScale();
+    M.getEvents().addEvent(time, "frame", &machineFrame);
+    inOutTState -= time;
+    M.getVideo().render((M.getFrameCounter() & 16) != 0);
+    M.getHost().redraw();
+    M.getZ80().interrupt();
+    return false;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Machine
+//----------------------------------------------------------------------------------------------------------------------
+
+Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
+    : m_host(host)
+    , m_clockScale(1)
+    , m_memory(1)
+    , m_io(m_memory, keys)
+    , m_video(m_memory, m_io, img)
+    , m_z80(m_memory, m_io)
+    , m_frameCounter(0)
+{
+    // Load the ROM into memory.
+    const u8* rom;
+    i64 size;
+    int handle = m_host.load("48.rom", rom, size);
+    if (handle)
+    {
+        m_memory.load(0, rom, size);
+        m_host.unload(handle);
+
+        // Bootstrap the events
+        getEvents().addEvent(69888 * m_clockScale, "frame", &machineFrame);
+    }
+}
+
+i64 Machine::update(i64& inOutTState)
+{
+    i64 elapsedTStates = 0;
+    m_host.clear();
+
+    while (getEvents().testEvent(*this, inOutTState))
+    {
+        i64 startTState = inOutTState;
+        getZ80().step(inOutTState);
+        elapsedTStates += (inOutTState - startTState);
+    }
+
+    return elapsedTStates;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -240,46 +204,46 @@ bool machineTestEvent(Machine* M, i64* inOutTState)
 #define BYTE_OF(arr, offset) arr[offset]
 #define WORD_OF(arr, offset) (*(u16 *)&arr[offset])
 
-bool machineLoadSna(Machine* M, const u8* data, i64 size, i64* outTState)
+bool Machine::loadSna(const u8* data, i64 size, i64& outTState)
 {
-    Z80* Z = &M->z80;
+    if (size != 49179) return false;
 
-    if (size != 49179) return NO;
+    m_z80.I() = BYTE_OF(data, 0);
+    m_z80.HL_() = WORD_OF(data, 1);
+    m_z80.DE_() = WORD_OF(data, 3);
+    m_z80.BC_() = WORD_OF(data, 5);
+    m_z80.AF_() = WORD_OF(data, 7);
+    m_z80.HL() = WORD_OF(data, 9);
+    m_z80.DE() = WORD_OF(data, 11);
+    m_z80.BC() = WORD_OF(data, 13);
+    m_z80.IX() = WORD_OF(data, 15);
+    m_z80.IY() = WORD_OF(data, 17);
+    m_z80.IFF1() = (BYTE_OF(data, 19) & 0x01) != 0;
+    m_z80.IFF2() = (BYTE_OF(data, 19) & 0x04) != 0;
+    m_z80.R() = BYTE_OF(data, 20);
+    m_z80.AF() = WORD_OF(data, 21);
+    m_z80.SP() = WORD_OF(data, 23);
+    m_z80.IM() = BYTE_OF(data, 25);
+    m_io.setBorder(BYTE_OF(data, 26));
+    m_memory.load(0x4000, data + 27, 0xc000);
 
-    I = BYTE_OF(data, 0);
-    HL_ = WORD_OF(data, 1);
-    DE_ = WORD_OF(data, 3);
-    BC_ = WORD_OF(data, 5);
-    AF_ = WORD_OF(data, 7);
-    HL = WORD_OF(data, 9);
-    DE = WORD_OF(data, 11);
-    BC = WORD_OF(data, 13);
-    IX = WORD_OF(data, 15);
-    IY = WORD_OF(data, 17);
-    IFF1 = K_BOOL(BYTE_OF(data, 19) & 0x01);
-    IFF2 = K_BOOL(BYTE_OF(data, 19) & 0x04);
-    R = BYTE_OF(data, 20);
-    AF = WORD_OF(data, 21);
-    SP = WORD_OF(data, 23);
-    Z->im = BYTE_OF(data, 25);
-    M->io.border = BYTE_OF(data, 26);
-    memoryLoad(&M->memory, 0x4000, data + 27, 0xc000);
+    m_z80.PC() = m_z80.pop(outTState);
 
-    PC = z80Pop(Z, outTState);
+    outTState = 0;
 
-    return YES;
+    return true;
 }
 
 #undef BYTE_OF
 #undef WORD_OF
 
-bool machineLoad(Machine* M, const u8* data, i64 size, FileType typeHint, i64* outTState)
+bool Machine::load(const u8* data, i64 size, FileType typeHint, i64& outTState)
 {
     switch (typeHint)
     {
-    case FT_Sna:    return machineLoadSna(M, data, size, outTState);
+    case FileType::Sna:     return loadSna(data, size, outTState);
     default:
-        return NO;
+        return false;
     }
 }
 

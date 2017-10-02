@@ -23,18 +23,19 @@ enum class Key
 class Io
 {
 public:
-    Io(Memory& memory, std::vector<u8>& keys);
+    Io(Memory& memory, std::vector<bool>& keys);
 
     void contend(u16 port, i64 tStates, int num, i64& inOutTStates);
     void out(u16 port, u8 data, i64& inOutTStates);
     u8 in(u16 port, i64& inOutTStates);
 
     u8 getBorder() const { return m_border; }
+    void setBorder(u8 border) { m_border = border; }
 
 private:
     u8                  m_border;
     Memory&             m_memory;
-    std::vector<u8>&    m_keys;
+    std::vector<bool>&  m_keys;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -46,7 +47,7 @@ private:
 
 #include "memory.h"
 
-Io::Io(Memory& memory, std::vector<u8>& keys)
+Io::Io(Memory& memory, std::vector<bool>& keys)
     : m_border(7)
     , m_memory(memory)
     , m_keys(keys)
