@@ -102,3 +102,6 @@ solution "nx"
 				--"NoMinimalRebuild",
 				--"NoIncrementalLink",
 			}
+            linkoptions {
+                "/ignore:4099"
+            }
