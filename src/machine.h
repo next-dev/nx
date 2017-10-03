@@ -152,7 +152,7 @@ bool machineFrame(Machine& M, i64& inOutTState)
     M.getEvents().addEvent(time, "frame", &machineFrame);
     inOutTState -= time;
     M.setFrameCounter(M.getFrameCounter() + 1);
-    M.getVideo().render((M.getFrameCounter() & 16) != 0);
+    //M.getVideo().render((M.getFrameCounter() & 16) != 0);
     M.getHost().redraw();
     M.getZ80().interrupt();
     return false;
@@ -195,6 +195,7 @@ i64 Machine::update(i64& inOutTState)
         i64 startTState = inOutTState;
         getZ80().step(inOutTState);
         elapsedTStates += (inOutTState - startTState);
+        m_video.render((getFrameCounter() & 16) != 0, inOutTState);
     }
 
     return elapsedTStates;
