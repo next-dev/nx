@@ -2,7 +2,7 @@
 // NX - Next Emulator
 //----------------------------------------------------------------------------------------------------------------------
 
-#define NX_DEBUG_CONSOLE    1
+#define NX_DEBUG_CONSOLE    0
 
 #include <SFML/Graphics.hpp>
 
@@ -147,7 +147,7 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
     Key key1 = Key::COUNT;
     Key key2 = Key::COUNT;
 
-    printf("KEY [%s]: %d\n", down ? "DOWN" : " UP ", key);
+    //printf("KEY [%s]: %d\n", down ? "DOWN" : " UP ", key);
 
     using K = sf::Keyboard;
 
@@ -216,6 +216,12 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
     {
         N.keyPress(key2, down);
     }
+
+    if ((key == K::LShift || key == K::RShift) && !down)
+    {
+        N.keyPress(Key::Shift, false);
+        N.keyPress(Key::SymShift, false);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -259,7 +265,7 @@ void console()
 // Main loop
 //----------------------------------------------------------------------------------------------------------------------
 
-int main()
+int main(int argc, char** argv)
 {
 #if NX_DEBUG_CONSOLE
     console();
@@ -275,6 +281,11 @@ int main()
     u32* img = new u32[kWindowWidth * kWindowHeight];
 
     Nx N(host, img);
+
+    for (int i = 1; i < argc; ++i)
+    {
+        N.load(argv[i]);
+    }
 
     while (window.isOpen())
     {
