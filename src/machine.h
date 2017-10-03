@@ -152,6 +152,7 @@ bool machineFrame(Machine& M, i64& inOutTState)
     M.getEvents().addEvent(time, "frame", &machineFrame);
     inOutTState -= time;
     M.setFrameCounter(M.getFrameCounter() + 1);
+    M.getVideo().frame();
     //M.getVideo().render((M.getFrameCounter() & 16) != 0);
     M.getHost().redraw();
     M.getZ80().interrupt();
@@ -182,6 +183,7 @@ Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
 
         // Bootstrap the events
         getEvents().addEvent(69888 * m_clockScale, "frame", &machineFrame);
+        m_video.frame();
     }
 }
 

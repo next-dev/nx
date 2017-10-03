@@ -50,6 +50,8 @@ private:
 
 #ifdef NX_IMPL
 
+#include <cassert>
+
 #include "io.h"
 
 Video::Video(Memory& memory, Io& io, u32* img)
@@ -204,11 +206,13 @@ void Video::render(bool flash, i64 tState)
             {
                 if ((pixelData & 0x80) != 0)
                 {
+                    assert(m_drawPoint < (kWindowWidth * kWindowHeight));
                     m_image[m_drawPoint++] = c1;
                     lastAttrData = ink;
                 }
                 else
                 {
+                    assert(m_drawPoint < (kWindowWidth * kWindowHeight));
                     m_image[m_drawPoint++] = c0;
                     lastAttrData = paper;
                 }
@@ -220,6 +224,7 @@ void Video::render(bool flash, i64 tState)
             u32 border = colours[m_io.getBorder()];
             for (int b = 0; b < 8; ++b)
             {
+                assert(m_drawPoint < (kWindowWidth * kWindowHeight));
                 m_image[m_drawPoint++] = border;
             }
         }
