@@ -404,15 +404,23 @@ int main(int argc, char** argv)
 #endif
 
     Host host;
+
+    // Spectrum video
     sf::RenderWindow window(sf::VideoMode(kWindowWidth * 4, kWindowHeight * 4), "NX " NX_VERSION);
     sf::Texture tex;
     tex.create(kWindowWidth, kWindowHeight);
     sf::Sprite sprite(tex);
     sprite.setScale(4, 4);
-
     u32* img = new u32[kWindowWidth * kWindowHeight];
 
-    Nx N(host, img);
+    // UI videwo
+    sf::Texture uitex;
+    uitex.create(kUiWidth, kUiHeight);
+    sf::Sprite uiSprite(uitex);
+    uiSprite.setScale(2, 2);
+    u32* ui_img = new u32[kUiWidth * kUiHeight];
+
+    Nx N(host, img, ui_img);
 
     for (int i = 1; i < argc; ++i)
     {
@@ -448,7 +456,9 @@ int main(int argc, char** argv)
         {
             window.clear();
             tex.update((const sf::Uint8 *)img);
+            uitex.update((const sf::Uint8 *)ui_img);
             window.draw(sprite);
+            window.draw(uiSprite);
             window.display();
         }
 
@@ -458,6 +468,7 @@ int main(int argc, char** argv)
     }
 
     delete[] img;
+    delete[] ui_img;
 
     return 0;
 }

@@ -7,11 +7,12 @@
 
 #include "host.h"
 #include "machine.h"
+#include "ui.h"
 
 class Nx
 {
 public:
-    Nx(IHost& host, u32* img);
+    Nx(IHost& host, u32* img, u32* ui_img);
 
     // Advance as many number of t-states as possible.  Returns the number of t-States that were processed.
     i64 update();
@@ -27,11 +28,24 @@ public:
     //
     bool load(std::string fileName);
 
+    //
+    // Debugger
+    //
+    void drawDebugger(Ui::Draw& draw);
+
+private:
+    //
+    // Debugger
+    //
+    void drawMemDump(Ui::Draw& draw);
+
 private:
     IHost&              m_host;
     i64                 m_tState;
+    i64                 m_elapsedTStates;
     std::vector<bool>   m_keys;
     Machine             m_machine;
+    Ui                  m_ui;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -41,18 +55,31 @@ private:
 
 #ifdef NX_IMPL
 
-Nx::Nx(IHost& host, u32* img)
+#include <functional>
+
+Nx::Nx(IHost& host, u32* img, u32* ui_img)
     : m_host(host)
     , m_tState(0)
+    , m_elapsedTStates(0)
     , m_keys((int)Key::COUNT)
     , m_machine(host, img, m_keys)
+    , m_ui(ui_img, m_machine.getMemory(), m_machine.getZ80(), m_machine.getIo())
 {
 
 }
 
 i64 Nx::update()
 {
-    return m_machine.update(m_tState);
+    i64 elapsedTStates = m_machine.update(m_tState);
+    m_elapsedTStates += elapsedTStates;
+    if (m_elapsedTStates >= 69888)
+    {
+        m_ui.clear();
+        m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
+        m_elapsedTStates -= 69888;
+    }
+
+    return elapsedTStates;
 }
 
 void Nx::keyPress(Key k, bool down)
@@ -80,6 +107,16 @@ bool Nx::load(std::string fileName)
     }
 
     return false;
+}
+
+void Nx::drawDebugger(Ui::Draw& draw)
+{
+
+}
+
+void Nx::drawMemDump(Ui::Draw& draw)
+{
+
 }
 
 //----------------------------------------------------------------------------------------------------------------------
