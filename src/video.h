@@ -82,20 +82,27 @@ Video::Video(Memory& memory, Io& io, u32* img)
         m_videoMap[t] = 0;
     }
 
+    // Calculate line timings
+    //
+    // +---------- TV width ------------------+
+    // |   +------ Window width ----------+   |
+    // |   |  +--- Screen width -------+  |   |
+    // v   v  v                        v  v   v
+    // +---+--+------------------------+--+---+-----+
+    // |000|11|aaaaaaaaaaaaaaaaaaaaaaaa|11|000|00000|
+    // +---+--+------------------------+--+---+-----+
+    //     ta tb                          176-ta    224
+    //                                 176-tb
+    int ta = (kTvWidth - kWindowWidth) / 4;
+    int tb = (kTvWidth - kScreenWidth) / 4;
+
     // Top border
     while (t < (m_startTState + (kBorderHeight * 224)))
     {
-        // The line is: border (24t), screen (128t), border (24t) = 176t
-        for (int i = 0; i < 176; ++i)
-        {
-            m_videoMap[t++] = 1;
-        }
-
-        // Horizontal retrace
-        for (int i = 176; i < 224; ++i)
-        {
-            m_videoMap[t++] = 0;
-        }
+        // The line is: border (w/2t), screen (128t), border (w/2t) = 128+wt
+        for (int i = 0; i < ta; ++i) m_videoMap[t++] = 0;
+        for (int i = ta; i < 176-ta; ++i) m_videoMap[t++] = 1;
+        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = 0;
     }
 
     // Build middle of display
@@ -105,10 +112,11 @@ Video::Video(Memory& memory, Io& io, u32* img)
     while (t < m_startTState + (kBorderHeight * 224) + (kScreenHeight * 224))
     {
         // Left border
-        for (int i = 0; i < 24; ++i) m_videoMap[t++] = 1;
+        for (int i = 0; i < ta; ++i) m_videoMap[t++] = 0;
+        for (int i = ta; i < tb; ++i) m_videoMap[t++] = 1;
 
         // Screen line
-        for (int i = 24; i < 24 + 128; ++i)
+        for (int i = tb; i < tb + 128; ++i)
         {
             // Every 4 t-states (8 pixels), we recalculate the address
             if (i % 4 == 0)
@@ -129,17 +137,18 @@ Video::Video(Memory& memory, Io& io, u32* img)
         ++y;
 
         // Right border
-        for (int i = 24 + 128; i < 24 + 128 + 24; ++i) m_videoMap[t++] = 1;
+        for (int i = tb + 128; i < 176-ta; ++i) m_videoMap[t++] = 1;
 
-        // Horizontal retrace
-        for (int i = 24 + 128 + 24; i < 224; ++i) m_videoMap[t++] = 0;
+        // Horizontal retrace + out of screen border
+        for (int i = 176-ta; i < 224; ++i) m_videoMap[t++] = 0;
     }
 
     // Bottom border
     while (t < m_startTState + (kBorderHeight * 224) + (kScreenHeight * 224) + (kBorderHeight * 224))
     {
-        for (int i = 0; i < 176; ++i) m_videoMap[t++] = 1;
-        for (int i = 176; i < 224; ++i) m_videoMap[t++] = 0;
+        for (int i = 0; i < ta; ++i) m_videoMap[t++] = 0;
+        for (int i = ta; i < 176 - ta; ++i) m_videoMap[t++] = 1;
+        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = 0;
     }
 
     while (t < 69888)
