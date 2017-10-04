@@ -21,20 +21,30 @@ enum class DebugKey
     COUNT
 };
 
+enum class JoystickKey
+{
+    Left,
+    Down,
+    Up,
+    Right,
+    Fire,
+};
+
 class Nx
 {
 public:
-    Nx(IHost& host, u32* img, u32* ui_img);
+    Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv);
 
     // Advance as many number of t-states as possible.  Returns the number of t-States that were processed.
     i64 update();
 
     //
-    // Keyboard control
+    // Input control
     //
     void keyPress(Key k, bool down);
     void keysClear();
     void debugKeyPress(DebugKey k, bool down);
+    void joystickKeyPress(JoystickKey k, bool down);
 
     //
     // File loading
@@ -53,11 +63,24 @@ public:
     //
     void drawOverlay(Ui::Draw& draw);
 
+    //
+    // Settings
+    //
+    std::string getSetting(std::string key, std::string defaultSetting);
+    void setSetting(std::string key, std::string setting);
+
+    bool usesKempstonJoystick() const { return m_kempstonJoystick; }
+
 private:
     //
     // Debugger
     //
     void drawMemDump(Ui::Draw& draw);
+
+    //
+    // Settings
+    //
+    void updateSettings();
 
 private:
     IHost&              m_host;
@@ -70,6 +93,10 @@ private:
 
     // Memory dump state
     u16                 m_address;
+
+    // Settings
+    std::map<std::string, std::string>  m_settings;
+    bool                                m_kempstonJoystick;     // Cursor keys & TAB mapped to Kempston joystick
 
 };
 
@@ -84,7 +111,7 @@ private:
 #include <sstream>
 #include <iomanip>
 
-Nx::Nx(IHost& host, u32* img, u32* ui_img)
+Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     : m_host(host)
     , m_tState(0)
     , m_elapsedTStates(0)
@@ -94,8 +121,37 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img)
     , m_debugger(false)
     //--- Memory dump state -------------------------------------------------------------
     , m_address(0)
+    //--- Settings ----------------------------------------------------------------------
+    , m_kempstonJoystick(false)
 {
+    // Deal with the command line
+    for (int i = 1; i < argc; ++i)
+    {
+        char* arg = argv[i];
+        if (arg[0] == '-')
+        {
+            // Setting being added
+            char* keyEnd = strchr(arg, '=');
+            char* keyStart = arg + 1;
+            if (keyEnd)
+            {
+                std::string key(keyStart, keyEnd);
+                std::string value(keyEnd+1);
+                setSetting(key, value);
+            }
+            else
+            {
+                // Assume key is "yes"
+                setSetting(arg + 1, "yes");
+            }
+        }
+        else
+        {
+            load(arg);
+        }
+    }
 
+    updateSettings();
 }
 
 i64 Nx::update()
@@ -131,6 +187,30 @@ void Nx::keysClear()
     for (auto& k : m_keys) k = 0;
 }
 
+void Nx::joystickKeyPress(JoystickKey k, bool down)
+{
+    u8 bit = 0;
+
+    switch (k)
+    {
+    case JoystickKey::Right:    bit = 0x01;     break;
+    case JoystickKey::Left:     bit = 0x02;     break;
+    case JoystickKey::Down:     bit = 0x04;     break;
+    case JoystickKey::Up:       bit = 0x08;     break;
+    case JoystickKey::Fire:     bit = 0x10;     break;
+    }
+
+    Io& io = m_machine.getIo();
+    if (down)
+    {
+        io.setKempstonState(io.getKempstonState() | bit);
+    }
+    else
+    {
+        io.setKempstonState(io.getKempstonState() & ~bit);
+    }
+}
+
 bool Nx::load(std::string fileName)
 {
     const u8* buffer;
@@ -146,6 +226,29 @@ bool Nx::load(std::string fileName)
     }
 
     return false;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Settings
+//----------------------------------------------------------------------------------------------------------------------
+
+std::string Nx::getSetting(std::string key, std::string defaultSetting)
+{
+    auto it = m_settings.find(key);
+    return it == m_settings.end() ? defaultSetting : it->second;
+}
+
+void Nx::setSetting(std::string key, std::string setting)
+{
+    m_settings[key] = setting;
+}
+
+void Nx::updateSettings()
+{
+    std::string v;
+
+    v = getSetting("kempston", "no");
+    m_kempstonJoystick = (v == "yes");
 }
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -326,10 +326,58 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
 
     case K::BackSpace:  key1 = Key::Shift;      key2 = Key::_0;     break;
     case K::Escape:     key1 = Key::Shift;      key2 = Key::Space;  break;
-    case K::Left:       key1 = Key::Shift;      key2 = Key::_5;     break;
-    case K::Down:       key1 = Key::Shift;      key2 = Key::_6;     break;
-    case K::Up:         key1 = Key::Shift;      key2 = Key::_7;     break;
-    case K::Right:      key1 = Key::Shift;      key2 = Key::_8;     break;
+
+    case K::Left:
+        if (N.usesKempstonJoystick())
+        {
+            N.joystickKeyPress(JoystickKey::Left, down);
+        }
+        else
+        {
+            key1 = Key::Shift;
+            key2 = Key::_5;
+        }
+        break;
+
+    case K::Down:
+        if (N.usesKempstonJoystick())
+        {
+            N.joystickKeyPress(JoystickKey::Down, down);
+        }
+        else
+        {
+            key1 = Key::Shift;
+            key2 = Key::_6;
+        }
+        break;
+
+    case K::Up:
+        if (N.usesKempstonJoystick())
+        {
+            N.joystickKeyPress(JoystickKey::Up, down);
+        }
+        else
+        {
+            key1 = Key::Shift;
+            key2 = Key::_7;
+        }
+        break;
+
+    case K::Right:
+        if (N.usesKempstonJoystick())
+        {
+            N.joystickKeyPress(JoystickKey::Right, down);
+        }
+        else
+        {
+            key1 = Key::Shift;
+            key2 = Key::_8;
+        }
+        break;
+
+    case K::Tab:
+        if (N.usesKempstonJoystick()) N.joystickKeyPress(JoystickKey::Fire, down);
+        break;
 
     case K::Tilde:      if (down) N.toggleDebugger();               break;
 
@@ -447,12 +495,7 @@ int main(int argc, char** argv)
     uiSprite.setScale(2, 2);
     u32* ui_img = new u32[kUiWidth * kUiHeight];
 
-    Nx N(host, img, ui_img);
-
-    for (int i = 1; i < argc; ++i)
-    {
-        N.load(argv[i]);
-    }
+    Nx N(host, img, ui_img, argc, argv);
 
     while (window.isOpen())
     {

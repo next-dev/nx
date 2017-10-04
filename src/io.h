@@ -29,11 +29,21 @@ public:
     void out(u16 port, u8 data, i64& inOutTStates);
     u8 in(u16 port, i64& inOutTStates);
 
+    //
+    // Border
+    //
     u8 getBorder() const { return m_border; }
     void setBorder(u8 border) { m_border = border; }
 
+    //
+    // Kempston Joystick
+    //
+    u8 getKempstonState() const { return m_kempstonJoystick; }
+    void setKempstonState(u8 state) { m_kempstonJoystick = state; }
+
 private:
     u8                  m_border;
+    u8                  m_kempstonJoystick;
     Memory&             m_memory;
     std::vector<bool>&  m_keys;
 };
@@ -48,7 +58,8 @@ private:
 #include "memory.h"
 
 Io::Io(Memory& memory, std::vector<bool>& keys)
-    : m_border(7)
+    : m_border(0)
+    , m_kempstonJoystick(0)
     , m_memory(memory)
     , m_keys(keys)
 {
@@ -162,6 +173,15 @@ u8 Io::in(u16 port, i64& inOutTStates)
                 }
                 row >>= 1;
             }
+        }
+    }
+    else
+    {
+        switch (LO(port))
+        {
+        case 0x1f:
+            x = m_kempstonJoystick;
+            break;
         }
     }
     return x;
