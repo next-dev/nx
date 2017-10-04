@@ -115,13 +115,9 @@ bool Nx::load(std::string fileName)
 
 void Nx::drawDebugger(Ui::Draw& draw)
 {
-    draw.pokeAttr(0, 0, 0xf8);
-    draw.pokePixel(0, 1, 0x3c);
-    draw.pokePixel(0, 2, 0x42);
-    draw.pokePixel(0, 3, 0x42);
-    draw.pokePixel(0, 4, 0x7e);
-    draw.pokePixel(0, 5, 0x42);
-    draw.pokePixel(0, 6, 0x42);
+    draw.printString(10, 10, "Hello ", 0xf8);
+    draw.printString(16, 10, "Mariella!!", 0xf9);
+    draw.printSquashedString(10, 11, "The quick brown fox jumps over the lazy dog!", 0xfa);
 }
 
 void Nx::drawMemDump(Ui::Draw& draw)
