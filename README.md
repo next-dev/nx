@@ -40,6 +40,15 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 |------------------|-------------------------------------------------------|
 | Ctrl             | Symbol shift                                          |
 | F1               | Open file                                             |
+| ~                | Enter debugger mode                                   |
+
+# Debugger Controls
+
+| Key              | Description                                           |
+|------------------|-------------------------------------------------------|
+| ~                | Leave debugger mode                                   |
+| Up/Down          | Scroll through memory viewer                          |
+| PgUp/PgDn        | Page through memory viewer                            |
 
 # Source code organisation.
 
