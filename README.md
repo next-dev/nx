@@ -47,8 +47,9 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 | Key              | Description                                           |
 |------------------|-------------------------------------------------------|
 | ~                | Leave debugger mode                                   |
-| Up/Down          | Scroll through memory viewer                          |
-| PgUp/PgDn        | Page through memory viewer                            |
+| Up/Down          | Scroll through current window                         |
+| PgUp/PgDn        | Page through current window                           |
+| Tab              | Cycle through current window                          |
 
 # Source code organisation.
 

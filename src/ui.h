@@ -59,7 +59,7 @@ public:
         //
         // Level 2 - advanced objects
         //
-        void window(int xCell, int yCell, int width, int height, const char* title, u8 backgroundAttr = 0xf8);
+        void window(int xCell, int yCell, int width, int height, const char* title, bool bright, u8 backgroundAttr = 0xf8);
 
     private:
         void charInfo(const u8* font, char c, u8& outMask, int& lShift, int& width);
@@ -209,8 +209,8 @@ void Ui::render(std::function<void(Ui::Draw &)> draw)
 {
     static const u32 colours[16] =
     {
-        0xdf000000, 0xdfff0000, 0xdf0000ff, 0xdfff00ff, 0xdf00ff00, 0xdfffff00, 0xdf00ffff, 0xdfffffff,
         0xdf000000, 0xdfd70000, 0xdf0000d7, 0xdfd700d7, 0xdf00d700, 0xdfd7d700, 0xdf00d7d7, 0xdfd7d7d7,
+        0xdf000000, 0xdfff0000, 0xdf0000ff, 0xdfff00ff, 0xdf00ff00, 0xdfffff00, 0xdf00ffff, 0xdfffffff,
     };
 
     Draw d(m_pixels, m_attrs);
@@ -429,7 +429,7 @@ int Ui::Draw::squashedStringWidth(const char* str, const u8* font)
 // Level 3 drawing
 //----------------------------------------------------------------------------------------------------------------------
 
-void Ui::Draw::window(int xCell, int yCell, int width, int height, const char* title, u8 backgroundAttr)
+void Ui::Draw::window(int xCell, int yCell, int width, int height, const char* title, bool bright, u8 backgroundAttr)
 {
     int titleMaxLen = width - 7;
     assert(titleMaxLen > 0);
@@ -438,21 +438,21 @@ void Ui::Draw::window(int xCell, int yCell, int width, int height, const char* t
     std::string text(title, title + titleLen);
 
     // Render the title
-    printChar(xCell, yCell, ' ', attr(Colour::White, Colour::Black, true));
-    titleLen = printSquashedString(xCell+1, yCell, text.c_str(), attr(Colour::White, Colour::Black, true));
+    printChar(xCell, yCell, ' ', attr(Colour::White, Colour::Black, bright));
+    titleLen = printSquashedString(xCell+1, yCell, text.c_str(), attr(Colour::White, Colour::Black, bright));
     for (int i = titleLen+1; i < titleMaxLen+1; ++i)
     {
-        printChar(xCell + i, yCell, ' ', attr(Colour::White, Colour::Black, true));
+        printChar(xCell + i, yCell, ' ', attr(Colour::White, Colour::Black, bright));
     }
 
     // Render the top-right corner of window
     int x = xCell + titleMaxLen + 1;
-    printChar(x++, yCell, '%', attr(Colour::Red, Colour::Black, true), gGfxFont);
-    printChar(x++, yCell, '%', attr(Colour::Yellow, Colour::Red, true), gGfxFont);
-    printChar(x++, yCell, '%', attr(Colour::Green, Colour::Yellow, true), gGfxFont);
-    printChar(x++, yCell, '%', attr(Colour::Cyan, Colour::Green, true), gGfxFont);
-    printChar(x++, yCell, '%', attr(Colour::Black, Colour::Cyan, true), gGfxFont);
-    printChar(x, yCell, ' ', attr(Colour::White, Colour::Black, true));
+    printChar(x++, yCell, '%', attr(Colour::Red, Colour::Black, bright), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Yellow, Colour::Red, bright), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Green, Colour::Yellow, bright), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Cyan, Colour::Green, bright), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Black, Colour::Cyan, bright), gGfxFont);
+    printChar(x, yCell, ' ', attr(Colour::White, Colour::Black, bright));
 
     // Render the window
     ++yCell;

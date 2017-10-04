@@ -260,6 +260,7 @@ void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
     case K::Right:      k = DebugKey::Right;    break;
     case K::PageUp:     k = DebugKey::PageUp;   break;
     case K::PageDown:   k = DebugKey::PageDn;   break;
+    case K::Tab:        k = DebugKey::Tab;      break;
 
     case K::Tilde:      if (down) N.toggleDebugger();       break;
     }

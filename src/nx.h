@@ -17,6 +17,7 @@ enum class DebugKey
     Right,
     PageUp,
     PageDn,
+    Tab,
 
     COUNT
 };
@@ -76,6 +77,7 @@ private:
     // Debugger
     //
     void drawMemDump(Ui::Draw& draw);
+    void drawDisassembler(Ui::Draw& draw);
 
     //
     // Settings
@@ -91,13 +93,25 @@ private:
     Ui                  m_ui;
     bool                m_debugger;
 
+    // Window layout
+    struct WindowPos
+    {
+        int x, y;
+        int width, height;
+    };
+    WindowPos           m_memoryDumpWindow;
+    WindowPos           m_dissasemblyWindow;
+    WindowPos*          m_currentWindow;
+
     // Memory dump state
     u16                 m_address;
+
+    // Disassembler state
+    u16                 m_rootAddress;
 
     // Settings
     std::map<std::string, std::string>  m_settings;
     bool                                m_kempstonJoystick;     // Cursor keys & TAB mapped to Kempston joystick
-
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -119,8 +133,14 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     , m_machine(host, img, m_keys)
     , m_ui(ui_img, m_machine.getMemory(), m_machine.getZ80(), m_machine.getIo())
     , m_debugger(false)
+    //--- Window layout -----------------------------------------------------------------
+    , m_memoryDumpWindow({ 1, 1, 43, 20 })
+    , m_dissasemblyWindow({ 1, 22, 43, 30})
+    , m_currentWindow(&m_memoryDumpWindow)
     //--- Memory dump state -------------------------------------------------------------
     , m_address(0)
+    //--- Disassemblye state ------------------------------------------------------------
+    , m_rootAddress(0)
     //--- Settings ----------------------------------------------------------------------
     , m_kempstonJoystick(false)
 {
@@ -258,6 +278,7 @@ void Nx::updateSettings()
 void Nx::drawDebugger(Ui::Draw& draw)
 {
     drawMemDump(draw);
+    drawDisassembler(draw);
 }
 
 void Nx::toggleDebugger()
@@ -267,15 +288,14 @@ void Nx::toggleDebugger()
 
 void Nx::drawMemDump(Ui::Draw& draw)
 {
-    static const int kX = 1;
-    static const int kY = 1;
-    static const int kWidth = 43;
-    static const int kHeight = 20;
+    WindowPos& w = m_memoryDumpWindow;
+    bool currentWindow = m_currentWindow == &m_memoryDumpWindow;
+    u8 bkg = draw.attr(Ui::Draw::Colour::Black, Ui::Draw::Colour::White, currentWindow);
 
-    draw.window(kX, kY, kWidth, kHeight, "Memory View");
+    draw.window(w.x, w.y, w.width, w.height, "Memory View", currentWindow, bkg);
 
     u16 a = m_address;
-    for (int i = 1; i < kHeight - 1; ++i, a += 8)
+    for (int i = 1; i < w.height - 1; ++i, a += 8)
     {
         using namespace std;
         stringstream ss;
@@ -290,7 +310,7 @@ void Nx::drawMemDump(Ui::Draw& draw)
             char ch = m_machine.getMemory().peek(a + b);
             ss << ((ch < 32 || ch > 127) ? '.' : ch);
         }
-        draw.printString(kX + 1, kY + i, ss.str().c_str(), 0xf8);
+        draw.printString(w.x + 1, w.y + i, ss.str().c_str(), bkg);
     }
 }
 
@@ -302,23 +322,51 @@ void Nx::debugKeyPress(DebugKey k, bool down)
         switch (k)
         {
         case DK::Up:
-            m_address -= 8;
+            if (m_currentWindow == &m_memoryDumpWindow)
+            {
+                m_address -= 8;
+            }
             break;
 
         case DK::Down:
-            m_address += 8;
+            if (m_currentWindow == &m_memoryDumpWindow)
+            {
+                m_address += 8;
+            }
             break;
 
         case DK::PageUp:
-            m_address -= 18 * 8;
+            if (m_currentWindow == &m_memoryDumpWindow)
+            {
+                m_address -= 18 * 8;
+            }
             break;
 
         case DK::PageDn:
-            m_address += 18 * 8;
+            if (m_currentWindow == &m_memoryDumpWindow)
+            {
+                m_address += 18 * 8;
+            }
             break;
 
+        case DK::Tab:
+            if (down) m_currentWindow = (m_currentWindow == &m_memoryDumpWindow)
+                ? &m_dissasemblyWindow : &m_memoryDumpWindow;
+            break;
         }
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Disassembler
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::drawDisassembler(Ui::Draw& draw)
+{
+    WindowPos& w = m_dissasemblyWindow;
+    bool currentWindow = m_currentWindow == &m_dissasemblyWindow;
+    u8 bkg = draw.attr(Ui::Draw::Colour::Black, Ui::Draw::Colour::White, currentWindow);
+    draw.window(w.x, w.y, w.width, w.height, "Disassembly", currentWindow, bkg);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
