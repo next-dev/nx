@@ -25,14 +25,27 @@ public:
     public:
         Draw(std::vector<u8>& pixels, std::vector<u8>& attr);
 
+        enum class Colour
+        {
+            Black,
+            Blue,
+            Red,
+            Magenta,
+            Green,
+            Cyan,
+            Yellow,
+            White
+        };
+
         //
-        // Level 0 - poking
+        // Level 0 - poking/low-level calculations
         //
         void pokePixel(int xCell, int yPixel, u8 bits);
         void andPixel(int xCell, int yPixel, u8 bits);
         void orPixel(int xCell, int yPixel, u8 bits);
         void xorPixel(int xCell, int yPixel, u8 bits);
         void pokeAttr(int xCell, int yCell, u8 attr);
+        u8 attr(Colour ink, Colour paper, bool bright);
 
         //
         // Level 1 - character rendering
@@ -41,6 +54,15 @@ public:
         int printChar(int xPixel, int yCell, char c, const u8* font);        // X is in pixels, returns width of character
         void printString(int xCell, int yCell, const char* str, u8 attr, const u8* font);
         void printSquashedString(int xCell, int yCell, const char* str, u8 attr, const u8* font);
+        int squashedStringWidth(const char* str, const u8* font);
+
+        //
+        // Level 2 - advanced objects
+        //
+        void window(int xCell, int yCell, int width, int height, const char* title, u8 backgroundAttr);
+
+    private:
+        void charInfo(const u8* font, char c, u8& outMask, int& lShift, int& width);
 
     private:
         std::vector<u8>&    m_pixels;
@@ -69,6 +91,7 @@ private:
 
 #ifdef NX_IMPL
 
+#include <algorithm>
 #include <cassert>
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -150,6 +173,16 @@ const u8 gFont[768] = {
 
 const int gFontLength = 768;
 
+const u8 gGfxFont[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,     // Space
+    0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,     // Left line            !
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,     // Right line           "
+    0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0xff,     // Bottom left corner   #
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0xff,     // Bottom right corner  $
+    0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff,     // Slope                %
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,     // Bottom line          &
+};
+
 
 //----------------------------------------------------------------------------------------------------------------------
 // Ui
@@ -216,7 +249,7 @@ void Ui::render(std::function<void(Ui::Draw &)> draw)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// Draw
+// Level 0 drawing
 //----------------------------------------------------------------------------------------------------------------------
 
 Ui::Draw::Draw(std::vector<u8>& pixels, std::vector<u8>& attr)
@@ -261,6 +294,15 @@ void Ui::Draw::pokeAttr(int xCell, int yCell, u8 attr)
     m_attrs[yCell * (kUiWidth / 8) + xCell] = attr;
 }
 
+u8 Ui::Draw::attr(Colour ink, Colour paper, bool bright)
+{
+    return (bright ? 0x40 : 0x00) + (u8(paper) << 3) + u8(ink);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Level 1 drawing
+//----------------------------------------------------------------------------------------------------------------------
+
 void Ui::Draw::printChar(int xCell, int yCell, char c, u8 attr, const u8* font = gFont)
 {
     if (c < 32 || c > 127) c = 32;
@@ -272,25 +314,47 @@ void Ui::Draw::printChar(int xCell, int yCell, char c, u8 attr, const u8* font =
     }
 }
 
+void Ui::Draw::charInfo(const u8* font, char c, u8& outMask, int& outLShift, int &outWidth)
+{
+    const u8* pixels = &font[(c - ' ') * 8];
+    outLShift = 0;
+    outMask = 0;
+
+    // Prepare the mask by ORing all the bytes.
+    // If the mask is blank (i.e. a space), create one of width 6.
+    for (int i = 0; i < 8; ++i) outMask |= pixels[i];
+    if (0 == outMask) outMask = 0xfc;
+
+    // Make sure there is only 1 pixel at most to the left of the mask
+    for (u8 b = 0xc0; ((outMask << outLShift) & b) == 0; ) ++outLShift;
+
+    outWidth = 8 - outLShift;
+    u8 mask = outMask;
+    while ((mask & 1) == 0)
+    {
+        --outWidth;
+        mask >>= 1;
+    }
+}
+
 int Ui::Draw::printChar(int xPixel, int yCell, char c, const u8* font = gFont)
 {
     // #todo: Put the mask/lshift calculations in a table
     if (xPixel < 0 || xPixel >= kUiWidth) return 0;
     if (yCell < 0 || yCell >= kUiHeight) return 0;
     if (c < 32 || c > 127) c = 32;
-    const u8* pixels = &font[(c - ' ') * 8];
-    u8 mask = 0;
-    int rShift = xPixel % 8;
-    int lShift = 0;
-    int cx = xPixel / 8;
-    int y = yCell * 8;
 
-    // Prepare the mask by ORing all the bytes.
-    // If the mask is blank (i.e. a space), create one of width 6.
-    for (int i = 0; i < 8; ++i) mask |= pixels[i];
-    if (0 == mask) mask = 0xfc;
+    // Calculate the character information (mask, left adjust and width)
+    u8 mask = 0;
+    int lShift = 0;
+    int width = 0;
+    charInfo(font, c, mask, lShift, width);
 
     // Make sure there is only 1 pixel at most to the left of the mask
+    int rShift = xPixel % 8;
+    int cx = xPixel / 8;
+    int y = yCell * 8;
+    const u8* pixels = &font[(c - ' ') * 8];
     for (u8 b = 0xc0; ((mask << lShift) & b) == 0; ) ++lShift;
 
     for (int i = 0; i < 8; ++i)
@@ -304,19 +368,6 @@ int Ui::Draw::printChar(int xPixel, int yCell, char c, const u8* font = gFont)
             andPixel(cx + 1, y + i, LO(m));
             orPixel(cx + 1, y + i, LO(w));
         }
-    }
-
-    // Calculate the width of the character
-    int width = 8 - lShift;
-    if (0 == mask)
-    {
-        // Space was found
-        width = 6;
-    }
-    else while ((mask & 1) == 0)
-    {
-        --width;
-        mask >>= 1;
     }
 
     return width;
@@ -353,6 +404,74 @@ void Ui::Draw::printSquashedString(int xCell, int yCell, const char* str, u8 att
     {
         pokeAttr(i, yCell, attr);
     }
+}
+
+int Ui::Draw::squashedStringWidth(const char* str, const u8* font)
+{
+    int maxWidth = 0;
+    u8 mask;
+    int lShift;
+    int w;
+
+    for (; *str != 0; ++str)
+    {
+        charInfo(font, *str, mask, lShift, w);
+        maxWidth += w;
+    }
+
+    // Render the attributes as best we can
+    return maxWidth / 8 + (maxWidth % 8 ? 1 : 0);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Level 3 drawing
+//----------------------------------------------------------------------------------------------------------------------
+
+void Ui::Draw::window(int xCell, int yCell, int width, int height, const char* title, u8 backgroundAttr)
+{
+    int titleMaxLen = width - 6;
+    assert(titleMaxLen > 0);
+    int titleLen = std::min(titleMaxLen, (int)strlen(title));
+
+    std::string text(title, title + titleLen);
+
+    // Render the title
+    printString(xCell, yCell, text.c_str(), attr(Colour::White, Colour::Black, true));
+    for (int i = titleLen; i < titleMaxLen; ++i)
+    {
+        printChar(xCell + i, yCell, ' ', attr(Colour::White, Colour::Black, true));
+    }
+
+    // Render the top-right corner of window
+    int x = xCell + titleMaxLen;
+    printChar(x++, yCell, '%', attr(Colour::Red, Colour::Black, true), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Yellow, Colour::Red, true), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Green, Colour::Yellow, true), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Cyan, Colour::Green, true), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Black, Colour::Cyan, true), gGfxFont);
+    printChar(x, yCell, ' ', attr(Colour::White, Colour::Black, true));
+
+    // Render the window
+    ++yCell;
+    for (int row = 1; row < (height - 1); ++row, ++yCell)
+    {
+        int x = xCell;
+        printChar(x++, yCell, '!', backgroundAttr, gGfxFont);
+        for (int col = 1; col < (width - 1); ++col, ++x)
+        {
+            pokeAttr(x, yCell, backgroundAttr);
+        }
+        printChar(x, yCell, '"', backgroundAttr, gGfxFont);
+    }
+
+    // Render bottom line
+    x = xCell;
+    printChar(x++, yCell, '#', backgroundAttr, gGfxFont);
+    for (int col = 1; col < (width - 1); ++col, ++x)
+    {
+        printChar(x, yCell, '&', backgroundAttr, gGfxFont);
+    }
+    printChar(x, yCell, '$', backgroundAttr, gGfxFont);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

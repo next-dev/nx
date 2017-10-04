@@ -115,9 +115,8 @@ bool Nx::load(std::string fileName)
 
 void Nx::drawDebugger(Ui::Draw& draw)
 {
-    draw.printString(10, 10, "Hello ", 0xf8);
-    draw.printString(16, 10, "Mariella!!", 0xf9);
-    draw.printSquashedString(10, 11, "The quick brown fox jumps over the lazy dog!", 0xfa);
+    draw.window(1, 1, 40, 20, "Research", draw.attr(Ui::Draw::Colour::Black, Ui::Draw::Colour::White, true));
+    draw.printSquashedString(1, 50, "Testing...", 0xf8);
 }
 
 void Nx::drawMemDump(Ui::Draw& draw)
