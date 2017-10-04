@@ -9,6 +9,18 @@
 #include "machine.h"
 #include "ui.h"
 
+enum class DebugKey
+{
+    Left,
+    Down,
+    Up,
+    Right,
+    PageUp,
+    PageDn,
+
+    COUNT
+};
+
 class Nx
 {
 public:
@@ -22,6 +34,7 @@ public:
     //
     void keyPress(Key k, bool down);
     void keysClear();
+    void debugKeyPress(DebugKey k, bool down);
 
     //
     // File loading
@@ -31,7 +44,14 @@ public:
     //
     // Debugger
     //
+    bool isDebugging() const { return m_debugger; }
     void drawDebugger(Ui::Draw& draw);
+    void toggleDebugger();
+
+    //
+    // Overlay
+    //
+    void drawOverlay(Ui::Draw& draw);
 
 private:
     //
@@ -46,6 +66,11 @@ private:
     std::vector<bool>   m_keys;
     Machine             m_machine;
     Ui                  m_ui;
+    bool                m_debugger;
+
+    // Memory dump state
+    u16                 m_address;
+
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -56,6 +81,8 @@ private:
 #ifdef NX_IMPL
 
 #include <functional>
+#include <sstream>
+#include <iomanip>
 
 Nx::Nx(IHost& host, u32* img, u32* ui_img)
     : m_host(host)
@@ -64,22 +91,34 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img)
     , m_keys((int)Key::COUNT)
     , m_machine(host, img, m_keys)
     , m_ui(ui_img, m_machine.getMemory(), m_machine.getZ80(), m_machine.getIo())
+    , m_debugger(false)
+    //--- Memory dump state -------------------------------------------------------------
+    , m_address(0)
 {
 
 }
 
 i64 Nx::update()
 {
-    i64 elapsedTStates = m_machine.update(m_tState);
-    m_elapsedTStates += elapsedTStates;
-    if (m_elapsedTStates >= 69888)
+    if (m_debugger)
     {
         m_ui.clear();
         m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
-        m_elapsedTStates -= 69888;
+        return 0;
+    }
+    else
+    {
+        i64 elapsedTStates = m_machine.update(m_tState);
+        m_elapsedTStates += elapsedTStates;
+        if (m_elapsedTStates > 69888)
+        {
+            m_elapsedTStates -= 69888;
+            m_ui.clear();
+            m_ui.render(std::bind(&Nx::drawOverlay, this, std::placeholders::_1));
+        }
+        return elapsedTStates;
     }
 
-    return elapsedTStates;
 }
 
 void Nx::keyPress(Key k, bool down)
@@ -115,11 +154,75 @@ bool Nx::load(std::string fileName)
 
 void Nx::drawDebugger(Ui::Draw& draw)
 {
-    draw.window(1, 1, 40, 20, "Research", draw.attr(Ui::Draw::Colour::Black, Ui::Draw::Colour::White, true));
-    draw.printSquashedString(1, 50, "Testing...", 0xf8);
+    drawMemDump(draw);
+}
+
+void Nx::toggleDebugger()
+{
+    m_debugger = !m_debugger;
 }
 
 void Nx::drawMemDump(Ui::Draw& draw)
+{
+    static const int kX = 1;
+    static const int kY = 1;
+    static const int kWidth = 43;
+    static const int kHeight = 20;
+
+    draw.window(kX, kY, kWidth, kHeight, "Memory View");
+
+    u16 a = m_address;
+    for (int i = 1; i < kHeight - 1; ++i, a += 8)
+    {
+        using namespace std;
+        stringstream ss;
+        ss << setfill('0') << setw(4) << hex << uppercase << a << " : ";
+        for (int b = 0; b < 8; ++b)
+        {
+            ss << setfill('0') << setw(2) << hex << uppercase << (int)m_machine.getMemory().peek(a + b) << " ";
+        }
+        ss << "  ";
+        for (int b = 0; b < 8; ++b)
+        {
+            char ch = m_machine.getMemory().peek(a + b);
+            ss << ((ch < 32 || ch > 127) ? '.' : ch);
+        }
+        draw.printString(kX + 1, kY + i, ss.str().c_str(), 0xf8);
+    }
+}
+
+void Nx::debugKeyPress(DebugKey k, bool down)
+{
+    if (down)
+    {
+        using DK = DebugKey;
+        switch (k)
+        {
+        case DK::Up:
+            m_address -= 8;
+            break;
+
+        case DK::Down:
+            m_address += 8;
+            break;
+
+        case DK::PageUp:
+            m_address -= 18 * 8;
+            break;
+
+        case DK::PageDn:
+            m_address += 18 * 8;
+            break;
+
+        }
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Overlay
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::drawOverlay(Ui::Draw& draw)
 {
 
 }

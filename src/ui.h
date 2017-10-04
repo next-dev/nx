@@ -53,13 +53,13 @@ public:
         void printChar(int xCell, int yCell, char c, u8 attr, const u8* font);
         int printChar(int xPixel, int yCell, char c, const u8* font);        // X is in pixels, returns width of character
         void printString(int xCell, int yCell, const char* str, u8 attr, const u8* font);
-        void printSquashedString(int xCell, int yCell, const char* str, u8 attr, const u8* font);
+        int printSquashedString(int xCell, int yCell, const char* str, u8 attr, const u8* font);
         int squashedStringWidth(const char* str, const u8* font);
 
         //
         // Level 2 - advanced objects
         //
-        void window(int xCell, int yCell, int width, int height, const char* title, u8 backgroundAttr);
+        void window(int xCell, int yCell, int width, int height, const char* title, u8 backgroundAttr = 0xf8);
 
     private:
         void charInfo(const u8* font, char c, u8& outMask, int& lShift, int& width);
@@ -387,7 +387,7 @@ void Ui::Draw::printString(int xCell, int yCell, const char* str, u8 attr, const
     }
 }
 
-void Ui::Draw::printSquashedString(int xCell, int yCell, const char* str, u8 attr, const u8* font = gFont)
+int Ui::Draw::printSquashedString(int xCell, int yCell, const char* str, u8 attr, const u8* font = gFont)
 {
     int maxWidth = 0;
     int x = xCell * 8;
@@ -404,6 +404,8 @@ void Ui::Draw::printSquashedString(int xCell, int yCell, const char* str, u8 att
     {
         pokeAttr(i, yCell, attr);
     }
+
+    return len;
 }
 
 int Ui::Draw::squashedStringWidth(const char* str, const u8* font)
@@ -429,21 +431,22 @@ int Ui::Draw::squashedStringWidth(const char* str, const u8* font)
 
 void Ui::Draw::window(int xCell, int yCell, int width, int height, const char* title, u8 backgroundAttr)
 {
-    int titleMaxLen = width - 6;
+    int titleMaxLen = width - 7;
     assert(titleMaxLen > 0);
     int titleLen = std::min(titleMaxLen, (int)strlen(title));
 
     std::string text(title, title + titleLen);
 
     // Render the title
-    printString(xCell, yCell, text.c_str(), attr(Colour::White, Colour::Black, true));
-    for (int i = titleLen; i < titleMaxLen; ++i)
+    printChar(xCell, yCell, ' ', attr(Colour::White, Colour::Black, true));
+    titleLen = printSquashedString(xCell+1, yCell, text.c_str(), attr(Colour::White, Colour::Black, true));
+    for (int i = titleLen+1; i < titleMaxLen+1; ++i)
     {
         printChar(xCell + i, yCell, ' ', attr(Colour::White, Colour::Black, true));
     }
 
     // Render the top-right corner of window
-    int x = xCell + titleMaxLen;
+    int x = xCell + titleMaxLen + 1;
     printChar(x++, yCell, '%', attr(Colour::Red, Colour::Black, true), gGfxFont);
     printChar(x++, yCell, '%', attr(Colour::Yellow, Colour::Red, true), gGfxFont);
     printChar(x++, yCell, '%', attr(Colour::Green, Colour::Yellow, true), gGfxFont);

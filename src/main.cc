@@ -246,6 +246,30 @@ const char* windowFileSaveAs(WindowFileOpenConfig* config)
 // Keyboard handling
 //----------------------------------------------------------------------------------------------------------------------
 
+void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
+{
+    using K = sf::Keyboard;
+
+    DebugKey k = DebugKey::COUNT;
+
+    switch (key)
+    {
+    case K::Left:       k = DebugKey::Left;     break;
+    case K::Down:       k = DebugKey::Down;     break;
+    case K::Up:         k = DebugKey::Up;       break;
+    case K::Right:      k = DebugKey::Right;    break;
+    case K::PageUp:     k = DebugKey::PageUp;   break;
+    case K::PageDown:   k = DebugKey::PageDn;   break;
+
+    case K::Tilde:      if (down) N.toggleDebugger();       break;
+    }
+
+    if (k != DebugKey::COUNT)
+    {
+        N.debugKeyPress(k, down);
+    }
+}
+
 void key(Nx& N, sf::Keyboard::Key key, bool down)
 {
     Key key1 = Key::COUNT;
@@ -307,6 +331,8 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
     case K::Up:         key1 = Key::Shift;      key2 = Key::_7;     break;
     case K::Right:      key1 = Key::Shift;      key2 = Key::_8;     break;
 
+    case K::Tilde:      if (down) N.toggleDebugger();               break;
+
 #ifdef _WIN32
     case K::F1:
         // File Open
@@ -324,6 +350,7 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
                 "*.sna"
             };
             const char* fileName = windowFileOpen(&cfg);
+            if (!fileName) break;
 
             // Store the path for next time
             const char* end = strrchr(fileName, '\\');
@@ -439,11 +466,25 @@ int main(int argc, char** argv)
                 break;
 
             case sf::Event::KeyPressed:
-                key(N, event.key.code, true);
+                if (N.isDebugging())
+                {
+                    debugKey(N, event.key.code, true);
+                }
+                else
+                {
+                    key(N, event.key.code, true);
+                }
                 break;
 
             case sf::Event::KeyReleased:
-                key(N, event.key.code, false);
+                if (N.isDebugging())
+                {
+                    debugKey(N, event.key.code, false);
+                }
+                else
+                {
+                    key(N, event.key.code, false);
+                }
                 break;
             }
         }
