@@ -274,6 +274,7 @@ void Ui::Draw::printChar(int xCell, int yCell, char c, u8 attr, const u8* font =
 
 int Ui::Draw::printChar(int xPixel, int yCell, char c, const u8* font = gFont)
 {
+    // #todo: Put the mask/lshift calculations in a table
     if (xPixel < 0 || xPixel >= kUiWidth) return 0;
     if (yCell < 0 || yCell >= kUiHeight) return 0;
     if (c < 32 || c > 127) c = 32;
