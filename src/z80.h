@@ -1166,7 +1166,7 @@ void Z80::executeDDFD(Reg& idx, i64& tState)
             PC() = II;
             break;
 
-        case 0xf9:  // LD SP(),IX
+        case 0xf9:  // LD (SP),IX
             CONTEND(IR(), 1, 2);
             SP() = II;
             break;
