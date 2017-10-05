@@ -48,13 +48,14 @@ public:
         u8 attr(Colour ink, Colour paper, bool bright);
 
         //
-        // Level 1 - character rendering
+        // Level 1 - character rendering & attr painting
         //
         void printChar(int xCell, int yCell, char c, u8 attr, const u8* font);
         int printChar(int xPixel, int yCell, char c, const u8* font);        // X is in pixels, returns width of character
         void printString(int xCell, int yCell, const char* str, u8 attr, const u8* font);
         int printSquashedString(int xCell, int yCell, const char* str, u8 attr, const u8* font);
         int squashedStringWidth(const char* str, const u8* font);
+        void attrRect(int xCell, int yCell, int width, int height, u8 colour);
 
         //
         // Level 2 - advanced objects
@@ -423,6 +424,17 @@ int Ui::Draw::squashedStringWidth(const char* str, const u8* font)
 
     // Render the attributes as best we can
     return maxWidth / 8 + (maxWidth % 8 ? 1 : 0);
+}
+
+void Ui::Draw::attrRect(int xCell, int yCell, int width, int height, u8 colour)
+{
+    for (int r = yCell; r < yCell + height; ++r)
+    {
+        for (int c = xCell; c < xCell + width; ++c)
+        {
+            pokeAttr(c, r, colour);
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

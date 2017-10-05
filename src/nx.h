@@ -432,13 +432,16 @@ void Nx::drawDisassembler(Ui::Draw& draw)
     Disassembler d;
     u16 a = m_rootAddress;
 
+    u8 bkg2 = bkg & ~0x40;
     for (int row = 1; row < w.height - 1; ++row)
     {
         u16 next = disassemble(d, a);
+        u8 colour = row & 1 ? bkg : bkg2;
 
-        draw.printString(w.x + 1, w.y + row, d.addressAndBytes(a).c_str(), bkg);
-        draw.printString(w.x + 20, w.y + row, d.opCode().c_str(), bkg);
-        draw.printString(w.x + 25, w.y + row, d.operands().c_str(), bkg);
+        draw.attrRect(w.x, w.y + row, w.width, 1, colour);
+        draw.printString(w.x + 1, w.y + row, d.addressAndBytes(a).c_str(), colour);
+        draw.printString(w.x + 20, w.y + row, d.opCode().c_str(), colour);
+        draw.printString(w.x + 25, w.y + row, d.operands().c_str(), colour);
         a = next;
     }
 }
