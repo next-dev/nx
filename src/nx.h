@@ -8,19 +8,7 @@
 #include "host.h"
 #include "machine.h"
 #include "ui.h"
-
-enum class DebugKey
-{
-    Left,
-    Down,
-    Up,
-    Right,
-    PageUp,
-    PageDn,
-    Tab,
-
-    COUNT
-};
+#include "debugger.h"
 
 enum class JoystickKey
 {
@@ -40,6 +28,9 @@ public:
 
     // Advance as many number of t-states as possible.  Returns the number of t-States that were processed.
     i64 update();
+
+    // Access to the underlying machine
+    Machine& getMachine() { return m_machine; }
 
     //
     // Input control
@@ -97,21 +88,9 @@ private:
     Ui                  m_ui;
     bool                m_debugger;
 
-    // Window layout
-    struct WindowPos
-    {
-        int x, y;
-        int width, height;
-    };
-    WindowPos           m_memoryDumpWindow;
-    WindowPos           m_dissasemblyWindow;
-    WindowPos*          m_currentWindow;
-
-    // Memory dump state
-    u16                 m_address;
-
-    // Disassembler state
-    u16                 m_rootAddress;
+    // Debugger windows
+    MemoryDumpWindow    m_memoryDumpWindow;
+    DisassemblyWindow   m_dissasemblyWindow;
 
     // Settings
     std::map<std::string, std::string>  m_settings;
@@ -126,10 +105,6 @@ private:
 #ifdef NX_IMPL
 
 #include <functional>
-#include <sstream>
-#include <iomanip>
-
-#include "disasm.h"
 
 Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     : m_host(host)
@@ -139,14 +114,9 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     , m_machine(host, img, m_keys)
     , m_ui(ui_img, m_machine.getMemory(), m_machine.getZ80(), m_machine.getIo())
     , m_debugger(false)
-    //--- Window layout -----------------------------------------------------------------
-    , m_memoryDumpWindow({ 1, 1, 43, 20 })
-    , m_dissasemblyWindow({ 1, 22, 43, 30})
-    , m_currentWindow(&m_dissasemblyWindow)
-    //--- Memory dump state -------------------------------------------------------------
-    , m_address(0)
-    //--- Disassemblye state ------------------------------------------------------------
-    , m_rootAddress(0)
+    //--- Windows
+    , m_memoryDumpWindow(m_machine)
+    , m_dissasemblyWindow(m_machine)
     //--- Settings ----------------------------------------------------------------------
     , m_kempstonJoystick(false)
 {
@@ -178,6 +148,8 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     }
 
     updateSettings();
+
+    m_dissasemblyWindow.Select();
 }
 
 i64 Nx::update()
@@ -283,8 +255,8 @@ void Nx::updateSettings()
 
 void Nx::drawDebugger(Ui::Draw& draw)
 {
-    drawMemDump(draw);
-    drawDisassembler(draw);
+    m_memoryDumpWindow.draw(draw);
+    m_dissasemblyWindow.draw(draw);
 }
 
 void Nx::toggleDebugger()
@@ -292,157 +264,30 @@ void Nx::toggleDebugger()
     m_debugger = !m_debugger;
 }
 
-void Nx::drawMemDump(Ui::Draw& draw)
-{
-    WindowPos& w = m_memoryDumpWindow;
-    bool currentWindow = m_currentWindow == &m_memoryDumpWindow;
-    u8 bkg = draw.attr(Ui::Draw::Colour::Black, Ui::Draw::Colour::White, currentWindow);
-
-    draw.window(w.x, w.y, w.width, w.height, "Memory View", currentWindow, bkg);
-
-    u16 a = m_address;
-    for (int i = 1; i < w.height - 1; ++i, a += 8)
-    {
-        using namespace std;
-        stringstream ss;
-        ss << setfill('0') << setw(4) << hex << uppercase << a << " : ";
-        for (int b = 0; b < 8; ++b)
-        {
-            ss << setfill('0') << setw(2) << hex << uppercase << (int)m_machine.getMemory().peek(a + b) << " ";
-        }
-        ss << "  ";
-        for (int b = 0; b < 8; ++b)
-        {
-            char ch = m_machine.getMemory().peek(a + b);
-            ss << ((ch < 32 || ch > 127) ? '.' : ch);
-        }
-        draw.printString(w.x + 1, w.y + i, ss.str().c_str(), bkg);
-    }
-}
-
-u16 Nx::backInstruction(u16 address)
-{
-    u16 count = 1;
-    Disassembler d;
-
-    // Keep disassembling back until the address after the instruction is equal
-    // to the current one
-    while (count < 4) {
-        u16 a = address - count;
-        a = disassemble(d, a);
-        if (a == address)
-        {
-            // This instruction will do!
-            return address - count;
-        }
-        ++count;
-    }
-
-    // Couldn't find a suitable instruction, fallback: just go back one byte
-    return address - 1;
-}
-
 void Nx::debugKeyPress(DebugKey k, bool down)
 {
+    m_memoryDumpWindow.keyPress(k, down);
+    m_dissasemblyWindow.keyPress(k, down);
+
     if (down)
     {
         using DK = DebugKey;
         switch (k)
         {
-        case DK::Up:
-            if (m_currentWindow == &m_memoryDumpWindow)
-            {
-                m_address -= 8;
-            }
-            else if (m_currentWindow == &m_dissasemblyWindow)
-            {
-                m_rootAddress = backInstruction(m_rootAddress);
-            }
-            break;
-
-        case DK::Down:
-            if (m_currentWindow == &m_memoryDumpWindow)
-            {
-                m_address += 8;
-            }
-            else if (m_currentWindow == &m_dissasemblyWindow)
-            {
-                Disassembler d;
-                m_rootAddress = disassemble(d, m_rootAddress);
-            }
-            break;
-
-        case DK::PageUp:
-            if (m_currentWindow == &m_memoryDumpWindow)
-            {
-                m_address -= (m_currentWindow->height-2) * 8;
-            }
-            else if (m_currentWindow == &m_dissasemblyWindow)
-            {
-                for (int i = 0; i < (m_currentWindow->height - 2); ++i)
-                {
-                    m_rootAddress = backInstruction(m_rootAddress);
-                }
-            }
-            break;
-
-        case DK::PageDn:
-            if (m_currentWindow == &m_memoryDumpWindow)
-            {
-                m_address += (m_currentWindow->height - 2) * 8;
-            }
-            else if (m_currentWindow == &m_dissasemblyWindow)
-            {
-                for (int i = 0; i < (m_currentWindow->height - 2); ++i)
-                {
-                    Disassembler d;
-                    m_rootAddress = disassemble(d, m_rootAddress);
-                }
-            }
-            break;
-
         case DK::Tab:
-            if (down) m_currentWindow = (m_currentWindow == &m_memoryDumpWindow)
-                ? &m_dissasemblyWindow : &m_memoryDumpWindow;
+            if (down)
+            {
+                if (m_memoryDumpWindow.isSelected())
+                {
+                    m_dissasemblyWindow.Select();
+                }
+                else
+                {
+                    m_memoryDumpWindow.Select();
+                }
+            }
             break;
         }
-    }
-}
-
-//----------------------------------------------------------------------------------------------------------------------
-// Disassembler
-//----------------------------------------------------------------------------------------------------------------------
-
-u16 Nx::disassemble(Disassembler& d, u16 address)
-{
-    return d.disassemble(address,
-        m_machine.getMemory().peek(address + 0),
-        m_machine.getMemory().peek(address + 1),
-        m_machine.getMemory().peek(address + 2),
-        m_machine.getMemory().peek(address + 3));
-}
-
-void Nx::drawDisassembler(Ui::Draw& draw)
-{
-    WindowPos& w = m_dissasemblyWindow;
-    bool currentWindow = m_currentWindow == &m_dissasemblyWindow;
-    u8 bkg = draw.attr(Ui::Draw::Colour::Black, Ui::Draw::Colour::White, currentWindow);
-    draw.window(w.x, w.y, w.width, w.height, "Disassembly", currentWindow, bkg);
-
-    Disassembler d;
-    u16 a = m_rootAddress;
-
-    u8 bkg2 = bkg & ~0x40;
-    for (int row = 1; row < w.height - 1; ++row)
-    {
-        u16 next = disassemble(d, a);
-        u8 colour = row & 1 ? bkg : bkg2;
-
-        draw.attrRect(w.x, w.y + row, w.width, 1, colour);
-        draw.printString(w.x + 1, w.y + row, d.addressAndBytes(a).c_str(), colour);
-        draw.printString(w.x + 20, w.y + row, d.opCode().c_str(), colour);
-        draw.printString(w.x + 25, w.y + row, d.operands().c_str(), colour);
-        a = next;
     }
 }
 

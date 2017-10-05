@@ -482,7 +482,8 @@ int main(int argc, char** argv)
     Host host;
 
     // Spectrum video
-    sf::RenderWindow window(sf::VideoMode(kWindowWidth * 4, kWindowHeight * 4), "NX " NX_VERSION);
+    sf::RenderWindow window(sf::VideoMode(kWindowWidth * 4, kWindowHeight * 4), "NX " NX_VERSION,
+        sf::Style::Titlebar | sf::Style::Close);
     sf::Texture tex;
     tex.create(kWindowWidth, kWindowHeight);
     sf::Sprite sprite(tex);

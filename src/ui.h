@@ -13,6 +13,18 @@ class Memory;
 class Z80;
 class Io;
 
+enum class Colour
+{
+    Black,
+    Blue,
+    Red,
+    Magenta,
+    Green,
+    Cyan,
+    Yellow,
+    White
+};
+
 class Ui
 {
 public:
@@ -24,18 +36,6 @@ public:
 
     public:
         Draw(std::vector<u8>& pixels, std::vector<u8>& attr);
-
-        enum class Colour
-        {
-            Black,
-            Blue,
-            Red,
-            Magenta,
-            Green,
-            Cyan,
-            Yellow,
-            White
-        };
 
         //
         // Level 0 - poking/low-level calculations
