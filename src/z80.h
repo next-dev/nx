@@ -30,6 +30,7 @@ public:
     void step(i64& tState);
     void interrupt();
     void nmi();
+    void restart();
 
     u8& A() { return m_af.h; }
     u8& F() { return m_af.l; }
@@ -222,6 +223,24 @@ Z80::Z80(Memory& memory, Io& io)
     , m_nmi(false)
     , m_eiHappened(false)
 {
+    restart();
+    for (int i = 0; i < 256; ++i)
+    {
+        m_SZ53[i] = (u8)(i & (F_3 | F_5 | F_SIGN));
+
+        u8 p = 0, x = i;
+        for (int bit = 0; bit < 8; ++bit) { p ^= (u8)(x & 1); x >>= 1; }
+        m_parity[i] = p ? 0 : F_PARITY;
+
+        m_SZ53P[i] = m_SZ53[i] | m_parity[i];
+    }
+
+    m_SZ53[0] |= F_ZERO;
+    m_SZ53P[0] |= F_ZERO;
+}
+
+void Z80::restart()
+{
     // #todo: Check these values
     AF() = 0xffff;
     BC() = 0xffff;
@@ -237,20 +256,10 @@ Z80::Z80(Memory& memory, Io& io)
     DE_() = 0xffff;
     HL_() = 0xffff;
     MP() = 0x0000;
-
-    for (int i = 0; i < 256; ++i)
-    {
-        m_SZ53[i] = (u8)(i & (F_3 | F_5 | F_SIGN));
-
-        u8 p = 0, x = i;
-        for (int bit = 0; bit < 8; ++bit) { p ^= (u8)(x & 1); x >>= 1; }
-        m_parity[i] = p ? 0 : F_PARITY;
-
-        m_SZ53P[i] = m_SZ53[i] | m_parity[i];
-    }
-
-    m_SZ53[0] |= F_ZERO;
-    m_SZ53P[0] |= F_ZERO;
+    m_halt = false;
+    m_iff1 = m_iff2 = true;
+    m_im = 0;
+    m_interrupt = m_nmi = m_eiHappened = false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

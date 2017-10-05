@@ -27,10 +27,13 @@ public:
     Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv);
 
     // Advance as many number of t-states as possible.  Returns the number of t-States that were processed.
-    i64 update();
+    void update();
 
     // Access to the underlying machine
     Machine& getMachine() { return m_machine; }
+
+    // Restart the machine
+    void restart();
 
     //
     // Input control
@@ -81,8 +84,6 @@ private:
 
 private:
     IHost&              m_host;
-    i64                 m_tState;
-    i64                 m_elapsedTStates;
     std::vector<bool>   m_keys;
     Machine             m_machine;
     Ui                  m_ui;
@@ -108,8 +109,6 @@ private:
 
 Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     : m_host(host)
-    , m_tState(0)
-    , m_elapsedTStates(0)
     , m_keys((int)Key::COUNT)
     , m_machine(host, img, m_keys)
     , m_ui(ui_img, m_machine.getMemory(), m_machine.getZ80(), m_machine.getIo())
@@ -152,27 +151,36 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     m_dissasemblyWindow.Select();
 }
 
-i64 Nx::update()
+void Nx::update()
 {
-    if (m_debugger)
-    {
-        m_ui.clear();
-        m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
-        return 0;
-    }
-    else
-    {
-        i64 elapsedTStates = m_machine.update(m_tState);
-        m_elapsedTStates += elapsedTStates;
-        if (m_elapsedTStates > 69888)
-        {
-            m_elapsedTStates -= 69888;
-            m_ui.clear();
-            m_ui.render(std::bind(&Nx::drawOverlay, this, std::placeholders::_1));
-        }
-        return elapsedTStates;
-    }
+    m_machine.update();
+    m_ui.clear();
+    m_ui.render(std::bind(m_debugger ? &Nx::drawDebugger : &Nx::drawOverlay, this, std::placeholders::_1));
 
+//     if (m_debugger)
+//     {
+//         m_ui.clear();
+//         m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
+//         return 0;
+//     }
+//     else
+//     {
+//         i64 elapsedTStates = m_machine.update(m_tState);
+//         m_elapsedTStates += elapsedTStates;
+//         if (m_elapsedTStates > 69888)
+//         {
+//             m_elapsedTStates -= 69888;
+//             m_ui.clear();
+//             m_ui.render(std::bind(&Nx::drawOverlay, this, std::placeholders::_1));
+//         }
+//         return elapsedTStates;
+//     }
+
+}
+
+void Nx::restart()
+{
+    m_machine.restart();
 }
 
 void Nx::keyPress(Key k, bool down)
@@ -217,7 +225,7 @@ bool Nx::load(std::string fileName)
     int handle = m_host.load(fileName, buffer, size);
     if (handle)
     {
-        bool result = m_machine.load(buffer, size, Machine::FileType::Sna, m_tState);
+        bool result = m_machine.load(buffer, size, Machine::FileType::Sna);
         m_host.unload(handle);
 
         return result;

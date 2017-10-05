@@ -12,49 +12,6 @@
 #include "z80.h"
 
 //----------------------------------------------------------------------------------------------------------------------
-// Events
-//----------------------------------------------------------------------------------------------------------------------
-
-class Machine;
-
-class EventManager
-{
-public:
-    class Event
-    {
-    public:
-        // An event function to return false to exit the emulation loop so that the host can get updates.
-        using Func = std::function<bool(Machine&, i64&)>;
-
-        Event(i64 tState, std::string name, Func func)
-            : m_tState(tState)
-            , m_name(name)
-            , m_func(func)
-        {}
-
-        bool trigger(Machine& M, i64& inOutTState)
-        {
-            return m_func(M, inOutTState);
-        }
-
-        i64 getTState() const { return m_tState; }
-        const std::string& getName() const { return m_name; }
-        Func getFunc() { return m_func; }
-
-    private:
-        i64             m_tState;
-        std::string     m_name;
-        Func            m_func;
-    };
-
-    void addEvent(i64 tState, std::string name, Event::Func func);
-    bool testEvent(Machine& M, i64& inOutTState);
-
-private:
-    std::vector<Event>  m_events;
-};
-
-//----------------------------------------------------------------------------------------------------------------------
 // Emulated Machine
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -63,8 +20,8 @@ class Machine
 public:
     Machine(IHost& host, u32* img, std::vector<bool>& keys);
 
-    // Returns the number of t-states that have passed.
-    i64 update(i64& inOutTState);
+    void update();
+    void restart();
 
     // Return various attributes of the machine
     int getClockScale() const { return m_clockScale; }
@@ -73,7 +30,6 @@ public:
     void setFrameCounter(int fc) { m_frameCounter = fc; }
 
     // Access to systems.
-    EventManager& getEvents() { return m_events; }
     Memory& getMemory() { return m_memory; }
     Io& getIo() { return m_io; }
     Video& getVideo() { return m_video; }
@@ -87,12 +43,13 @@ public:
         Tap,
         Pzx,
     };
-    bool load(const u8* data, i64 size, FileType typeHint, i64& outTState);
+    bool load(const u8* data, i64 size, FileType typeHint);
 
 private:
-    bool loadSna(const u8* data, i64 size, i64& outTState);
+    bool loadSna(const u8* data, i64 size);
 
 private:
+    i64             m_tState;
     IHost&          m_host;
     int             m_clockScale;
     Memory          m_memory;
@@ -100,7 +57,6 @@ private:
     Video           m_video;
     Z80             m_z80;
     int             m_frameCounter;
-    EventManager    m_events;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -111,53 +67,6 @@ private:
 #ifdef NX_IMPL
 
 #include <algorithm>
-
-//----------------------------------------------------------------------------------------------------------------------
-// Event manager
-//----------------------------------------------------------------------------------------------------------------------
-
-void EventManager::addEvent(i64 tState, std::string name, Event::Func func)
-{
-    m_events.emplace_back(tState, name, func);
-
-    // Sort the array
-    std::sort(m_events.begin(), m_events.end(), [](Event& ev1, Event& ev2) -> bool {
-        return ev1.getTState() < ev2.getTState();
-    });
-}
-
-bool EventManager::testEvent(Machine& M, i64& inOutTState)
-{
-    bool result = true;
-
-    // Keep looping until all passed events have been processed.
-    while (result &&
-        (m_events.size() > 0) &&
-        (m_events[0].getTState() <= inOutTState))
-    {
-        if (!m_events[0].trigger(M, inOutTState)) result = false;
-        m_events.erase(m_events.begin());
-    }
-
-    return result;
-}
-
-//----------------------------------------------------------------------------------------------------------------------
-// Events
-//----------------------------------------------------------------------------------------------------------------------
-
-bool machineFrame(Machine& M, i64& inOutTState)
-{
-    i64 time = 69888 * M.getClockScale();
-    M.getEvents().addEvent(time, "frame", &machineFrame);
-    inOutTState -= time;
-    M.setFrameCounter(M.getFrameCounter() + 1);
-    M.getVideo().frame();
-    //M.getVideo().render((M.getFrameCounter() & 16) != 0);
-    M.getHost().redraw();
-    M.getZ80().interrupt();
-    return false;
-}
 
 //----------------------------------------------------------------------------------------------------------------------
 // Machine
@@ -180,27 +89,34 @@ Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
     {
         m_memory.load(0, rom, size);
         m_host.unload(handle);
-
-        // Bootstrap the events
-        getEvents().addEvent(69888 * m_clockScale, "frame", &machineFrame);
         m_video.frame();
     }
 }
 
-i64 Machine::update(i64& inOutTState)
+void Machine::update()
 {
-    i64 elapsedTStates = 0;
-    m_host.clear();
+    m_tState = 0;
 
-    while (getEvents().testEvent(*this, inOutTState))
+    i64 frameTime = 69888 * getClockScale();
+
+    while (m_tState < frameTime)
     {
-        i64 startTState = inOutTState;
-        getZ80().step(inOutTState);
-        elapsedTStates += (inOutTState - startTState);
-        m_video.render((getFrameCounter() & 16) != 0, inOutTState);
+        getZ80().step(m_tState);
+        m_video.render((getFrameCounter() & 16) != 0, m_tState);
     }
 
-    return elapsedTStates;
+    m_tState -= frameTime;
+    setFrameCounter(getFrameCounter() + 1);
+    getVideo().frame();
+    getZ80().interrupt();
+}
+
+void Machine::restart()
+{
+    m_tState = 0;
+    setFrameCounter(0);
+    getVideo().frame();
+    getZ80().restart();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -210,7 +126,7 @@ i64 Machine::update(i64& inOutTState)
 #define BYTE_OF(arr, offset) arr[offset]
 #define WORD_OF(arr, offset) (*(u16 *)&arr[offset])
 
-bool Machine::loadSna(const u8* data, i64 size, i64& outTState)
+bool Machine::loadSna(const u8* data, i64 size)
 {
     if (size != 49179) return false;
 
@@ -233,9 +149,9 @@ bool Machine::loadSna(const u8* data, i64 size, i64& outTState)
     m_io.setBorder(BYTE_OF(data, 26));
     m_memory.load(0x4000, data + 27, 0xc000);
 
-    m_z80.PC() = m_z80.pop(outTState);
+    m_z80.PC() = m_z80.pop(m_tState);
 
-    outTState = 0;
+    m_tState = 0;
 
     return true;
 }
@@ -243,11 +159,11 @@ bool Machine::loadSna(const u8* data, i64 size, i64& outTState)
 #undef BYTE_OF
 #undef WORD_OF
 
-bool Machine::load(const u8* data, i64 size, FileType typeHint, i64& outTState)
+bool Machine::load(const u8* data, i64 size, FileType typeHint)
 {
     switch (typeHint)
     {
-    case FileType::Sna:     return loadSna(data, size, outTState);
+    case FileType::Sna:     return loadSna(data, size);
     default:
         return false;
     }

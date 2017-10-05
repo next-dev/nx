@@ -40,6 +40,7 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 |------------------|-------------------------------------------------------|
 | Ctrl             | Symbol shift                                          |
 | F1               | Open file                                             |
+| F12              | Restart the machine                                   |
 | ~                | Enter debugger mode                                   |
 
 # Debugger Controls

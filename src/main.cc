@@ -118,16 +118,6 @@ public:
         m_handles.remove(handle);
     }
 
-    void clear() override
-    {
-        m_redraw = false;
-    }
-
-    void redraw() override
-    {
-        m_redraw = true;
-    }
-
     //
     // Querying
     //
@@ -413,6 +403,10 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
         break;
 #endif
 
+    case K::F12:
+        N.restart();
+        break;
+
     default:
         // If releasing a non-speccy key, clear all key map.
         N.keysClear();
@@ -490,7 +484,7 @@ int main(int argc, char** argv)
     sprite.setScale(4, 4);
     u32* img = new u32[kWindowWidth * kWindowHeight];
 
-    // UI videwo
+    // UI video
     sf::Texture uitex;
     uitex.create(kUiWidth, kUiHeight);
     sf::Sprite uiSprite(uitex);
@@ -538,15 +532,12 @@ int main(int argc, char** argv)
 
         N.update();
 
-        if (host.getRedraw())
-        {
-            window.clear();
-            tex.update((const sf::Uint8 *)img);
-            uitex.update((const sf::Uint8 *)ui_img);
-            window.draw(sprite);
-            window.draw(uiSprite);
-            window.display();
-        }
+        window.clear();
+        tex.update((const sf::Uint8 *)img);
+        uitex.update((const sf::Uint8 *)ui_img);
+        window.draw(sprite);
+        window.draw(uiSprite);
+        window.display();
 
         sf::Time elapsedTime = clk.getElapsedTime();
         sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
