@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <cstdarg>
+
 static const int kUiWidth = kWindowWidth * 2;
 static const int kUiHeight = kWindowHeight * 2;
 
@@ -22,7 +24,7 @@ enum class UiKey
     PageUp,
     PageDn,
     Tab,
-
+    
     COUNT
 };
 
@@ -118,6 +120,12 @@ protected:
     //
     virtual void onDraw(Ui::Draw& draw) = 0;
     virtual void onKey(UiKey key, bool down) = 0;
+    
+    //
+    // Helper functions
+    //
+    void printFormatArgs(Ui::Draw& draw, int xCell, int yCell, u8 colour, const char* format, va_list args);
+    void printFormat(Ui::Draw& draw, int xCell, int yCell, u8 colour, const char* format, ...);
 
 protected:
     Machine&        m_machine;
@@ -159,6 +167,7 @@ private:
 
 #include <algorithm>
 #include <cassert>
+#include <cstdio>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Font
@@ -247,6 +256,8 @@ const u8 gGfxFont[] = {
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0xff,     // Bottom right corner  $
     0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff,     // Slope                %
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,     // Bottom line          &
+    0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08,     // Vertical bar         '
+    0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0xff,     // Upside down T        (
 };
 
 
@@ -579,6 +590,21 @@ void Window::draw(Ui::Draw& draw)
 void Window::keyPress(UiKey key, bool down)
 {
     onKey(key, down);
+}
+
+void Window::printFormatArgs(Ui::Draw& draw, int xCell, int yCell, u8 colour, const char *format, va_list args)
+{
+    char buffer[m_width+1];
+    vsnprintf(buffer, m_width, format, args);
+    draw.printString(m_x + xCell, m_y + yCell, buffer, colour);
+}
+
+void Window::printFormat(Ui::Draw &draw, int xCell, int yCell, u8 colour, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    printFormatArgs(draw, xCell, yCell, colour, format, args);
+    va_end(args);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

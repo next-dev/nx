@@ -253,6 +253,7 @@ void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
     case K::Tab:        k = UiKey::Tab;         break;
 
     case K::Tilde:      if (down) N.toggleDebugger();       break;
+    case K::F5:         if (down) N.togglePause();          break;
             
     default: break;
     }
@@ -373,6 +374,7 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
         break;
 
     case K::Tilde:      if (down) N.toggleDebugger();               break;
+    case K::F5:         if (down) N.togglePause();                  break;
 
 #ifdef _WIN32
     case K::F1:

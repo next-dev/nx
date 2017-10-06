@@ -54,6 +54,7 @@ public:
     bool isDebugging() const { return m_debugger; }
     void drawDebugger(Ui::Draw& draw);
     void toggleDebugger();
+    void togglePause();
 
     //
     // Overlay
@@ -88,10 +89,12 @@ private:
     Machine             m_machine;
     Ui                  m_ui;
     bool                m_debugger;
+    RunMode             m_runMode;
 
     // Debugger windows
     MemoryDumpWindow    m_memoryDumpWindow;
     DisassemblyWindow   m_dissasemblyWindow;
+    CpuStatusWindow     m_cpuStatusWindow;
 
     // Settings
     std::map<std::string, std::string>  m_settings;
@@ -113,9 +116,11 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
     , m_machine(host, img, m_keys)
     , m_ui(ui_img, m_machine.getMemory(), m_machine.getZ80(), m_machine.getIo())
     , m_debugger(false)
+    , m_runMode(RunMode::Normal)
     //--- Windows
     , m_memoryDumpWindow(m_machine)
     , m_dissasemblyWindow(m_machine)
+    , m_cpuStatusWindow(m_machine)
     //--- Settings ----------------------------------------------------------------------
     , m_kempstonJoystick(false)
 {
@@ -153,29 +158,9 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
 
 void Nx::update()
 {
-    m_machine.update();
+    m_machine.update(m_runMode);
     m_ui.clear();
     m_ui.render(std::bind(m_debugger ? &Nx::drawDebugger : &Nx::drawOverlay, this, std::placeholders::_1));
-
-//     if (m_debugger)
-//     {
-//         m_ui.clear();
-//         m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
-//         return 0;
-//     }
-//     else
-//     {
-//         i64 elapsedTStates = m_machine.update(m_tState);
-//         m_elapsedTStates += elapsedTStates;
-//         if (m_elapsedTStates > 69888)
-//         {
-//             m_elapsedTStates -= 69888;
-//             m_ui.clear();
-//             m_ui.render(std::bind(&Nx::drawOverlay, this, std::placeholders::_1));
-//         }
-//         return elapsedTStates;
-//     }
-
 }
 
 void Nx::restart()
@@ -185,6 +170,7 @@ void Nx::restart()
 
 void Nx::keyPress(Key k, bool down)
 {
+    if (m_runMode != RunMode::Normal) return;
     m_keys[(int)k] = down;
 }
 
@@ -265,6 +251,7 @@ void Nx::drawDebugger(Ui::Draw& draw)
 {
     m_memoryDumpWindow.draw(draw);
     m_dissasemblyWindow.draw(draw);
+    m_cpuStatusWindow.draw(draw);
 }
 
 void Nx::toggleDebugger()
@@ -276,6 +263,7 @@ void Nx::uiKeyPress(UiKey k, bool down)
 {
     m_memoryDumpWindow.keyPress(k, down);
     m_dissasemblyWindow.keyPress(k, down);
+    m_cpuStatusWindow.keyPress(k, down);
 
     if (down)
     {
@@ -300,6 +288,14 @@ void Nx::uiKeyPress(UiKey k, bool down)
             break;
         }
     }
+}
+
+void Nx::togglePause()
+{
+    m_runMode = (m_runMode != RunMode::Normal) ? RunMode::Normal : RunMode::Stopped;
+    m_dissasemblyWindow.setAddress(m_machine.getZ80().PC());
+    m_debugger = true;
+    m_dissasemblyWindow.Select();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
