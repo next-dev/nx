@@ -240,24 +240,24 @@ void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
 {
     using K = sf::Keyboard;
 
-    DebugKey k = DebugKey::COUNT;
+    UiKey k = UiKey::COUNT;
 
     switch (key)
     {
-    case K::Left:       k = DebugKey::Left;     break;
-    case K::Down:       k = DebugKey::Down;     break;
-    case K::Up:         k = DebugKey::Up;       break;
-    case K::Right:      k = DebugKey::Right;    break;
-    case K::PageUp:     k = DebugKey::PageUp;   break;
-    case K::PageDown:   k = DebugKey::PageDn;   break;
-    case K::Tab:        k = DebugKey::Tab;      break;
+    case K::Left:       k = UiKey::Left;        break;
+    case K::Down:       k = UiKey::Down;        break;
+    case K::Up:         k = UiKey::Up;          break;
+    case K::Right:      k = UiKey::Right;       break;
+    case K::PageUp:     k = UiKey::PageUp;      break;
+    case K::PageDown:   k = UiKey::PageDn;      break;
+    case K::Tab:        k = UiKey::Tab;         break;
 
     case K::Tilde:      if (down) N.toggleDebugger();       break;
     }
 
-    if (k != DebugKey::COUNT)
+    if (k != UiKey::COUNT)
     {
-        N.debugKeyPress(k, down);
+        N.uiKeyPress(k, down);
     }
 }
 
