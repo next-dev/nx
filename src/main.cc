@@ -487,14 +487,14 @@ int main(int argc, char** argv)
     sf::Texture tex;
     tex.create(kWindowWidth, kWindowHeight);
     sf::Sprite sprite(tex);
-    sprite.setScale(kScale, kScale);
+    sprite.setScale((float)kScale, (float)kScale);
     u32* img = new u32[kWindowWidth * kWindowHeight];
 
     // UI video
     sf::Texture uitex;
     uitex.create(kUiWidth, kUiHeight);
     sf::Sprite uiSprite(uitex);
-    uiSprite.setScale(kScale/2, kScale/2);
+    uiSprite.setScale((float)kScale/2, (float)kScale/2);
     u32* ui_img = new u32[kUiWidth * kUiHeight];
 
     Nx N(host, img, ui_img, argc, argv);

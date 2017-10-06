@@ -594,7 +594,7 @@ void Window::keyPress(UiKey key, bool down)
 
 void Window::printFormatArgs(Ui::Draw& draw, int xCell, int yCell, u8 colour, const char *format, va_list args)
 {
-    char buffer[m_width+1];
+    char buffer[81];
     vsnprintf(buffer, m_width, format, args);
     draw.printString(m_x + xCell, m_y + yCell, buffer, colour);
 }
