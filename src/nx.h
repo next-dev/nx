@@ -40,7 +40,7 @@ public:
     //
     void keyPress(Key k, bool down);
     void keysClear();
-    void debugKeyPress(DebugKey k, bool down);
+    void uiKeyPress(UiKey k, bool down);
     void joystickKeyPress(JoystickKey k, bool down);
 
     //
@@ -272,14 +272,14 @@ void Nx::toggleDebugger()
     m_debugger = !m_debugger;
 }
 
-void Nx::debugKeyPress(DebugKey k, bool down)
+void Nx::uiKeyPress(UiKey k, bool down)
 {
     m_memoryDumpWindow.keyPress(k, down);
     m_dissasemblyWindow.keyPress(k, down);
 
     if (down)
     {
-        using DK = DebugKey;
+        using DK = UiKey;
         switch (k)
         {
         case DK::Tab:
