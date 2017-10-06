@@ -131,7 +131,7 @@ std::string Disassembler::byteNoPrefix(u8 b)
 std::string Disassembler::index(u8 b)
 {
     std::stringstream ss;
-    ss << b;
+    ss << (int)b;
     return ss.str();
 }
 
@@ -652,14 +652,14 @@ void Disassembler::disassembleED(u8 b2, u8 b3, u8 b4)
 
     case 2:
         {
-            static const char* suffixes[4] = { "i", "d", "ir", "dr" };
-            static const char* prefixes1[4] = { "ld", "cp", "in", "out" };
-            static const char* prefixes2[4] = { "ld", "cp", "in", "ot" };
+            static const char* ySuffixes[4] = { "i", "d", "ir", "dr" };
+            static const char* zPrefixes1[4] = { "ld", "cp", "in", "out" };
+            static const char* zPrefixes2[4] = { "ld", "cp", "in", "ot" };
             if (z <= 3 && y >= 4)
             {
                 result(
-                    std::string(y > 5 ? prefixes2[y - 4] : prefixes1[y - 4]) +
-                    suffixes[z],
+                       std::string(z > 1 ? zPrefixes2[z] : zPrefixes1[z]) +
+                    ySuffixes[y - 4],
                     2);
             }
             else goto invalid;
