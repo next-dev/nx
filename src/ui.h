@@ -13,6 +13,19 @@ class Memory;
 class Z80;
 class Io;
 
+enum class UiKey
+{
+    Left,
+    Down,
+    Up,
+    Right,
+    PageUp,
+    PageDn,
+    Tab,
+
+    COUNT
+};
+
 enum class Colour
 {
     Black,
@@ -84,6 +97,58 @@ private:
     Z80&                m_z80;
     Io&                 m_io;
 };
+
+//----------------------------------------------------------------------------------------------------------------------
+// Window base class
+//----------------------------------------------------------------------------------------------------------------------
+
+class Machine;
+
+class Window
+{
+public:
+    Window(Machine& M, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright);
+
+    virtual void draw(Ui::Draw& draw);
+    virtual void keyPress(UiKey key, bool down);
+
+protected:
+    //
+    // Hooks
+    //
+    virtual void onDraw(Ui::Draw& draw) = 0;
+    virtual void onKey(UiKey key, bool down) = 0;
+
+protected:
+    Machine&        m_machine;
+    int             m_x;
+    int             m_y;
+    int             m_width;
+    int             m_height;
+    std::string     m_title;
+    u8              m_bkgColour;
+};
+
+//----------------------------------------------------------------------------------------------------------------------
+// Selectable window
+//----------------------------------------------------------------------------------------------------------------------
+
+class SelectableWindow : public Window
+{
+public:
+    SelectableWindow(Machine& M, int x, int y, int width, int height, std::string title, Colour ink, Colour paper);
+
+    void Select();
+    bool isSelected() const { return ms_currentWindow == this; }
+
+    void draw(Ui::Draw& draw) override;
+    void keyPress(UiKey key, bool down) override;
+
+private:
+    static SelectableWindow* ms_currentWindow;
+};
+
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
@@ -488,6 +553,80 @@ void Ui::Draw::window(int xCell, int yCell, int width, int height, const char* t
     }
     printChar(x, yCell, '$', backgroundAttr, gGfxFont);
 }
+
+//----------------------------------------------------------------------------------------------------------------------
+// Window base class
+//----------------------------------------------------------------------------------------------------------------------
+
+Window::Window(Machine& M, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright)
+    : m_machine(M)
+    , m_x(x)
+    , m_y(y)
+    , m_width(width)
+    , m_height(height)
+    , m_title(title)
+    , m_bkgColour((int)ink + (8 * (int)paper) + (bright ? 0x40 : 0x00))
+{
+
+}
+
+void Window::draw(Ui::Draw& draw)
+{
+    draw.window(m_x, m_y, m_width, m_height, m_title.c_str(), (m_bkgColour & 0x40) != 0, m_bkgColour);
+    onDraw(draw);
+}
+
+void Window::keyPress(UiKey key, bool down)
+{
+    onKey(key, down);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Selectable window class
+//----------------------------------------------------------------------------------------------------------------------
+
+SelectableWindow* SelectableWindow::ms_currentWindow = 0;
+
+SelectableWindow::SelectableWindow(Machine& M, int x, int y, int width, int height, std::string title, Colour ink, Colour paper)
+    : Window(M, x, y, width, height, title, ink, paper, false)
+{
+
+}
+
+void SelectableWindow::draw(Ui::Draw& draw)
+{
+    u8 bkg = m_bkgColour;
+    if (ms_currentWindow == this)
+    {
+        bkg |= 0x40;
+    }
+    else
+    {
+        bkg &= ~0x40;
+    }
+    draw.window(m_x, m_y, m_width, m_height, m_title.c_str(), (bkg & 0x40) != 0, bkg);
+    onDraw(draw);
+}
+
+void SelectableWindow::keyPress(UiKey key, bool down)
+{
+    if (ms_currentWindow == this)
+    {
+        onKey(key, down);
+    }
+}
+
+void SelectableWindow::Select()
+{
+    if (ms_currentWindow)
+    {
+        ms_currentWindow->m_bkgColour &= ~0x40;
+    }
+    ms_currentWindow = this;
+    m_bkgColour |= 0x40;
+}
+
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
