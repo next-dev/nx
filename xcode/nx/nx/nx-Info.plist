@@ -19,6 +19,6 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>NSHighResolutionCapable</key>
-	<true/>
+	<false/>
 </dict>
 </plist>

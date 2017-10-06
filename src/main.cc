@@ -474,23 +474,25 @@ int main(int argc, char** argv)
 #if NX_DEBUG_CONSOLE && defined(_WIN32)
     console();
 #endif
+    
+    static int kScale = 4;
 
     Host host;
 
     // Spectrum video
-    sf::RenderWindow window(sf::VideoMode(kWindowWidth * 4, kWindowHeight * 4), "NX " NX_VERSION,
+    sf::RenderWindow window(sf::VideoMode(kWindowWidth * kScale, kWindowHeight * kScale), "NX " NX_VERSION,
         sf::Style::Titlebar | sf::Style::Close);
     sf::Texture tex;
     tex.create(kWindowWidth, kWindowHeight);
     sf::Sprite sprite(tex);
-    sprite.setScale(4, 4);
+    sprite.setScale(kScale, kScale);
     u32* img = new u32[kWindowWidth * kWindowHeight];
 
     // UI video
     sf::Texture uitex;
     uitex.create(kUiWidth, kUiHeight);
     sf::Sprite uiSprite(uitex);
-    uiSprite.setScale(2, 2);
+    uiSprite.setScale(kScale/2, kScale/2);
     u32* ui_img = new u32[kUiWidth * kUiHeight];
 
     Nx N(host, img, ui_img, argc, argv);

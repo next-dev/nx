@@ -68,6 +68,10 @@ private:
 
 #include <algorithm>
 
+#ifdef __APPLE__
+#include "ResourcePath.hpp"
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // Machine
 //----------------------------------------------------------------------------------------------------------------------
@@ -84,7 +88,11 @@ Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
     // Load the ROM into memory.
     const u8* rom;
     i64 size;
+#ifdef __APPLE__
+    int handle = m_host.load(resourcePath() + "48.rom", rom, size);
+#else
     int handle = m_host.load("48.rom", rom, size);
+#endif
     if (handle)
     {
         m_memory.load(0, rom, size);
