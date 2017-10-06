@@ -97,7 +97,7 @@ There is a Xcode project in the `xcode/nx` folder.  Just open it up and build.  
 xcode/nx/DerivedData/nx/Build/Products/<Build Type>/
 ```
 
-where <Build Type> is the configuration you chose (either Debug or Release).
+where &lt;Build Type&gt; is the configuration you chose (either Debug or Release).
 
 # Legal notices
 

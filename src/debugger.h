@@ -252,7 +252,7 @@ u16 DisassemblyWindow::disassemble(Disassembler& d, u16 address)
 //----------------------------------------------------------------------------------------------------------------------
 
 CpuStatusWindow::CpuStatusWindow(Machine& M)
-    : Window(M, 45, 1, 34, 19, "CPU Status", Colour::Black, Colour::White, false)
+    : Window(M, 45, 1, 34, 20, "CPU Status", Colour::Black, Colour::White, false)
     , m_z80(M.getZ80())
 {
     
@@ -273,7 +273,7 @@ void CpuStatusWindow::onDraw(Ui::Draw &draw)
 
     draw.printSquashedString(m_x + 27, m_y + 1, "Stack", colour);
     const char hex[] = "0123456789ABCDEF";
-    for (int i = 0; i < 16; ++i) draw.printChar(m_x + 27, m_y + 2 + i, hex[i], colour);
+    for (int i = 0; i < 16; ++i) draw.printChar(m_x + 27, m_y + 3 + i, hex[i], colour);
 
     // Print out the registers
     colour = draw.attr(Colour::Black, Colour::White, false);
@@ -311,7 +311,7 @@ void CpuStatusWindow::onDraw(Ui::Draw &draw)
     i64 ts;
     for (int i = 0; i < 16; ++i)
     {
-        printFormat(draw, 29, 2 + i, colour, "%04X", m_machine.getMemory().peek16(a, ts));
+        printFormat(draw, 29, 3 + i, colour, "%04X", m_machine.getMemory().peek16(a, ts));
         a += 2;
     }
 }
