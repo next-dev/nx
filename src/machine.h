@@ -12,6 +12,18 @@
 #include "z80.h"
 
 //----------------------------------------------------------------------------------------------------------------------
+// Run modes
+//----------------------------------------------------------------------------------------------------------------------
+
+enum class RunMode
+{
+    Stopped,    // Don't run any instructions.
+    Normal,     // Emulate as normal, run as fast as possible for a frame.
+    StepIn,     // Step over a single instruction, and follow CALLs.
+    StepOver,   // Step over a single instruction, and run a subroutine CALL till it returns to following instruction.
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Emulated Machine
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -20,12 +32,13 @@ class Machine
 public:
     Machine(IHost& host, u32* img, std::vector<bool>& keys);
 
-    void update();
+    void update(RunMode runMode);
     void restart();
 
     // Return various attributes of the machine
     int getClockScale() const { return m_clockScale; }
     int getFrameCounter() const { return m_frameCounter; }
+    i64 getTState() const { return m_tState; }
 
     void setFrameCounter(int fc) { m_frameCounter = fc; }
 
@@ -68,6 +81,10 @@ private:
 
 #include <algorithm>
 
+#ifdef __APPLE__
+#include "ResourcePath.hpp"
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // Machine
 //----------------------------------------------------------------------------------------------------------------------
@@ -84,7 +101,11 @@ Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
     // Load the ROM into memory.
     const u8* rom;
     i64 size;
+#ifdef __APPLE__
+    int handle = m_host.load(resourcePath() + "48.rom", rom, size);
+#else
     int handle = m_host.load("48.rom", rom, size);
+#endif
     if (handle)
     {
         m_memory.load(0, rom, size);
@@ -93,8 +114,10 @@ Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
     }
 }
 
-void Machine::update()
+void Machine::update(RunMode runMode)
 {
+    if (runMode == RunMode::Stopped) return;
+    
     m_tState = 0;
 
     i64 frameTime = 69888 * getClockScale();

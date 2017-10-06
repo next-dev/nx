@@ -76,7 +76,7 @@ if you require.  The planned headers will be:
 The way the header libraries work is that you can #include them anywhere but in ONE .c file, you must define NX_IMPL
 so that the implementation is pulled into that compilation object.
 
-# Building
+# Building on PC
 
 The build environment is set up for Visual Studio 2017.  It uses premake to generate the projects and solutions.  It
 uses 3 batch files:
@@ -89,6 +89,15 @@ So the normal operation is to run `build2017.bat` then run `edit.bat`.
 
 If you require use of a different version of Visual Studio, you can edit the build batch file.  Look for the parameter
 passed to premake.  It should be obvious what you change.
+
+# Building on Mac
+
+There is a Xcode project in the `xcode/nx` folder.  Just open it up and build.  You will find the app in:
+```
+xcode/nx/DerivedData/nx/Build/Products/<Build Type>/
+```
+
+where <Build Type> is the configuration you chose (either Debug or Release).
 
 # Legal notices
 

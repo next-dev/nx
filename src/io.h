@@ -63,7 +63,7 @@ Io::Io(Memory& memory, std::vector<bool>& keys)
     , m_memory(memory)
     , m_keys(keys)
 {
-    for (auto& k : m_keys) k = 0;
+    std::fill(m_keys.begin(), m_keys.end(), false);
 }
 
 void Io::contend(u16 port, i64 tStates, int num, i64& inOutTStates)

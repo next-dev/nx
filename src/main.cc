@@ -253,6 +253,9 @@ void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
     case K::Tab:        k = UiKey::Tab;         break;
 
     case K::Tilde:      if (down) N.toggleDebugger();       break;
+    case K::F5:         if (down) N.togglePause();          break;
+            
+    default: break;
     }
 
     if (k != UiKey::COUNT)
@@ -371,6 +374,7 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
         break;
 
     case K::Tilde:      if (down) N.toggleDebugger();               break;
+    case K::F5:         if (down) N.togglePause();                  break;
 
 #ifdef _WIN32
     case K::F1:
@@ -472,23 +476,25 @@ int main(int argc, char** argv)
 #if NX_DEBUG_CONSOLE && defined(_WIN32)
     console();
 #endif
+    
+    static int kScale = 4;
 
     Host host;
 
     // Spectrum video
-    sf::RenderWindow window(sf::VideoMode(kWindowWidth * 4, kWindowHeight * 4), "NX " NX_VERSION,
+    sf::RenderWindow window(sf::VideoMode(kWindowWidth * kScale, kWindowHeight * kScale), "NX " NX_VERSION,
         sf::Style::Titlebar | sf::Style::Close);
     sf::Texture tex;
     tex.create(kWindowWidth, kWindowHeight);
     sf::Sprite sprite(tex);
-    sprite.setScale(4, 4);
+    sprite.setScale((float)kScale, (float)kScale);
     u32* img = new u32[kWindowWidth * kWindowHeight];
 
     // UI video
     sf::Texture uitex;
     uitex.create(kUiWidth, kUiHeight);
     sf::Sprite uiSprite(uitex);
-    uiSprite.setScale(2, 2);
+    uiSprite.setScale((float)kScale/2, (float)kScale/2);
     u32* ui_img = new u32[kUiWidth * kUiHeight];
 
     Nx N(host, img, ui_img, argc, argv);
@@ -525,6 +531,8 @@ int main(int argc, char** argv)
                     key(N, event.key.code, false);
                 }
                 break;
+                    
+            default: break;
             }
         }
 

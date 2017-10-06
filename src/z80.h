@@ -31,6 +31,8 @@ public:
     void interrupt();
     void nmi();
     void restart();
+    
+    bool isHalted() const { return m_halt; }
 
     u8& A() { return m_af.h; }
     u8& F() { return m_af.l; }
