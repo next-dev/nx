@@ -253,6 +253,8 @@ void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
     case K::Tab:        k = DebugKey::Tab;      break;
 
     case K::Tilde:      if (down) N.toggleDebugger();       break;
+            
+    default: break;
     }
 
     if (k != DebugKey::COUNT)
@@ -525,6 +527,8 @@ int main(int argc, char** argv)
                     key(N, event.key.code, false);
                 }
                 break;
+                    
+            default: break;
             }
         }
 

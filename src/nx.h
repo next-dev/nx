@@ -190,7 +190,7 @@ void Nx::keyPress(Key k, bool down)
 
 void Nx::keysClear()
 {
-    for (auto& k : m_keys) k = 0;
+    std::fill(m_keys.begin(), m_keys.end(), false);
 }
 
 void Nx::joystickKeyPress(JoystickKey k, bool down)
@@ -294,6 +294,9 @@ void Nx::debugKeyPress(DebugKey k, bool down)
                     m_memoryDumpWindow.Select();
                 }
             }
+            break;
+                
+        default:
             break;
         }
     }

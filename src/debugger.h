@@ -65,7 +65,7 @@ public:
     bool isSelected() const { return ms_currentWindow == this; }
 
     void draw(Ui::Draw& draw) override;
-    void keyPress(DebugKey key, bool down);
+    void keyPress(DebugKey key, bool down) override;
 
 private:
     static SelectableWindow* ms_currentWindow;
@@ -249,6 +249,9 @@ void MemoryDumpWindow::onKey(DebugKey key, bool down)
         case DK::PageDn:
             m_address += (m_height - 2) * 8;
             break;
+                
+        default:
+            break;
         }
     }
 }
@@ -317,6 +320,9 @@ void DisassemblyWindow::onKey(DebugKey key, bool down)
                 Disassembler d;
                 m_address = disassemble(d, m_address);
             }
+                
+        default:
+            break;
         }
     }
 }

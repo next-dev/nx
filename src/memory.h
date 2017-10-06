@@ -138,7 +138,7 @@ i64 Memory::contention(i64 tStates)
 
 void Memory::poke(u16 address, u8 b)
 {
-    if (m_romWritable || address > -0x4000) m_memory[address] = b;
+    if (m_romWritable || address > 0x4000) m_memory[address] = b;
 }
 
 void Memory::poke(u16 address, u8 b, i64& inOutTStates)
