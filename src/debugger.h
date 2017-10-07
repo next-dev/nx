@@ -308,7 +308,7 @@ void CpuStatusWindow::onDraw(Ui::Draw &draw)
     draw.printChar(m_x + 26, m_y + m_height - 1, '(', colour, gGfxFont);
 
     u16 a = m_z80.SP();
-    i64 ts;
+    i64 ts = 0;
     for (int i = 0; i < 16; ++i)
     {
         printFormat(draw, 29, 3 + i, colour, "%04X", m_machine.getMemory().peek16(a, ts));
