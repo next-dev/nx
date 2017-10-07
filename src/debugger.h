@@ -219,7 +219,7 @@ void DisassemblyWindow::adjustBar()
 int DisassemblyWindow::findViewAddress(u16 address)
 {
     auto it = std::find(m_viewedAddresses.begin(), m_viewedAddresses.end(), address);
-    return (it == m_viewedAddresses.end()) ? -1 : it - m_viewedAddresses.begin();
+    return (it == m_viewedAddresses.end()) ? -1 : (int)(it - m_viewedAddresses.begin());
 }
 
 void DisassemblyWindow::setView(u16 newTopAddress)

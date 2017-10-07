@@ -123,7 +123,8 @@ private:
 //----------------------------------------------------------------------------------------------------------------------
 
 Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
-    : m_host(host)
+    : m_tState(0)
+    , m_host(host)
     , m_clockScale(1)
     , m_memory(1)
     , m_io(m_memory, keys)
