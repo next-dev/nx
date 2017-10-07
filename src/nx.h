@@ -294,7 +294,7 @@ void Nx::togglePause()
 {
     m_runMode = (m_runMode != RunMode::Normal) ? RunMode::Normal : RunMode::Stopped;
     m_dissasemblyWindow.setAddress(m_machine.getZ80().PC());
-    m_debugger = true;
+    m_debugger = !(m_debugger || m_runMode == RunMode::Normal);
     m_dissasemblyWindow.Select();
 }
 

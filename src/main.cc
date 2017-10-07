@@ -425,11 +425,14 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
         N.keyPress(key2, down);
     }
 
+    // Fix for Windows crappy keyboard support.  It's not perfect but better than not dealing with it.
+#ifdef _WIN32
     if ((key == K::LShift || key == K::RShift) && !down)
     {
         N.keyPress(Key::Shift, false);
         N.keyPress(Key::SymShift, false);
     }
+#endif
 }
 
 //----------------------------------------------------------------------------------------------------------------------
