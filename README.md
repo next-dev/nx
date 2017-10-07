@@ -60,6 +60,19 @@ Currently *Step Over* acts like *Step In* right now.  When pausing from a runnin
 the debugger will always stop inside the interrupt handler since emulator keys are polled after a frame interrupt
 is triggered.  Later, breakpoints will be implemented to allow more control about where you stop.
 
+# Command line parameters
+
+The emulator works on a key/value system for configuration.  The command line syntax for an option is:
+```
+-<key>[=<value>]
+```
+The value is optional and implies "true".  So `-<key>` is the same as `-<key>=true`.  The supported keys are:
+
+| Key               | Description                                        |
+|-------------------|----------------------------------------------------|
+| -kempston         | Set to true for kempston support.  Cursor keys<br/>and tab control the joystick. |
+
+
 # Source code organisation.
 
 My style is to use a single .c file with all the platform specific code in it (thanks Casey from handmadehero.org) and
