@@ -33,7 +33,7 @@ public:
     Machine(IHost& host, u32* img, std::vector<bool>& keys);
 
     // Returns true if the frame ended.
-    bool update(RunMode runMode);
+    bool update(RunMode runMode, bool& breakpointHit);
     
     // Restart the machine
     void restart();
@@ -60,10 +60,37 @@ public:
         Pzx,
     };
     bool load(const u8* data, i64 size, FileType typeHint);
+    
+    //
+    // Breakpoints
+    //
+    enum class BreakpointType
+    {
+        User,       // User added breakpoint, only user can remove it
+        Temporary,  // System added breakpoint, and it should be removed when hit.
+    };
+    
+    // Toggle a user breakpoint
+    void toggleBreakpoint(u16 address);
+    
+    // Add a temporary breakpoint
+    void addTemporaryBreakpoint(u16 address);
+    
+    // Return true if there is a user breakpoint at a given address.
+    bool hasUserBreakpointAt(u16 address);
 
 private:
     bool loadSna(const u8* data, i64 size);
     void updateVideo();
+    
+    struct Breakpoint
+    {
+        BreakpointType  m_type;
+        u16             m_address;
+    };
+    
+    std::vector<Breakpoint>::iterator findBreakpoint(u16 address);
+    bool shouldBreak(u16 address);
 
 private:
     i64             m_tState;
@@ -74,6 +101,8 @@ private:
     Video           m_video;
     Z80             m_z80;
     int             m_frameCounter;
+    
+    std::vector<Breakpoint> m_breakpoints;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -123,9 +152,10 @@ void Machine::updateVideo()
     m_video.render((getFrameCounter() & 16) != 0, m_tState);
 }
 
-bool Machine::update(RunMode runMode)
+bool Machine::update(RunMode runMode, bool& breakpointHit)
 {
     bool result = false;
+    breakpointHit = false;
     i64 frameTime = 69888 * getClockScale();
 
     switch(runMode)
@@ -136,6 +166,11 @@ bool Machine::update(RunMode runMode)
             {
                 getZ80().step(m_tState);
                 updateVideo();
+                if ((runMode == RunMode::Normal) && shouldBreak(getZ80().PC()))
+                {
+                    breakpointHit = true;
+                    break;
+                }
             }
         }
         break;
@@ -226,6 +261,98 @@ bool Machine::load(const u8* data, i64 size, FileType typeHint)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Breakpoints
+//----------------------------------------------------------------------------------------------------------------------
+
+std::vector<Machine::Breakpoint>::iterator Machine::findBreakpoint(u16 address)
+{
+    return std::find_if(m_breakpoints.begin(), m_breakpoints.end(),
+                        std::bind([](Breakpoint& bp, u16 address) -> bool { return bp.m_address == address; },
+                                  std::placeholders::_1, address));
+}
+
+void Machine::toggleBreakpoint(u16 address)
+{
+    auto it = findBreakpoint(address);
+    if (it == m_breakpoints.end())
+    {
+        m_breakpoints.emplace_back(Breakpoint { BreakpointType::User, address });
+    }
+    else
+    {
+        m_breakpoints.erase(it);
+    }
+}
+
+void Machine::addTemporaryBreakpoint(u16 address)
+{
+    auto it = findBreakpoint(address);
+    if (it == m_breakpoints.end())
+    {
+        m_breakpoints.emplace_back(Breakpoint { BreakpointType::Temporary, address });
+    }
+}
+
+bool Machine::shouldBreak(u16 address)
+{
+    auto it = findBreakpoint(address);
+    bool result = it != m_breakpoints.end();
+    if (result && (it->m_type == BreakpointType::Temporary))
+    {
+        m_breakpoints.erase(it);
+    }
+    
+    return result;
+}
+
+bool Machine::hasUserBreakpointAt(u16 address)
+{
+    auto it = findBreakpoint(address);
+    return (it != m_breakpoints.end() && it->m_type == BreakpointType::User);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 
 #endif // NX_IMPL
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

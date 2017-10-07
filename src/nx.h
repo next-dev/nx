@@ -162,7 +162,12 @@ Nx::Nx(IHost& host, u32* img, u32* ui_img, int argc, char** argv)
 
 void Nx::update()
 {
-    m_machine.update(m_runMode);
+    bool breakpointHit = false;
+    m_machine.update(m_runMode, breakpointHit);
+    if (breakpointHit)
+    {
+        togglePause();
+    }
     m_ui.clear();
     m_ui.render(std::bind(m_debugger ? &Nx::drawDebugger : &Nx::drawOverlay, this, std::placeholders::_1));
 }
@@ -174,8 +179,9 @@ void Nx::stepIn()
     {
         togglePause();
     }
-    m_machine.update(RunMode::StepIn);
-    m_dissasemblyWindow.adjustBar();
+    bool breakpointHit;
+    m_machine.update(RunMode::StepIn, breakpointHit);
+    m_dissasemblyWindow.setCursor(getMachine().getZ80().PC());
     m_ui.clear();
     m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
 }
@@ -187,8 +193,9 @@ void Nx::stepOver()
     {
         togglePause();
     }
-    m_machine.update(RunMode::StepOver);
-    m_dissasemblyWindow.adjustBar();
+    bool breakpointHit;
+    m_machine.update(RunMode::StepOver, breakpointHit);
+    m_dissasemblyWindow.setCursor(getMachine().getZ80().PC());
     m_ui.clear();
     m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
 }
@@ -334,7 +341,7 @@ void Nx::togglePause()
     // the next instruction will be after an interrupt fired.  We step one more time to process the interrupt and
     // jump to the interrupt routine.  This requires that the debugger be activated.
     if (m_debugger && m_runMode == RunMode::Stopped) stepIn();
-    m_dissasemblyWindow.setAddress(m_machine.getZ80().PC());
+    m_dissasemblyWindow.adjustBar();
     m_dissasemblyWindow.Select();
 
 }

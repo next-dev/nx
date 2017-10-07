@@ -54,6 +54,7 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 | F5               | Toggle pause.  Pausing while running will bring up the debugger. |
 | F6               | Step over.  Will pause when running.  (Currently unimplemented). |
 | F7               | Step in.  Will pause when running.                               |
+| F9               | Toggle breakpoint.                                               |
 
 Currently *Step Over* acts like *Step In* right now.  When pausing from a running state, if interrupts are enabled,
 the debugger will always stop inside the interrupt handler since emulator keys are polled after a frame interrupt
