@@ -2220,11 +2220,14 @@ void Z80::step(i64& tState)
         MP() = PC();
         m_interrupt = false;
     }
-    m_eiHappened = false;
-    m_nmi = false;
+    else
+    {
+        m_eiHappened = false;
+        m_nmi = false;
 
-    u8 opCode = fetchInstruction(tState);
-    execute(opCode, tState);
+        u8 opCode = fetchInstruction(tState);
+        execute(opCode, tState);
+    }
 }
 
 void Z80::interrupt()

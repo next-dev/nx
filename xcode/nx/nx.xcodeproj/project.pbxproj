@@ -383,6 +383,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/frameworks",
 				);
+				GCC_OPTIMIZATION_LEVEL = 0;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/../../include",
 					/usr/local/include/,

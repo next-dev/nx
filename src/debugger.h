@@ -37,6 +37,7 @@ public:
     DisassemblyWindow(Machine& M);
     
     void setAddress(u16 address);
+    void adjustBar();
 
 private:
     void onDraw(Ui::Draw& draw) override;
@@ -156,6 +157,33 @@ DisassemblyWindow::DisassemblyWindow(Machine& M)
 void DisassemblyWindow::setAddress(u16 address)
 {
     m_address = address;
+}
+
+void DisassemblyWindow::adjustBar()
+{
+    // Calculate which row our bar is on.
+    int row = 0;
+    u16 a = m_address;
+    u16 pc = m_machine.getZ80().PC();
+    Disassembler d;
+    
+    for (row = 1; row < m_height-1; ++row)
+    {
+        if (a == pc) break;
+        a = disassemble(d, a);
+    }
+    
+    // The bar isn't on this view, so reset address
+    if (row == m_height-1)
+    {
+        m_address = pc;
+    }
+    else while (row > m_height / 2)
+    {
+        // We need to adjust the bar
+        m_address = disassemble(d, m_address);
+        --row;
+    }
 }
 
 void DisassemblyWindow::onDraw(Ui::Draw& draw)

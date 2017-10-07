@@ -28,6 +28,10 @@ public:
 
     // Advance as many number of t-states as possible.  Returns the number of t-States that were processed.
     void update();
+    
+    // Debugger functions.  These only work if the run mode is current RunMode::Stopped.
+    void stepOver();
+    void stepIn();
 
     // Access to the underlying machine
     Machine& getMachine() { return m_machine; }
@@ -163,6 +167,32 @@ void Nx::update()
     m_ui.render(std::bind(m_debugger ? &Nx::drawDebugger : &Nx::drawOverlay, this, std::placeholders::_1));
 }
 
+void Nx::stepIn()
+{
+    assert(m_debugger);
+    if (m_runMode == RunMode::Normal)
+    {
+        togglePause();
+    }
+    m_machine.update(RunMode::StepIn);
+    m_dissasemblyWindow.adjustBar();
+    m_ui.clear();
+    m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
+}
+
+void Nx::stepOver()
+{
+    assert(m_debugger);
+    if (m_runMode == RunMode::Normal)
+    {
+        togglePause();
+    }
+    m_machine.update(RunMode::StepOver);
+    m_dissasemblyWindow.adjustBar();
+    m_ui.clear();
+    m_ui.render(std::bind(&Nx::drawDebugger, this, std::placeholders::_1));
+}
+
 void Nx::restart()
 {
     m_machine.restart();
@@ -293,9 +323,20 @@ void Nx::uiKeyPress(UiKey k, bool down)
 void Nx::togglePause()
 {
     m_runMode = (m_runMode != RunMode::Normal) ? RunMode::Normal : RunMode::Stopped;
+    
+    if (!m_debugger)
+    {
+        // If the debugger isn't running then we only show the debugger if we're pausing.
+        m_debugger = (m_runMode == RunMode::Stopped);
+    }
+
+    // Because this method is usually called after a key press, which usually gets processed at the end of the frame,
+    // the next instruction will be after an interrupt fired.  We step one more time to process the interrupt and
+    // jump to the interrupt routine.  This requires that the debugger be activated.
+    if (m_debugger && m_runMode == RunMode::Stopped) stepIn();
     m_dissasemblyWindow.setAddress(m_machine.getZ80().PC());
-    m_debugger = !(m_debugger || m_runMode == RunMode::Normal);
     m_dissasemblyWindow.Select();
+
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -304,7 +345,10 @@ void Nx::togglePause()
 
 void Nx::drawOverlay(Ui::Draw& draw)
 {
-
+    if (m_runMode == RunMode::Stopped)
+    {
+        draw.printSquashedString(70, 60, "Stopped", draw.attr(Colour::Black, Colour::White, true));
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

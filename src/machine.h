@@ -32,7 +32,10 @@ class Machine
 public:
     Machine(IHost& host, u32* img, std::vector<bool>& keys);
 
-    void update(RunMode runMode);
+    // Returns true if the frame ended.
+    bool update(RunMode runMode);
+    
+    // Restart the machine
     void restart();
 
     // Return various attributes of the machine
@@ -60,6 +63,7 @@ public:
 
 private:
     bool loadSna(const u8* data, i64 size);
+    void updateVideo();
 
 private:
     i64             m_tState;
@@ -114,24 +118,53 @@ Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
     }
 }
 
-void Machine::update(RunMode runMode)
+void Machine::updateVideo()
 {
-    if (runMode == RunMode::Stopped) return;
-    
-    m_tState = 0;
+    m_video.render((getFrameCounter() & 16) != 0, m_tState);
+}
 
+bool Machine::update(RunMode runMode)
+{
+    bool result = false;
     i64 frameTime = 69888 * getClockScale();
 
-    while (m_tState < frameTime)
+    switch(runMode)
     {
+    case RunMode::Normal:
+        {
+            while (m_tState < frameTime)
+            {
+                getZ80().step(m_tState);
+                updateVideo();
+            }
+        }
+        break;
+            
+    case RunMode::StepIn:
         getZ80().step(m_tState);
-        m_video.render((getFrameCounter() & 16) != 0, m_tState);
+        updateVideo();
+        break;
+        
+    case RunMode::StepOver:
+        getZ80().step(m_tState);
+        updateVideo();
+        break;
+        
+    case RunMode::Stopped:
+        // Do nothing
+        break;
     }
-
-    m_tState -= frameTime;
-    setFrameCounter(getFrameCounter() + 1);
-    getVideo().frame();
-    getZ80().interrupt();
+    
+    if (m_tState >= frameTime)
+    {
+        m_tState -= frameTime;
+        setFrameCounter(getFrameCounter() + 1);
+        getVideo().frame();
+        getZ80().interrupt();
+        result = true;
+    }
+    
+    return result;
 }
 
 void Machine::restart()

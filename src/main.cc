@@ -254,6 +254,8 @@ void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
 
     case K::Tilde:      if (down) N.toggleDebugger();       break;
     case K::F5:         if (down) N.togglePause();          break;
+    case K::F6:         if (down) N.stepOver();             break;
+    case K::F7:         if (down) N.stepIn();               break;
             
     default: break;
     }

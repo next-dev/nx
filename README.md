@@ -45,12 +45,19 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 
 # Debugger Controls
 
-| Key              | Description                                           |
-|------------------|-------------------------------------------------------|
-| ~                | Leave debugger mode                                   |
-| Up/Down          | Scroll through current window                         |
-| PgUp/PgDn        | Page through current window                           |
-| Tab              | Cycle through current window                          |
+| Key              | Description                                                      |
+|------------------|------------------------------------------------------------------|
+| ~                | Leave debugger mode                                              |
+| Up/Down          | Scroll through current window                                    |
+| PgUp/PgDn        | Page through current window                                      |
+| Tab              | Cycle through current window                                     |
+| F5               | Toggle pause.  Pausing while running will bring up the debugger. |
+| F6               | Step over.  Will pause when running.  (Currently unimplemented). |
+| F7               | Step in.  Will pause when running.                               |
+
+Currently *Step Over* acts like *Step In* right now.  When pausing from a running state, if interrupts are enabled,
+the debugger will always stop inside the interrupt handler since emulator keys are polled after a frame interrupt
+is triggered.  Later, breakpoints will be implemented to allow more control about where you stop.
 
 # Source code organisation.
 
