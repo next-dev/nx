@@ -251,11 +251,20 @@ void debugKey(Nx& N, sf::Keyboard::Key key, bool down)
     case K::PageUp:     k = UiKey::PageUp;      break;
     case K::PageDown:   k = UiKey::PageDn;      break;
     case K::Tab:        k = UiKey::Tab;         break;
+    case K::F1:         k = UiKey::F1;          break;
+    case K::F2:         k = UiKey::F2;          break;
+    case K::F3:         k = UiKey::F3;          break;
+    case K::F4:         k = UiKey::F4;          break;
+    case K::F5:         k = UiKey::F5;          break;
+    case K::F6:         k = UiKey::F6;          break;
+    case K::F7:         k = UiKey::F7;          break;
+    case K::F8:         k = UiKey::F8;          break;
+    case K::F9:         k = UiKey::F9;          break;
+    case K::F10:        k = UiKey::F10;         break;
+    case K::F11:        k = UiKey::F11;         break;
+    case K::F12:        k = UiKey::F12;         break;
 
     case K::Tilde:      if (down) N.toggleDebugger();       break;
-    case K::F5:         if (down) N.togglePause();          break;
-    case K::F6:         if (down) N.stepOver();             break;
-    case K::F7:         if (down) N.stepIn();               break;
             
     default: break;
     }
@@ -376,7 +385,7 @@ void key(Nx& N, sf::Keyboard::Key key, bool down)
         break;
 
     case K::Tilde:      if (down) N.toggleDebugger();               break;
-    case K::F5:         if (down) N.togglePause();                  break;
+    case K::F5:         N.uiKeyPress(UiKey::F5, down);              break;
 
 #ifdef _WIN32
     case K::F1:

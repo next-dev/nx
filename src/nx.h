@@ -58,7 +58,7 @@ public:
     bool isDebugging() const { return m_debugger; }
     void drawDebugger(Ui::Draw& draw);
     void toggleDebugger();
-    void togglePause();
+    void togglePause(bool wasBreakpoint);
 
     //
     // Overlay
@@ -166,7 +166,8 @@ void Nx::update()
     m_machine.update(m_runMode, breakpointHit);
     if (breakpointHit)
     {
-        togglePause();
+        m_dissasemblyWindow.setCursor(getMachine().getZ80().PC());
+        togglePause(true);
     }
     m_ui.clear();
     m_ui.render(std::bind(m_debugger ? &Nx::drawDebugger : &Nx::drawOverlay, this, std::placeholders::_1));
@@ -177,7 +178,7 @@ void Nx::stepIn()
     assert(m_debugger);
     if (m_runMode == RunMode::Normal)
     {
-        togglePause();
+        togglePause(false);
     }
     bool breakpointHit;
     m_machine.update(RunMode::StepIn, breakpointHit);
@@ -191,7 +192,7 @@ void Nx::stepOver()
     assert(m_debugger);
     if (m_runMode == RunMode::Normal)
     {
-        togglePause();
+        togglePause(false);
     }
     bool breakpointHit;
     m_machine.update(RunMode::StepOver, breakpointHit);
@@ -321,13 +322,28 @@ void Nx::uiKeyPress(UiKey k, bool down)
             }
             break;
                 
+        case DK::F5:
+            togglePause(false);
+            break;
+            
+        case DK::F6:
+            stepOver();
+            break;
+            
+        case DK::F7:
+            stepIn();
+            break;
+            
+        case DK::F8:
+            break;
+            
         default:
             break;
         }
     }
 }
 
-void Nx::togglePause()
+void Nx::togglePause(bool wasBreakpoint)
 {
     m_runMode = (m_runMode != RunMode::Normal) ? RunMode::Normal : RunMode::Stopped;
     
@@ -339,8 +355,9 @@ void Nx::togglePause()
 
     // Because this method is usually called after a key press, which usually gets processed at the end of the frame,
     // the next instruction will be after an interrupt fired.  We step one more time to process the interrupt and
-    // jump to the interrupt routine.  This requires that the debugger be activated.
-    if (m_debugger && m_runMode == RunMode::Stopped) stepIn();
+    // jump to the interrupt routine.  This requires that the debugger be activated.  Of course, we don't want this to happen
+    // if a breakpoint occurs.
+    if (!wasBreakpoint && m_debugger && m_runMode == RunMode::Stopped) stepIn();
     m_dissasemblyWindow.adjustBar();
     m_dissasemblyWindow.Select();
 

@@ -260,9 +260,8 @@ void DisassemblyWindow::cursorDown()
 void DisassemblyWindow::cursorUp()
 {
     int index = findViewAddress(m_address);
-    assert(index != -1);
     
-    if (index == 0)
+    if (index == 0 || index == -1)
     {
         // We don't know the previous address.  Keep going back one byte until the disassembly of the instruction
         // finished up on the current address.
@@ -351,6 +350,10 @@ void DisassemblyWindow::onKey(UiKey key, bool down)
             adjustBar();
             break;
                 
+        case DK::F9:
+            m_machine.toggleBreakpoint(m_address);
+            break;
+            
         default:
             break;
         }
