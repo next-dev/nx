@@ -162,12 +162,17 @@ void DisassemblyWindow::onDraw(Ui::Draw& draw)
 {
     Disassembler d;
     u16 a = m_address;
+    u8 selectColour = draw.attr(Colour::Black, Colour::Yellow, true);
 
     u8 bkg2 = m_bkgColour & ~0x40;
     for (int row = 1; row < m_height - 1; ++row)
     {
         u16 next = disassemble(d, a);
-        u8 colour = row & 1 ? m_bkgColour : bkg2;
+        u8 colour = (a == m_machine.getZ80().PC())
+            ? selectColour
+            : row & 1
+                ? m_bkgColour
+                : bkg2;
 
         draw.attrRect(m_x, m_y + row, m_width, 1, colour);
         draw.printString(m_x + 1, m_y + row, d.addressAndBytes(a).c_str(), colour);
