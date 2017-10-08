@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "audio.h"
 #include "video.h"
 #include "z80.h"
 
@@ -99,6 +100,7 @@ private:
     Memory          m_memory;
     Io              m_io;
     Video           m_video;
+    Audio           m_audio;
     Z80             m_z80;
     int             m_frameCounter;
     
@@ -129,6 +131,7 @@ Machine::Machine(IHost& host, u32* img, std::vector<bool>& keys)
     , m_memory(1)
     , m_io(m_memory, keys)
     , m_video(m_memory, m_io, img)
+    , m_audio(69888 * m_clockScale)
     , m_z80(m_memory, m_io)
     , m_frameCounter(0)
 {
