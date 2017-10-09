@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C965A3F91F8BCF0400C2B212 /* portaudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C965A3F81F8BCF0400C2B212 /* portaudio.framework */; };
+		C965A3FA1F8BCF0400C2B212 /* portaudio.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C965A3F81F8BCF0400C2B212 /* portaudio.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C9A29B741F8715A500336E8E /* ResourcePath.mm in Sources */ = {isa = PBXBuildFile; fileRef = C9A29B731F8715A500336E8E /* ResourcePath.mm */; };
 		C9A29B801F8715A500336E8E /* icon.png in Resources */ = {isa = PBXBuildFile; fileRef = C9A29B7F1F8715A500336E8E /* icon.png */; };
 		C9A29B871F87162900336E8E /* main.cc in Sources */ = {isa = PBXBuildFile; fileRef = C9A29B861F87162900336E8E /* main.cc */; };
@@ -48,6 +50,7 @@
 			files = (
 				C9A29BA61F87167000336E8E /* sfml-audio.framework in Embed Frameworks */,
 				C9A29B981F87167000336E8E /* sfml-window.framework in Embed Frameworks */,
+				C965A3FA1F8BCF0400C2B212 /* portaudio.framework in Embed Frameworks */,
 				C9A29BAE1F87167000336E8E /* freetype.framework in Embed Frameworks */,
 				C9A29BA81F87167000336E8E /* FLAC.framework in Embed Frameworks */,
 				C9A29B9C1F87167000336E8E /* vorbis.framework in Embed Frameworks */,
@@ -67,6 +70,7 @@
 
 /* Begin PBXFileReference section */
 		C965A3F71F8BB0FC00C2B212 /* audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = audio.h; path = ../../../src/audio.h; sourceTree = "<group>"; };
+		C965A3F81F8BCF0400C2B212 /* portaudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = portaudio.framework; path = frameworks/portaudio.framework; sourceTree = "<group>"; };
 		C9A29B6E1F8715A500336E8E /* nx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C9A29B721F8715A500336E8E /* nx-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "nx-Info.plist"; sourceTree = "<group>"; };
 		C9A29B731F8715A500336E8E /* ResourcePath.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ResourcePath.mm; sourceTree = "<group>"; };
@@ -107,6 +111,7 @@
 			files = (
 				C9A29BA51F87167000336E8E /* sfml-audio.framework in Frameworks */,
 				C9A29B971F87167000336E8E /* sfml-window.framework in Frameworks */,
+				C965A3F91F8BCF0400C2B212 /* portaudio.framework in Frameworks */,
 				C9A29BAD1F87167000336E8E /* freetype.framework in Frameworks */,
 				C9A29BA71F87167000336E8E /* FLAC.framework in Frameworks */,
 				C9A29B9B1F87167000336E8E /* vorbis.framework in Frameworks */,
@@ -127,6 +132,7 @@
 		C9A29B641F8715A500336E8E = {
 			isa = PBXGroup;
 			children = (
+				C965A3F81F8BCF0400C2B212 /* portaudio.framework */,
 				C9A29B911F87166F00336E8E /* FLAC.framework */,
 				C9A29B941F87167000336E8E /* freetype.framework */,
 				C9A29B8C1F87166F00336E8E /* ogg.framework */,
