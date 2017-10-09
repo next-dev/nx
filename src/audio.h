@@ -73,7 +73,7 @@ Audio::Audio(int numTStatesPerFrame)
     // Output information about the audio system
     const PaHostApiInfo* hostInfo = Pa_GetHostApiInfo(m_audioHost);
     const PaDeviceInfo* deviceInfo = Pa_GetDeviceInfo(m_audioDevice);
-    m_sampleRate = deviceInfo->defaultSampleRate;
+    m_sampleRate = (int)deviceInfo->defaultSampleRate;
     
     printf("Audio host: %s\n", hostInfo->name);
     printf("Audio device: %s\n", deviceInfo->name);
