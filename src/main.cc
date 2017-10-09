@@ -560,10 +560,6 @@ int main(int argc, char** argv)
         window.draw(sprite);
         window.draw(uiSprite);
         window.display();
-
-        sf::Time elapsedTime = clk.getElapsedTime();
-        sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
-        sf::sleep(timeLeft);
     }
 
     delete[] img;

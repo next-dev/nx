@@ -171,6 +171,7 @@ void Nx::update()
     }
     m_ui.clear();
     m_ui.render(std::bind(m_debugger ? &Nx::drawDebugger : &Nx::drawOverlay, this, std::placeholders::_1));
+    m_machine.getAudio().waitFrame();
 }
 
 void Nx::stepIn()

@@ -50,6 +50,7 @@ public:
     Memory& getMemory() { return m_memory; }
     Io& getIo() { return m_io; }
     Video& getVideo() { return m_video; }
+    Audio& getAudio() { return m_audio; }
     Z80& getZ80() { return m_z80; }
     IHost& getHost() { return m_host; }
 

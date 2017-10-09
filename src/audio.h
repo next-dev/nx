@@ -5,6 +5,7 @@
 #pragma once
 
 #include <portaudio/portaudio.h>
+#include <atomic>
 
 #define NX_AUDIO_SAMPLERATE 44100
 
@@ -20,6 +21,8 @@ public:
 
     int numTStatesPerSample() const { return m_numTStatesPerFrame / numSamplesPerFrame(); }
     int numSamplesPerFrame() const { return m_sampleRate / 50; }
+    
+    void waitFrame();
     
 private:
     void initialiseBuffers();
@@ -41,6 +44,8 @@ private:
     PaHostApiIndex  m_audioHost;
     PaDeviceIndex   m_audioDevice;
     PaStream*       m_stream;
+    
+    std::atomic<bool>   m_frame;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -120,9 +125,16 @@ int Audio::callback(const void *input,
                     void *userData)
 {
     Audio* self = (Audio *)userData;
+    self->m_frame = true;
     i16* outputBuffer = (i16 *)output;
     memcpy(outputBuffer, self->m_playBuffer, frameCount * sizeof(i16));
     return paContinue;
+}
+
+void Audio::waitFrame()
+{
+    m_frame = false;
+    while (!m_frame) ;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
