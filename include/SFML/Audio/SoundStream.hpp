@@ -180,11 +180,6 @@ public:
 
 protected:
 
-    enum
-    {
-        NoLoop = -1 ///< "Invalid" endSeeks value, telling us to continue uninterrupted
-    };
-
     ////////////////////////////////////////////////////////////
     /// \brief Default constructor
     ///
@@ -239,18 +234,6 @@ protected:
     ////////////////////////////////////////////////////////////
     virtual void onSeek(Time timeOffset) = 0;
 
-    ////////////////////////////////////////////////////////////
-    /// \brief Change the current playing position in the stream source to the beginning of the loop
-    ///
-    /// This function can be overridden by derived classes to
-    /// allow implementation of custom loop points. Otherwise,
-    /// it just calls onSeek(Time::Zero) and returns 0.
-    ///
-    /// \return The seek position after looping (or -1 if there's no loop)
-    ///
-    ////////////////////////////////////////////////////////////
-    virtual Int64 onLoop();
-
 private:
 
     ////////////////////////////////////////////////////////////
@@ -271,12 +254,11 @@ private:
     /// playing queue.
     ///
     /// \param bufferNum Number of the buffer to fill (in [0, BufferCount])
-    /// \param immediateLoop Treat empty buffers as spent, and act on loops immediately
     ///
     /// \return True if the stream source has requested to stop, false otherwise
     ///
     ////////////////////////////////////////////////////////////
-    bool fillAndPushBuffer(unsigned int bufferNum, bool immediateLoop = false);
+    bool fillAndPushBuffer(unsigned int bufferNum);
 
     ////////////////////////////////////////////////////////////
     /// \brief Fill the audio buffers and put them all into the playing queue
@@ -299,24 +281,23 @@ private:
 
     enum
     {
-        BufferCount = 3,    ///< Number of audio buffers used by the streaming loop
-        BufferRetries = 2   ///< Number of retries (excluding initial try) for onGetData()
+        BufferCount = 3 ///< Number of audio buffers used by the streaming loop
     };
 
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    Thread        m_thread;                   ///< Thread running the background tasks
-    mutable Mutex m_threadMutex;              ///< Thread mutex
-    Status        m_threadStartState;         ///< State the thread starts in (Playing, Paused, Stopped)
-    bool          m_isStreaming;              ///< Streaming state (true = playing, false = stopped)
-    unsigned int  m_buffers[BufferCount];     ///< Sound buffers used to store temporary audio data
-    unsigned int  m_channelCount;             ///< Number of channels (1 = mono, 2 = stereo, ...)
-    unsigned int  m_sampleRate;               ///< Frequency (samples / second)
-    Uint32        m_format;                   ///< Format of the internal sound buffers
-    bool          m_loop;                     ///< Loop flag (true to loop, false to play once)
-    Uint64        m_samplesProcessed;         ///< Number of buffers processed since beginning of the stream
-    Int64         m_bufferSeeks[BufferCount]; ///< If buffer is an "end buffer", holds next seek position, else NoLoop. For play offset calculation.
+    Thread        m_thread;                  ///< Thread running the background tasks
+    mutable Mutex m_threadMutex;             ///< Thread mutex
+    Status        m_threadStartState;        ///< State the thread starts in (Playing, Paused, Stopped)
+    bool          m_isStreaming;             ///< Streaming state (true = playing, false = stopped)
+    unsigned int  m_buffers[BufferCount];    ///< Sound buffers used to store temporary audio data
+    unsigned int  m_channelCount;            ///< Number of channels (1 = mono, 2 = stereo, ...)
+    unsigned int  m_sampleRate;              ///< Frequency (samples / second)
+    Uint32        m_format;                  ///< Format of the internal sound buffers
+    bool          m_loop;                    ///< Loop flag (true to loop, false to play once)
+    Uint64        m_samplesProcessed;        ///< Number of buffers processed since beginning of the stream
+    bool          m_endBuffers[BufferCount]; ///< Each buffer is marked as "end buffer" or not, for proper duration calculation
 };
 
 } // namespace sf

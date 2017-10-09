@@ -51,16 +51,6 @@ protected:
     ///
     ////////////////////////////////////////////////////////////
     NonCopyable() {}
-    
-    ////////////////////////////////////////////////////////////
-    /// \brief Default destructor
-    ///
-    /// By declaring a protected destructor it's impossible to
-    /// call delete on a pointer of sf::NonCopyable, thus
-    /// preventing possible resource leaks.
-    ///
-    ////////////////////////////////////////////////////////////
-    ~NonCopyable() {}
 
 private:
 

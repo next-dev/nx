@@ -66,6 +66,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C965A3F71F8BB0FC00C2B212 /* audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = audio.h; path = ../../../src/audio.h; sourceTree = "<group>"; };
 		C9A29B6E1F8715A500336E8E /* nx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C9A29B721F8715A500336E8E /* nx-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "nx-Info.plist"; sourceTree = "<group>"; };
 		C9A29B731F8715A500336E8E /* ResourcePath.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ResourcePath.mm; sourceTree = "<group>"; };
@@ -155,6 +156,7 @@
 		C9A29B701F8715A500336E8E /* nx */ = {
 			isa = PBXGroup;
 			children = (
+				C965A3F71F8BB0FC00C2B212 /* audio.h */,
 				C9A29BB21F871EA700336E8E /* debugger.h */,
 				C9A29BB61F871EA800336E8E /* disasm.h */,
 				C9A29BB81F871EA800336E8E /* host.h */,

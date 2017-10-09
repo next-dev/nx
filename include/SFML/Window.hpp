@@ -30,10 +30,8 @@
 ////////////////////////////////////////////////////////////
 
 #include <SFML/System.hpp>
-#include <SFML/Window/Clipboard.hpp>
 #include <SFML/Window/Context.hpp>
 #include <SFML/Window/ContextSettings.hpp>
-#include <SFML/Window/Cursor.hpp>
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/Joystick.hpp>
 #include <SFML/Window/Keyboard.hpp>

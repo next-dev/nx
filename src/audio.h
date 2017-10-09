@@ -12,8 +12,6 @@
 // Beeper audio stream
 //----------------------------------------------------------------------------------------------------------------------
 
-using FrameFunction = std::function<void()>;
-
 class AudioStream final : public sf::SoundStream
 {
 public:
@@ -34,7 +32,6 @@ private:
     i16*            m_soundBuffer;
     i16*            m_playBuffer;
     i16*            m_fillBuffer;
-    FrameFunction   m_frameFunction;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -67,6 +64,7 @@ AudioStream::AudioStream(int numTStatesPerFrame)
     , m_playBuffer(nullptr)
     , m_fillBuffer(nullptr)
 {
+    initialize(1, NX_AUDIO_SAMPLERATE);
     initialiseBuffers();
 }
 
@@ -86,8 +84,9 @@ void AudioStream::initialiseBuffers()
     m_playBuffer = m_soundBuffer;
     m_fillBuffer = m_soundBuffer + numSamplesPerFrame();
 
-    for (int i = 0; i < numSamplesPerFrame(); ++i) m_playBuffer[i] = 32767;
-    for (int i = 0; i < numSamplesPerFrame(); ++i) m_fillBuffer[i] = -32767;
+    int bufferSizeInSamples = numSamplesPerFrame();
+    for (int i = 0; i < bufferSizeInSamples; ++i) m_playBuffer[i] = 32767;
+    for (int i = 0; i < bufferSizeInSamples; ++i) m_fillBuffer[i] = -32767;
 }
 
 bool AudioStream::onGetData(Chunk& data)
