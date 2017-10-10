@@ -36,6 +36,12 @@ public:
     void setBorder(u8 border) { m_border = border; }
 
     //
+    // Speaker
+    //
+    u8 getSpeaker() const { return m_speaker; }
+    void setSpeaker(u8 speaker) { m_speaker = speaker; }
+
+    //
     // Kempston Joystick
     //
     u8 getKempstonState() const { return m_kempstonJoystick; }
@@ -43,6 +49,7 @@ public:
 
 private:
     u8                  m_border;
+    u8                  m_speaker;
     u8                  m_kempstonJoystick;
     Memory&             m_memory;
     std::vector<bool>&  m_keys;
@@ -59,6 +66,7 @@ private:
 
 Io::Io(Memory& memory, std::vector<bool>& keys)
     : m_border(0)
+    , m_speaker(0)
     , m_kempstonJoystick(0)
     , m_memory(memory)
     , m_keys(keys)
@@ -97,6 +105,7 @@ void Io::out(u16 port, u8 data, i64& inOutTStates)
     {
         // Deal with $fe
         m_border = data & 7;
+        m_speaker = ((data & 0x10) >> 4) | ((data & 0x08) >> 3);
 
         contend(port, 3, 1, inOutTStates);
     }

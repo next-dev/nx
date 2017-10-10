@@ -414,6 +414,7 @@ void CpuStatusWindow::onDraw(Ui::Draw &draw)
     draw.printString(m_x + 1, m_y + 12, "IFF2", colour);
     draw.printString(m_x + 1, m_y + 13, "IM", colour);
     draw.printString(m_x + 1, m_y + 14, "HALT", colour);
+    draw.printString(m_x + 1, m_y + 16, "FPS", colour);
 
     draw.printSquashedString(m_x + 27, m_y + 1, "Stack", colour);
     const char hex[] = "0123456789ABCDEF";
@@ -446,6 +447,10 @@ void CpuStatusWindow::onDraw(Ui::Draw &draw)
     draw.printString(m_x + 7, m_y + 14, m_z80.isHalted() ? "Yes" : "No", colour);
     
     printFormat(draw, 7, 13, colour, "%d", m_z80.IM());
+
+    // FPS
+    static sf::Clock clock;
+    printFormat(draw, 7, 16, colour, "%d", (int)(sf::seconds(1) / clock.restart()));
     
     // Print out the stack
     for (int i = 1; i < m_height - 1; ++i) draw.printChar(m_x + 26, m_y + i, '\'', colour, gGfxFont);

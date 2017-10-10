@@ -4,9 +4,8 @@
 
 #define NX_DEBUG_CONSOLE    0
 
-#include <SFML/Graphics.hpp>
-
 #include <cstdint>
+#include <SFML/Graphics.hpp>
 
 typedef int8_t      i8;
 typedef int16_t     i16;
@@ -487,6 +486,7 @@ void console()
 
 int main(int argc, char** argv)
 {
+    
 #if NX_DEBUG_CONSOLE && defined(_WIN32)
     console();
 #endif
@@ -550,7 +550,9 @@ int main(int argc, char** argv)
             }
         }
 
+#if NX_DISABLE_AUDIO
         sf::Clock clk;
+#endif
 
         N.update();
 
@@ -560,6 +562,12 @@ int main(int argc, char** argv)
         window.draw(sprite);
         window.draw(uiSprite);
         window.display();
+
+#if NX_DISABLE_AUDIO
+        sf::Time elapsedTime = clk.restart();
+        sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
+        sf::sleep(timeLeft);
+#endif
     }
 
     delete[] img;

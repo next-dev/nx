@@ -84,6 +84,7 @@ public:
 private:
     bool loadSna(const u8* data, i64 size);
     void updateVideo();
+    void updateAudio();
     
     struct Breakpoint
     {
@@ -157,6 +158,13 @@ void Machine::updateVideo()
     m_video.render((getFrameCounter() & 16) != 0, m_tState);
 }
 
+void Machine::updateAudio()
+{
+#if !NX_DISABLE_AUDIO
+    m_audio.updateBeeper(m_tState, getIo().getSpeaker());
+#endif
+}
+
 bool Machine::update(RunMode runMode, bool& breakpointHit)
 {
     bool result = false;
@@ -171,6 +179,7 @@ bool Machine::update(RunMode runMode, bool& breakpointHit)
             {
                 getZ80().step(m_tState);
                 updateVideo();
+                updateAudio();
                 if ((runMode == RunMode::Normal) && shouldBreak(getZ80().PC()))
                 {
                     breakpointHit = true;
