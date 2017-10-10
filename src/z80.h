@@ -663,7 +663,7 @@ void Z80::daa()
     result = A();
 
     setFlags(F_CARRY, carry);
-    setFlags(F_PARITY, m_parity[result]);
+    setFlags(F_PARITY, m_parity[result] != 0);
 }
 
 int Z80::displacement(u8 x)
