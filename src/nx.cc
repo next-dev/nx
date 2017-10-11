@@ -178,6 +178,110 @@ void Nx::frame()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// File open dialog
+//----------------------------------------------------------------------------------------------------------------------
+
+#ifdef _WIN32
+
+typedef struct
+{
+    const char*   title;
+    const char*   path;
+    const char*   filterName;
+    const char*   filter;
+}
+WindowFileOpenConfig;
+
+const char* windowFileOpen(WindowFileOpenConfig* config);
+const char* windowFileSaveAs(WindowFileOpenConfig* config);
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <commdlg.h>
+#include <string.h>
+
+static int win32NextFilter(char* dst, const char** p)
+{
+    int len;
+
+    *p += strspn(*p, "|");
+    if (**p == '\0') {
+        return 0;
+    }
+
+    len = (int)strcspn(*p, "|");
+    memcpy(dst, *p, len);
+    dst[len] = '\0';
+    *p += len;
+
+    return 1;
+}
+
+static const char* win32MakeFilterString(WindowFileOpenConfig* config)
+{
+    static char buf[1024];
+    int n = 0;
+
+    buf[0] = 0;
+
+    if (config->filter)
+    {
+        const char* p;
+        char b[32];
+        const char* name = config->filterName ? config->filterName : config->filter;
+
+        n += sprintf(buf + n, "%s", name) + 1;
+
+        p = config->filter;
+        while (win32NextFilter(b, &p))
+        {
+            n += sprintf(buf + n, "%s;", b);
+        }
+
+        buf[++n] = 0;
+    }
+
+    n += sprintf(buf + n, "All Files") + 1;
+    n += sprintf(buf + n, "*.*");
+    buf[++n] = 0;
+
+    return buf;
+}
+
+static void win32InitOpenFileName(WindowFileOpenConfig* config, OPENFILENAMEA* ofn)
+{
+    static char fileName[2048];
+
+    fileName[0] = 0;
+    memset(ofn, 0, sizeof(*ofn));
+    ofn->lStructSize = sizeof(*ofn);
+    ofn->lpstrFilter = win32MakeFilterString(config);
+    ofn->nFilterIndex = 1;
+    ofn->lpstrFile = fileName;
+    ofn->Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+    ofn->nMaxFile = sizeof(fileName) - 1;
+    ofn->lpstrInitialDir = config->path;
+    ofn->lpstrTitle = config->title;
+    ofn->lpstrTitle = config->title;
+}
+
+const char* windowFileOpen(WindowFileOpenConfig* config)
+{
+    OPENFILENAMEA ofn;
+    win32InitOpenFileName(config, &ofn);
+    return GetOpenFileNameA(&ofn) ? ofn.lpstrFile : 0;
+}
+
+const char* windowFileSaveAs(WindowFileOpenConfig* config)
+{
+    OPENFILENAMEA ofn;
+    win32InitOpenFileName(config, &ofn);
+    return GetSaveFileNameA(&ofn) ? ofn.lpstrFile : 0;
+}
+
+#endif
+
+//----------------------------------------------------------------------------------------------------------------------
 // Keyboard
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -272,6 +376,39 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
         case K::F5:
             if (down) togglePause(false);
             break;
+
+#ifdef _WIN32
+        case K::F1:
+            // File Open
+        {
+            fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
+
+            // Last path opened
+            static char path[2048] = { 0 };
+
+            // Open file
+            WindowFileOpenConfig cfg = {
+                "Open file",
+                path,
+                "NX files",
+                "*.sna"
+            };
+            const char* fileName = windowFileOpen(&cfg);
+            if (!fileName) break;
+
+            // Store the path for next time
+            const char* end = strrchr(fileName, '\\');
+            strncpy(path, (const char *)fileName, (size_t)(path - end));
+
+            if (!loadSnapshot(fileName))
+            {
+                MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
+            }
+        }
+        break;
+#endif
+
+
             
         default:
             // If releasing a non-speccy key, clear all key map.
@@ -409,8 +546,9 @@ bool Nx::loadSnapshot(string fileName)
     m_machine->setBorderColour(BYTE_OF(data, 26));
     m_machine->load(0x4000, data + 27, 0xc000);
     
-    TState t;
+    TState t = 0;
     z80.PC() = z80.pop(t);
+    m_machine->resetTState();
     
     return true;
 
