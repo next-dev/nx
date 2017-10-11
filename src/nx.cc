@@ -34,7 +34,10 @@ Nx::Nx(int argc, char** argv)
 
     //--- Rendering -----------------------------------------------------------------
     , m_window(sf::VideoMode(kWindowWidth * kScale, kWindowHeight * kScale), "NX " NX_VERSION,
-               sf::Style::Titlebar | sf::Style::Close)
+        sf::Style::Titlebar | sf::Style::Close)
+
+    //--- Peripherals ---------------------------------------------------------------
+    , m_kempstonJoystick(false)
 {
     sf::FileInputStream f;
 #ifdef __APPLE__
@@ -341,28 +344,63 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
         case K::Escape:     key1 = Key::Shift;      key2 = Key::Space;  break;
             
         case K::Left:
-            key1 = Key::Shift;
-            key2 = Key::_5;
+            if (usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Left, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_5;
+            }
             break;
             
         case K::Down:
-            key1 = Key::Shift;
-            key2 = Key::_6;
+            if (usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Down, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_6;
+            }
             break;
             
         case K::Up:
-            key1 = Key::Shift;
-            key2 = Key::_7;
+            if (usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Up, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_7;
+            }
             break;
             
         case K::Right:
-            key1 = Key::Shift;
-            key2 = Key::_8;
+            if (usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Right, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_8;
+            }
             break;
             
         case K::Tab:
-            key1 = Key::Shift;
-            key2 = Key::SymShift;
+            if (usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Fire, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::SymShift;
+            }
             break;
             
         case K::Tilde:
@@ -474,6 +512,31 @@ void Nx::debuggerKey(sf::Keyboard::Key key)
     }
 }
 
+void Nx::joystickKey(Joystick key, bool down)
+{
+    u8 bit = 0;
+
+    switch (key)
+    {
+    case Joystick::Right:    bit = 0x01;     break;
+    case Joystick::Left:     bit = 0x02;     break;
+    case Joystick::Down:     bit = 0x04;     break;
+    case Joystick::Up:       bit = 0x08;     break;
+    case Joystick::Fire:     bit = 0x10;     break;
+    }
+
+    
+    if (down)
+    {
+        m_machine->setKempstonState(m_machine->getKempstonState() | bit);
+    }
+    else
+    {
+        m_machine->setKempstonState(m_machine->getKempstonState() & ~bit);
+    }
+
+}
+
 void Nx::calculateKeys()
 {
     for (int i = 0; i < 8; ++i)
@@ -571,7 +634,7 @@ string Nx::getSetting(string key, string defaultSetting)
 
 void Nx::updateSettings()
 {
-    
+    m_kempstonJoystick = getSetting("kempston") == "yes";
 }
 
 //----------------------------------------------------------------------------------------------------------------------

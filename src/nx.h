@@ -11,6 +11,15 @@
 #include <SFML/Graphics.hpp>
 #include <map>
 
+enum class Joystick
+{
+    Left,
+    Right,
+    Up,
+    Down,
+    Fire
+};
+
 //----------------------------------------------------------------------------------------------------------------------
 // Emulator class
 //----------------------------------------------------------------------------------------------------------------------
@@ -35,18 +44,22 @@ public:
     
     // Settings
     void setSetting(string key, string value);
-    string getSetting(string key, string defaultSetting);
+    string getSetting(string key, string defaultSetting = "no");
     void updateSettings();
 
     // Debugging
     void togglePause(bool breakpointHit);
     void stepOver();
     void stepIn();
+
+    // Peripherals
+    bool usesKempstonJoystick() const { return m_kempstonJoystick; }
     
 private:
     // Keyboard routines
     void spectrumKey(sf::Keyboard::Key key, bool down);
     void debuggerKey(sf::Keyboard::Key key);
+    void joystickKey(Joystick key, bool down);
     void calculateKeys();
     
     // File routines
@@ -69,6 +82,9 @@ private:
 
     // Rendering
     sf::RenderWindow    m_window;
+
+    // Peripherals
+    bool                m_kempstonJoystick;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

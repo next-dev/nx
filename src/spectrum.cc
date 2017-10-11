@@ -31,6 +31,10 @@ Spectrum::Spectrum()
 
     //--- ULA state ------------------------------------------------------
     , m_borderColour(7)
+
+    //--- Kempston -------------------------------------------------------
+    , m_kempstonJoystick(false)
+    , m_kempstonState(0)
 {
     reset();
 }
@@ -608,6 +612,19 @@ bool Spectrum::hasUserBreakpointAt(u16 address)
     return (it != m_breakpoints.end() && it->type == BreakpointType::User);
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+// Kempston Joystick emulation
+//----------------------------------------------------------------------------------------------------------------------
+
+void Spectrum::setKempstonState(u8 state)
+{
+    m_kempstonState = state;
+}
+
+u8 Spectrum::getKempstonState() const
+{
+    return m_kempstonState;
+}
 
 
 //----------------------------------------------------------------------------------------------------------------------
