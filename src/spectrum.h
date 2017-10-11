@@ -41,6 +41,18 @@ enum class Key
 };
 
 //----------------------------------------------------------------------------------------------------------------------
+// Run mode
+//----------------------------------------------------------------------------------------------------------------------
+
+enum class RunMode
+{
+    Stopped,    // Don't run any instructions.
+    Normal,     // Emulate as normal, run as fast as possible for a frame.
+    StepIn,     // Step over a single instruction, and follow CALLs.
+    StepOver,   // Step over a single instruction, and run a subroutine CALL till it returns to following instruction.
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Spectrum base class
 // Each model must override this and implement the specifics
 //----------------------------------------------------------------------------------------------------------------------
@@ -72,6 +84,7 @@ public:
     TState          getFrameTime        () const { return 69888; }
     u8              getBorderColour     () const { return m_borderColour; }
     Z80&            getZ80              () { return m_z80; }
+    TState          getTState           () { return m_tState;}
 
 
     //------------------------------------------------------------------------------------------------------------------
@@ -91,8 +104,9 @@ public:
     // General functionality, not specific to a model
     //------------------------------------------------------------------------------------------------------------------
 
-    // Main function called to generate a single frame or instruction (in single-step mode).
-    void            update              ();
+    // Main function called to generate a single frame or instruction (in single-step mode).  Will return true if
+    // a frame was complete.
+    bool            update              (RunMode runMode, bool& breakpointHit);
 
     // Emulation control
     void            togglePause         ();
@@ -120,6 +134,13 @@ public:
 
     void            ioContend           (u16 port, TState delay, int num, TState& t);
 
+    //------------------------------------------------------------------------------------------------------------------
+    // Debugger interface
+    //------------------------------------------------------------------------------------------------------------------
+
+    void            toggleBreakpoint    (u16 address);
+    bool            hasUserBreakpointAt (u16 address);
+
 private:
     //
     // Memory
@@ -132,11 +153,30 @@ private:
     void            initVideo           ();
     void            updateVideo         ();
 
+    //
+    // Breakpoints
+    //
+    enum class BreakpointType
+    {
+        User,       // User added breakpoint, only user can remove it
+        Temporary,  // System added breakpoint, and it should be removed when hit.
+    };
+
+    struct Breakpoint
+    {
+        BreakpointType  type;
+        u16             address;
+    };
+
+    vector<Breakpoint>::iterator    findBreakpoint          (u16 address);
+    void                            addTemporaryBreakpoint  (u16 address);
+    bool                            shouldBreak             (u16 address);
+
+
 private:
 
     // Clock state
     TState          m_tState;
-    TState          m_lastTState;
 
     // Video state
     u32*            m_image;
@@ -159,4 +199,7 @@ private:
     // ULA state
     u8              m_borderColour;
     vector<u8>      m_keys;
+
+    // Debugger state
+    vector<Breakpoint>  m_breakpoints;
 };

@@ -4,6 +4,8 @@
 
 #include "nx.h"
 
+#include <cassert>
+
 #ifdef __APPLE__
 #   include "ResourcePath.hpp"
 #endif
@@ -19,14 +21,21 @@ static const int kUiScale = 2;
 //----------------------------------------------------------------------------------------------------------------------
 
 Nx::Nx(int argc, char** argv)
-    : m_machine(nullptr)
+    : m_machine(new Spectrum)       // #todo: Allow the debugger to switch Spectrums
+
+    //--- Keyboard state ------------------------------------------------------------
     , m_speccyKeys((int)Key::COUNT)
     , m_keyRows(8)
-    , m_debugger(false)
+
+    //--- Debugger state ------------------------------------------------------------
+    , m_debugger(*m_machine)
+    , m_debuggerEnabled(false)
+    , m_runMode(RunMode::Normal)
+
+    //--- Rendering -----------------------------------------------------------------
     , m_window(sf::VideoMode(kWindowWidth * kScale, kWindowHeight * kScale), "NX " NX_VERSION,
                sf::Style::Titlebar | sf::Style::Close)
 {
-    m_machine = new Spectrum();
     sf::FileInputStream f;
 #ifdef __APPLE__
     string romFileName = resourcePath() + "48.rom";
@@ -83,6 +92,11 @@ void Nx::render()
 {
     m_window.clear();
     m_window.draw(m_machine->getVideoSprite());
+    if (m_debuggerEnabled)
+    {
+        m_debugger.render();
+        m_window.draw(m_debugger.getSprite());
+    }
     m_window.display();
 }
 
@@ -110,11 +124,21 @@ void Nx::run()
                 break;
 
             case sf::Event::KeyPressed:
-                spectrumKey(event.key.code, true);
+                if (m_debuggerEnabled)
+                {
+                    debuggerKey(event.key.code);
+                }
+                else
+                {
+                    spectrumKey(event.key.code, true);
+                }
                 break;
 
             case sf::Event::KeyReleased:
-                spectrumKey(event.key.code, false);
+                if (m_debuggerEnabled)
+                {
+                    spectrumKey(event.key.code, false);
+                }
                 break;
 
             default:
@@ -144,7 +168,13 @@ void Nx::run()
 
 void Nx::frame()
 {
-    m_machine->update();
+    bool breakpointHit = false;
+    m_machine->update(m_runMode, breakpointHit);
+    if (breakpointHit)
+    {
+        m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
+        togglePause(true);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -232,7 +262,7 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
             break;
             
         case K::Tilde:
-            if (down) m_debugger = !m_debugger;
+            if (down) m_debuggerEnabled = !m_debuggerEnabled;
             break;
             
         case K::F2:
@@ -267,7 +297,29 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
 
 void Nx::debuggerKey(sf::Keyboard::Key key)
 {
-    
+    using K = sf::Keyboard::Key;
+
+    switch (key)
+    {
+    case K::Tilde:
+        m_debuggerEnabled = false;
+        break;
+
+    case K::F5:
+        togglePause(false);
+        break;
+
+    case K::F6:
+        stepOver();
+        break;
+
+    case K::F7:
+        stepIn();
+        break;
+
+    default:
+        m_debugger.onKey(key);
+    }
 }
 
 void Nx::calculateKeys()
@@ -367,6 +419,49 @@ string Nx::getSetting(string key, string defaultSetting)
 void Nx::updateSettings()
 {
     
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Debugging
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::togglePause(bool breakpointHit)
+{
+    m_runMode = (m_runMode != RunMode::Normal) ? RunMode::Normal : RunMode::Stopped;
+
+    if (!m_debuggerEnabled)
+    {
+        // If the debugger isn't running then we only show the debugger if we're pausing.
+        m_debuggerEnabled = (m_runMode == RunMode::Stopped);
+    }
+
+    // Because this method is usually called after a key press, which usually gets processed at the end of the frame,
+    // the next instruction will be after an interrupt fired.  We step one more time to process the interrupt and
+    // jump to the interrupt routine.  This requires that the debugger be activated.  Of course, we don't want this to happen
+    // if a breakpoint occurs.
+    if (!breakpointHit && m_debuggerEnabled && m_runMode == RunMode::Stopped) stepIn();
+    m_debugger.getDisassemblyWindow().adjustBar();
+    m_debugger.getDisassemblyWindow().Select();
+}
+
+void Nx::stepIn()
+{
+    assert(m_debuggerEnabled);
+    if (m_runMode == RunMode::Normal) togglePause(false);
+
+    bool breakpointHit;
+    m_machine->update(RunMode::StepIn, breakpointHit);
+    m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
+}
+
+void Nx::stepOver()
+{
+    assert(m_debuggerEnabled);
+    if (m_runMode == RunMode::Normal) togglePause(false);
+
+    bool breakpointHit;
+    m_machine->update(RunMode::StepIn, breakpointHit);
+    m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
 }
 
 //----------------------------------------------------------------------------------------------------------------------

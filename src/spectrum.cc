@@ -83,21 +83,46 @@ void Spectrum::reset(bool hard /* = true */)
 // Frame emulation
 //----------------------------------------------------------------------------------------------------------------------
 
-void Spectrum::update()
+bool Spectrum::update(RunMode runMode, bool& breakpointHit)
 {
-    m_lastTState = m_tState;
+    bool result = false;
+    breakpointHit = false;
+    TState frameTime = getFrameTime();
 
-    while (m_tState < getFrameTime())
+    switch (runMode)
     {
+    case RunMode::Normal:
+        while (m_tState < getFrameTime())
+        {
+            m_z80.step(m_tState);
+            updateVideo();
+            if ((runMode == RunMode::Normal) && shouldBreak(m_z80.PC()))
+            {
+                breakpointHit = true;
+                break;
+            }
+        }
+        break;
+
+    case RunMode::StepIn:
+    case RunMode::StepOver:
         m_z80.step(m_tState);
         updateVideo();
+        break;
+
+    case RunMode::Stopped:
+        // Do nothing
+        break;
     }
 
     if (m_tState >= getFrameTime())
     {
         m_tState -= getFrameTime();
         m_z80.interrupt();
+        result = true;
     }
+
+    return result;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -531,6 +556,59 @@ void Spectrum::updateVideo()
         ++m_frameCounter;
     }
 }
+
+//----------------------------------------------------------------------------------------------------------------------
+// Breakpoints
+//----------------------------------------------------------------------------------------------------------------------
+
+vector<Spectrum::Breakpoint>::iterator Spectrum::findBreakpoint(u16 address)
+{
+    return std::find_if(m_breakpoints.begin(), m_breakpoints.end(),
+        std::bind([](Breakpoint& bp, u16 address) -> bool { return bp.address == address; },
+            std::placeholders::_1, address));
+}
+
+void Spectrum::toggleBreakpoint(u16 address)
+{
+    auto it = findBreakpoint(address);
+    if (it == m_breakpoints.end())
+    {
+        m_breakpoints.emplace_back(Breakpoint{ BreakpointType::User, address });
+    }
+    else
+    {
+        m_breakpoints.erase(it);
+    }
+}
+
+void Spectrum::addTemporaryBreakpoint(u16 address)
+{
+    auto it = findBreakpoint(address);
+    if (it == m_breakpoints.end())
+    {
+        m_breakpoints.emplace_back(Breakpoint{ BreakpointType::Temporary, address });
+    }
+}
+
+bool Spectrum::shouldBreak(u16 address)
+{
+    auto it = findBreakpoint(address);
+    bool result = it != m_breakpoints.end();
+    if (result && (it->type == BreakpointType::Temporary))
+    {
+        m_breakpoints.erase(it);
+    }
+
+    return result;
+}
+
+bool Spectrum::hasUserBreakpointAt(u16 address)
+{
+    auto it = findBreakpoint(address);
+    return (it != m_breakpoints.end() && it->type == BreakpointType::User);
+}
+
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

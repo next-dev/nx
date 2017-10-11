@@ -6,6 +6,7 @@
 #pragma once
 
 #include "spectrum.h"
+#include "debugger.h"
 
 #include <SFML/Graphics.hpp>
 #include <map>
@@ -36,6 +37,11 @@ public:
     void setSetting(string key, string value);
     string getSetting(string key, string defaultSetting);
     void updateSettings();
+
+    // Debugging
+    void togglePause(bool breakpointHit);
+    void stepOver();
+    void stepIn();
     
 private:
     // Keyboard routines
@@ -48,11 +54,20 @@ private:
 
 private:
     Spectrum*           m_machine;
+
+    // Keyboard state
     vector<bool>        m_speccyKeys;
     vector<u8>          m_keyRows;
-    bool                m_debugger;
+
+    // Debugger state
+    Debugger            m_debugger;
+    bool                m_debuggerEnabled;
+    RunMode             m_runMode;
+
+    // Settings
     map<string, string> m_settings;
 
+    // Rendering
     sf::RenderWindow    m_window;
 };
 
