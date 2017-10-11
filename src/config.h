@@ -38,6 +38,12 @@ using namespace std;
 // Show a console on Win32 platform
 #define NX_DEBUG_CONSOLE        0
 
+#if NX_DEBUG_CONSOLE
+#   define NX_LOG(...) printf(__VA_ARGS__)
+#else
+#   define NX_LOG(...)
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // Constants
 //----------------------------------------------------------------------------------------------------------------------

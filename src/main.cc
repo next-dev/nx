@@ -19,9 +19,7 @@ public:
     Application(int argc, char** argv);
 
     void run();
-
-private:
-    void console();
+    static void console();
 
 private:
     Nx  m_emulator;
@@ -42,6 +40,8 @@ Application::Application(int argc, char** argv)
 
 #if defined(_WIN32) && NX_DEBUG_CONSOLE
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <conio.h>
 #include <fcntl.h>
 #include <io.h>
@@ -93,6 +93,7 @@ void Application::run()
 
 int main(int argc, char** argv)
 {
+    Application::console();
     Application app(argc, argv);
     app.run();
 }

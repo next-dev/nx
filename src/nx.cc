@@ -135,7 +135,7 @@ void Nx::run()
                 break;
 
             case sf::Event::KeyReleased:
-                if (m_debuggerEnabled)
+                if (!m_debuggerEnabled)
                 {
                     spectrumKey(event.key.code, false);
                 }
@@ -185,6 +185,8 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
 {
     Key key1 = Key::COUNT;
     Key key2 = Key::COUNT;
+
+    NX_LOG("Key: %d (%s)\n", (int)key, down ? "pressed" : "released");
     
     using K = sf::Keyboard;
     
