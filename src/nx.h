@@ -27,9 +27,18 @@ public:
 
     // Generate a single frame, including processing audio.
     void frame();
+    
+private:
+    // Keyboard routines
+    void spectrumKey(sf::Keyboard::Key key, bool down);
+    void debuggerKey(sf::Keyboard::Key key);
+    void calculateKeys();
 
 private:
     Spectrum*           m_machine;
+    vector<bool>        m_speccyKeys;
+    vector<u8>          m_keyRows;
+    bool                m_debugger;
 
     sf::RenderWindow    m_window;
 };

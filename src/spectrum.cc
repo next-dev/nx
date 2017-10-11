@@ -2,8 +2,6 @@
 // Spectrum base class implementation
 //----------------------------------------------------------------------------------------------------------------------
 
-#pragma once
-
 #include "spectrum.h"
 
 #include <algorithm>
@@ -54,6 +52,11 @@ sf::Sprite& Spectrum::getVideoSprite()
 {
     m_videoTexture.update((const sf::Uint8 *)m_image);
     return m_videoSprite;
+}
+
+void Spectrum::setKeyboardState(vector<u8> &rows)
+{
+    m_keys = rows;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -259,6 +262,18 @@ u8 Spectrum::in(u16 port, TState& t)
 
     if (isUlaPort)
     {
+        Reg p(port);
+        x = 0xff;
+        u8 row = p.h;
+        for (int i = 0; i < 8; ++i)
+        {
+            if ((row & 1) == 0)
+            {
+                // This row is required to be read
+                x &= ~m_keys[i];
+            }
+            row >>= 1;
+        }
     }
     else
     {

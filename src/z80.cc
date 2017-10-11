@@ -7,9 +7,6 @@
 #include <algorithm>
 #include <cassert>
 
-#include "memory.h"
-#include "io.h"
-
 const u8 Z80::kIoIncParityTable[16] = { 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0 };
 const u8 Z80::kIoDecParityTable[16] = { 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1 };
 const u8 Z80::kHalfCarryAdd[8] = { 0, F_HALF, F_HALF, F_HALF, 0, 0, 0, F_HALF };

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C940923B1F8D8BB200D44114 /* spectrum.cc in Sources */ = {isa = PBXBuildFile; fileRef = C94092351F8D8BB100D44114 /* spectrum.cc */; };
+		C940923C1F8D8BB200D44114 /* z80.cc in Sources */ = {isa = PBXBuildFile; fileRef = C94092391F8D8BB200D44114 /* z80.cc */; };
+		C940923D1F8D8BB200D44114 /* nx.cc in Sources */ = {isa = PBXBuildFile; fileRef = C940923A1F8D8BB200D44114 /* nx.cc */; };
 		C965A3F91F8BCF0400C2B212 /* portaudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C965A3F81F8BCF0400C2B212 /* portaudio.framework */; };
 		C965A3FA1F8BCF0400C2B212 /* portaudio.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C965A3F81F8BCF0400C2B212 /* portaudio.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C9A29B741F8715A500336E8E /* ResourcePath.mm in Sources */ = {isa = PBXBuildFile; fileRef = C9A29B731F8715A500336E8E /* ResourcePath.mm */; };
@@ -69,7 +72,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C965A3F71F8BB0FC00C2B212 /* audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = audio.h; path = ../../../src/audio.h; sourceTree = "<group>"; };
+		C94092351F8D8BB100D44114 /* spectrum.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = spectrum.cc; path = ../../../src/spectrum.cc; sourceTree = "<group>"; };
+		C94092361F8D8BB100D44114 /* spectrum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = spectrum.h; path = ../../../src/spectrum.h; sourceTree = "<group>"; };
+		C94092371F8D8BB100D44114 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../../src/config.h; sourceTree = "<group>"; };
+		C94092381F8D8BB200D44114 /* types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = types.h; path = ../../../src/types.h; sourceTree = "<group>"; };
+		C94092391F8D8BB200D44114 /* z80.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = z80.cc; path = ../../../src/z80.cc; sourceTree = "<group>"; };
+		C940923A1F8D8BB200D44114 /* nx.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nx.cc; path = ../../../src/nx.cc; sourceTree = "<group>"; };
 		C965A3F81F8BCF0400C2B212 /* portaudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = portaudio.framework; path = frameworks/portaudio.framework; sourceTree = "<group>"; };
 		C9A29B6E1F8715A500336E8E /* nx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C9A29B721F8715A500336E8E /* nx-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "nx-Info.plist"; sourceTree = "<group>"; };
@@ -90,17 +98,8 @@
 		C9A29B921F87167000336E8E /* SFML.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SFML.framework; path = frameworks/SFML.framework; sourceTree = "<group>"; };
 		C9A29B931F87167000336E8E /* sfml-system.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = "sfml-system.framework"; path = "frameworks/sfml-system.framework"; sourceTree = "<group>"; };
 		C9A29B941F87167000336E8E /* freetype.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = freetype.framework; path = frameworks/freetype.framework; sourceTree = "<group>"; };
-		C9A29BB01F871EA700336E8E /* ui.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ui.h; path = ../../../src/ui.h; sourceTree = "<group>"; };
 		C9A29BB11F871EA700336E8E /* z80.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = z80.h; path = ../../../src/z80.h; sourceTree = "<group>"; };
-		C9A29BB21F871EA700336E8E /* debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = debugger.h; path = ../../../src/debugger.h; sourceTree = "<group>"; };
 		C9A29BB31F871EA700336E8E /* nx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = nx.h; path = ../../../src/nx.h; sourceTree = "<group>"; };
-		C9A29BB41F871EA700336E8E /* memory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = memory.h; path = ../../../src/memory.h; sourceTree = "<group>"; };
-		C9A29BB51F871EA700336E8E /* test.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = test.h; path = ../../../src/test.h; sourceTree = "<group>"; };
-		C9A29BB61F871EA800336E8E /* disasm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = disasm.h; path = ../../../src/disasm.h; sourceTree = "<group>"; };
-		C9A29BB71F871EA800336E8E /* video.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = video.h; path = ../../../src/video.h; sourceTree = "<group>"; };
-		C9A29BB81F871EA800336E8E /* host.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = host.h; path = ../../../src/host.h; sourceTree = "<group>"; };
-		C9A29BB91F871EA800336E8E /* machine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = machine.h; path = ../../../src/machine.h; sourceTree = "<group>"; };
-		C9A29BBA1F871EA800336E8E /* io.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = io.h; path = ../../../src/io.h; sourceTree = "<group>"; };
 		C9A29BBC1F8721A500336E8E /* 48.rom */ = {isa = PBXFileReference; lastKnownFileType = file; name = 48.rom; path = ../../../data/48.rom; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -162,17 +161,13 @@
 		C9A29B701F8715A500336E8E /* nx */ = {
 			isa = PBXGroup;
 			children = (
-				C965A3F71F8BB0FC00C2B212 /* audio.h */,
-				C9A29BB21F871EA700336E8E /* debugger.h */,
-				C9A29BB61F871EA800336E8E /* disasm.h */,
-				C9A29BB81F871EA800336E8E /* host.h */,
-				C9A29BBA1F871EA800336E8E /* io.h */,
-				C9A29BB91F871EA800336E8E /* machine.h */,
-				C9A29BB41F871EA700336E8E /* memory.h */,
+				C94092371F8D8BB100D44114 /* config.h */,
+				C940923A1F8D8BB200D44114 /* nx.cc */,
+				C94092351F8D8BB100D44114 /* spectrum.cc */,
+				C94092361F8D8BB100D44114 /* spectrum.h */,
+				C94092381F8D8BB200D44114 /* types.h */,
+				C94092391F8D8BB200D44114 /* z80.cc */,
 				C9A29BB31F871EA700336E8E /* nx.h */,
-				C9A29BB51F871EA700336E8E /* test.h */,
-				C9A29BB01F871EA700336E8E /* ui.h */,
-				C9A29BB71F871EA800336E8E /* video.h */,
 				C9A29BB11F871EA700336E8E /* z80.h */,
 				C9A29B861F87162900336E8E /* main.cc */,
 				C9A29B731F8715A500336E8E /* ResourcePath.mm */,
@@ -287,7 +282,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C940923C1F8D8BB200D44114 /* z80.cc in Sources */,
 				C9A29B871F87162900336E8E /* main.cc in Sources */,
+				C940923B1F8D8BB200D44114 /* spectrum.cc in Sources */,
+				C940923D1F8D8BB200D44114 /* nx.cc in Sources */,
 				C9A29B741F8715A500336E8E /* ResourcePath.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
