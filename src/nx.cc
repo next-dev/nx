@@ -18,7 +18,7 @@ static const int kUiScale = 2;
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-Nx::Nx()
+Nx::Nx(int argc, char** argv)
     : m_machine(nullptr)
     , m_speccyKeys((int)Key::COUNT)
     , m_keyRows(8)
@@ -33,14 +33,37 @@ Nx::Nx()
 #else
     string romFileName = "48.rom";
 #endif
-    if (f.open(romFileName))
+    m_machine->load(0, loadFile(romFileName));
+    
+    // Deal with the command line
+    for (int i = 1; i < argc; ++i)
     {
-        i64 size = min(f.getSize(), (i64)16384);
-        vector<u8> buffer(size);
-        f.read(buffer.data(), size);
-
-        m_machine->load(0, buffer.data(), size);
+        char* arg = argv[i];
+        if (arg[0] == '-')
+        {
+            // Setting being added
+            char* keyEnd = strchr(arg, '=');
+            char* keyStart = arg + 1;
+            if (keyEnd)
+            {
+                std::string key(keyStart, keyEnd);
+                std::string value(keyEnd+1);
+                setSetting(key, value);
+            }
+            else
+            {
+                // Assume key is "yes"
+                setSetting(arg + 1, "yes");
+            }
+        }
+        else
+        {
+            loadSnapshot(arg);
+        }
     }
+    
+    updateSettings();
+
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -263,6 +286,87 @@ void Nx::calculateKeys()
         }
         m_keyRows[i] = keys;
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// File loading
+//----------------------------------------------------------------------------------------------------------------------
+
+vector<u8> Nx::loadFile(string fileName)
+{
+    vector<u8> buffer;
+    sf::FileInputStream f;
+    
+    if (f.open(fileName))
+    {
+        i64 size = f.getSize();
+        buffer.resize(size);
+        f.read(buffer.data(), size);
+    }
+    
+    return buffer;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Snapshot loading
+//----------------------------------------------------------------------------------------------------------------------
+
+#define BYTE_OF(arr, offset) arr[offset]
+#define WORD_OF(arr, offset) (*(u16 *)&arr[offset])
+
+bool Nx::loadSnapshot(string fileName)
+{
+    vector<u8> buffer = loadFile(fileName);
+    u8* data = buffer.data();
+    i64 size = (i64)buffer.size();
+    Z80& z80 = m_machine->getZ80();
+    
+    if (size != 49179) return false;
+    
+    z80.I() = BYTE_OF(data, 0);
+    z80.HL_() = WORD_OF(data, 1);
+    z80.DE_() = WORD_OF(data, 3);
+    z80.BC_() = WORD_OF(data, 5);
+    z80.AF_() = WORD_OF(data, 7);
+    z80.HL() = WORD_OF(data, 9);
+    z80.DE() = WORD_OF(data, 11);
+    z80.BC() = WORD_OF(data, 13);
+    z80.IX() = WORD_OF(data, 15);
+    z80.IY() = WORD_OF(data, 17);
+    z80.IFF1() = (BYTE_OF(data, 19) & 0x01) != 0;
+    z80.IFF2() = (BYTE_OF(data, 19) & 0x04) != 0;
+    z80.R() = BYTE_OF(data, 20);
+    z80.AF() = WORD_OF(data, 21);
+    z80.SP() = WORD_OF(data, 23);
+    z80.IM() = BYTE_OF(data, 25);
+    m_machine->setBorderColour(BYTE_OF(data, 26));
+    m_machine->load(0x4000, data + 27, 0xc000);
+    
+    TState t;
+    z80.PC() = z80.pop(t);
+    
+    return true;
+
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Settings
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::setSetting(string key, string value)
+{
+    m_settings[key] = value;
+}
+
+string Nx::getSetting(string key, string defaultSetting)
+{
+    auto it = m_settings.find(key);
+    return it == m_settings.end() ? defaultSetting : it->second;
+}
+
+void Nx::updateSettings()
+{
+    
 }
 
 //----------------------------------------------------------------------------------------------------------------------

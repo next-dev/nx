@@ -59,6 +59,11 @@ void Spectrum::setKeyboardState(vector<u8> &rows)
     m_keys = rows;
 }
 
+void Spectrum::setBorderColour(u8 borderColour)
+{
+    m_borderColour = borderColour & 7;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Overrides
 //----------------------------------------------------------------------------------------------------------------------
@@ -71,6 +76,7 @@ void Spectrum::reset(bool hard /* = true */)
         initVideo();
     }
     m_z80.restart();
+    m_tState = 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -173,8 +179,13 @@ void Spectrum::poke16(u16 address, u16 w, TState& t)
 
 void Spectrum::load(u16 address, const void* buffer, i64 size)
 {
-    i64 clampedSize = std::min((i64)address + (i64)size, (i64)65536) - address;
-    std::copy((const u8 *)buffer, (const u8 *)buffer + size, m_ram.begin() + address);
+    i64 clampedSize = min((i64)address + size, (i64)65536) - address;
+    copy((u8*)buffer, (u8*)buffer + size, m_ram.begin() + address);
+}
+
+void Spectrum::load(u16 address, const vector<u8>& buffer)
+{
+    load(address, buffer.data(), buffer.size());
 }
 
 bool Spectrum::isContended(u16 addr) const

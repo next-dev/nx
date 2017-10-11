@@ -71,6 +71,7 @@ public:
     sf::Sprite&     getVideoSprite      ();
     TState          getFrameTime        () const { return 69888; }
     u8              getBorderColour     () const { return m_borderColour; }
+    Z80&            getZ80              () { return m_z80; }
 
 
     //------------------------------------------------------------------------------------------------------------------
@@ -98,6 +99,9 @@ public:
     
     // Set the keyboard state.
     void            setKeyboardState    (vector<u8>& rows);
+    
+    // Set the border
+    void            setBorderColour     (u8 borderColour);
 
     //------------------------------------------------------------------------------------------------------------------
     // Memory interface
@@ -106,6 +110,7 @@ public:
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);
+    void            load                (u16 address, const vector<u8>& buffer);
     void            load                (u16 address, const void* buffer, i64 size);
     void            setRomWriteState    (bool writable);
 

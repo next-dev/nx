@@ -16,7 +16,7 @@
 class Application
 {
 public:
-    Application();
+    Application(int argc, char** argv);
 
     void run();
 
@@ -31,8 +31,8 @@ private:
 // Construction
 //----------------------------------------------------------------------------------------------------------------------
 
-Application::Application()
-    : m_emulator()
+Application::Application(int argc, char** argv)
+    : m_emulator(argc, argv)
 {
 }
 
@@ -93,6 +93,6 @@ void Application::run()
 
 int main(int argc, char** argv)
 {
-    Application app;
+    Application app(argc, argv);
     app.run();
 }
