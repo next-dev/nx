@@ -186,8 +186,6 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
     Key key1 = Key::COUNT;
     Key key2 = Key::COUNT;
 
-    NX_LOG("Key: %d (%s)\n", (int)key, down ? "pressed" : "released");
-    
     using K = sf::Keyboard;
     
     switch (key)
@@ -268,7 +266,11 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
             break;
             
         case K::F2:
-            m_machine->reset(false);
+            if (down) m_machine->reset(false);
+            break;
+
+        case K::F5:
+            if (down) togglePause(false);
             break;
             
         default:
@@ -317,6 +319,17 @@ void Nx::debuggerKey(sf::Keyboard::Key key)
 
     case K::F7:
         stepIn();
+        break;
+
+    case K::Tab:
+        if (m_debugger.getDisassemblyWindow().isSelected())
+        {
+            m_debugger.getMemoryDumpWindow().Select();
+        }
+        else
+        {
+            m_debugger.getDisassemblyWindow().Select();
+        }
         break;
 
     default:

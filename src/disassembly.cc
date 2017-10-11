@@ -18,7 +18,7 @@ DisassemblyWindow::DisassemblyWindow(Spectrum& speccy)
     , m_address(0)
     , m_topAddress(0)
 {
-
+    adjustBar();
 }
 
 void DisassemblyWindow::adjustBar()
