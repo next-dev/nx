@@ -257,8 +257,8 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
 #ifdef _WIN32
     if ((key == K::LShift || key == K::RShift) && !down)
     {
-        N.keyPress(Key::Shift, false);
-        N.keyPress(Key::SymShift, false);
+        m_speccyKeys[(int)Key::Shift] = false;
+        m_speccyKeys[(int)Key::SymShift] = false;
     }
 #endif
 
