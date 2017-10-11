@@ -301,9 +301,9 @@ u8 Spectrum::in(u16 port, TState& t)
     // Fetch the actual value from the port
     //
 
+    Reg p(port);
     if (isUlaPort)
     {
-        Reg p(port);
         x = 0xff;
         u8 row = p.h;
         for (int i = 0; i < 8; ++i)
@@ -318,6 +318,17 @@ u8 Spectrum::in(u16 port, TState& t)
     }
     else
     {
+        switch(p.l)
+        {
+        case 0x1f:
+            // Kempston joystick
+            x = m_kempstonState;
+            break;
+                
+        default:
+            // Do nothing!
+            break;
+        }
     }
     return x;
 }
