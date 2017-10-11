@@ -90,6 +90,7 @@ void Spectrum::update()
     if (m_tState >= getFrameTime())
     {
         m_tState -= getFrameTime();
+        m_z80.interrupt();
     }
 }
 
