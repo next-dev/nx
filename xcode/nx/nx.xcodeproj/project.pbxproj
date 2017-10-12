@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C93004591F9016A7001DE439 /* audio.cc in Sources */ = {isa = PBXBuildFile; fileRef = C93004571F9016A7001DE439 /* audio.cc */; };
 		C940923B1F8D8BB200D44114 /* spectrum.cc in Sources */ = {isa = PBXBuildFile; fileRef = C94092351F8D8BB100D44114 /* spectrum.cc */; };
 		C940923C1F8D8BB200D44114 /* z80.cc in Sources */ = {isa = PBXBuildFile; fileRef = C94092391F8D8BB200D44114 /* z80.cc */; };
 		C940923D1F8D8BB200D44114 /* nx.cc in Sources */ = {isa = PBXBuildFile; fileRef = C940923A1F8D8BB200D44114 /* nx.cc */; };
@@ -78,6 +79,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C93004571F9016A7001DE439 /* audio.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = audio.cc; path = ../../../src/audio.cc; sourceTree = "<group>"; };
+		C93004581F9016A7001DE439 /* audio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = audio.h; path = ../../../src/audio.h; sourceTree = "<group>"; };
 		C94092351F8D8BB100D44114 /* spectrum.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = spectrum.cc; path = ../../../src/spectrum.cc; sourceTree = "<group>"; };
 		C94092361F8D8BB100D44114 /* spectrum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = spectrum.h; path = ../../../src/spectrum.h; sourceTree = "<group>"; };
 		C94092371F8D8BB100D44114 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../../src/config.h; sourceTree = "<group>"; };
@@ -176,6 +179,8 @@
 		C9A29B701F8715A500336E8E /* nx */ = {
 			isa = PBXGroup;
 			children = (
+				C93004571F9016A7001DE439 /* audio.cc */,
+				C93004581F9016A7001DE439 /* audio.h */,
 				C9F9ECC91F8E841500FB18EB /* cpustatus.cc */,
 				C9F9ECCB1F8E841500FB18EB /* debugger.cc */,
 				C9F9ECCA1F8E841500FB18EB /* debugger.h */,
@@ -312,6 +317,7 @@
 				C9A29B871F87162900336E8E /* main.cc in Sources */,
 				C9F9ECCF1F8E841600FB18EB /* memorydump.cc in Sources */,
 				C9F9ECD31F8E841600FB18EB /* debugger.cc in Sources */,
+				C93004591F9016A7001DE439 /* audio.cc in Sources */,
 				C9F9ECD01F8E841600FB18EB /* disassembly.cc in Sources */,
 				C940923B1F8D8BB200D44114 /* spectrum.cc in Sources */,
 				C940923D1F8D8BB200D44114 /* nx.cc in Sources */,
