@@ -7,6 +7,7 @@
 #include "types.h"
 #include "config.h"
 #include "z80.h"
+#include "audio.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -67,7 +68,7 @@ public:
     // Construction/Destruction
     //------------------------------------------------------------------------------------------------------------------
 
-    Spectrum();
+    Spectrum(function<void()> frameFunc);
     virtual ~Spectrum();
 
     //------------------------------------------------------------------------------------------------------------------
@@ -85,6 +86,7 @@ public:
     u8              getBorderColour     () const { return m_borderColour; }
     Z80&            getZ80              () { return m_z80; }
     TState          getTState           () { return m_tState;}
+    Audio&          getAudio            () { return m_audio; }
 
 
     //------------------------------------------------------------------------------------------------------------------
@@ -197,6 +199,9 @@ private:
     int             m_videoWrite;       // Write point into 2D image array
     TState          m_startTState;      // Starting t-state for top-left of window
     TState          m_drawTState;       // Current t-state that has been draw to
+
+    // Audio state
+    Audio           m_audio;
 
     // Memory state
     vector<u8>      m_ram;

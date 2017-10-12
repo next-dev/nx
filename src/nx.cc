@@ -23,7 +23,7 @@ static const int kUiScale = 2;
 //----------------------------------------------------------------------------------------------------------------------
 
 Nx::Nx(int argc, char** argv)
-    : m_machine(new Spectrum)       // #todo: Allow the debugger to switch Spectrums
+    : m_machine(new Spectrum(std::bind(&Nx::frame, this)))   // #todo: Allow the debugger to switch Spectrums
     , m_quit(false)
 
     //--- Keyboard state ------------------------------------------------------------
@@ -112,8 +112,6 @@ void Nx::render()
 
 void Nx::run()
 {
-    std::thread t(std::bind(&Nx::frame, this));
-
     while (m_window.isOpen())
     {
         sf::Event event;
@@ -128,6 +126,7 @@ void Nx::run()
             switch (event.type)
             {
             case sf::Event::Closed:
+                m_quit = true;
                 m_window.close();
                 break;
 
@@ -159,8 +158,9 @@ void Nx::run()
         //
         m_machine->setKeyboardState(m_keyRows);
         //frame();
-        if (m_renderSignal.isTriggered())
+        if (m_machine->getAudio().getSignal().isTriggered())
         {
+            frame();
             render();
         }
 
@@ -171,9 +171,6 @@ void Nx::run()
 //         sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
 //         sf::sleep(timeLeft);
     }
-
-    m_quit = true;
-    t.join();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -182,23 +179,13 @@ void Nx::run()
 
 void Nx::frame()
 {
-    while(!m_quit)
+    if (m_quit) return;
+    bool breakpointHit = false;
+    m_machine->update(m_runMode, breakpointHit);
+    if (breakpointHit)
     {
-        sf::Clock clk;
-
-        bool breakpointHit = false;
-        m_machine->update(m_runMode, breakpointHit);
-        if (breakpointHit)
-        {
-            m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
-            togglePause(true);
-        }
-
-        m_renderSignal.trigger();
-
-        sf::Time elapsedTime = clk.restart();
-        sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
-        sf::sleep(timeLeft);
+        m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
+        togglePause(true);
     }
 }
 

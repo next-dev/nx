@@ -12,7 +12,7 @@
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-Spectrum::Spectrum()
+Spectrum::Spectrum(function<void()> frameFunc)
     //--- Clock state ----------------------------------------------------
     : m_tState(0)
 
@@ -23,6 +23,9 @@ Spectrum::Spectrum()
     , m_startTState(0)
     , m_drawTState(0)
 
+    //--- Audio state ----------------------------------------------------
+    , m_audio(69888, frameFunc)
+
     //--- Memory state ---------------------------------------------------
     , m_romWritable(true)
 
@@ -31,6 +34,7 @@ Spectrum::Spectrum()
 
     //--- ULA state ------------------------------------------------------
     , m_borderColour(7)
+    , m_keys(8, 0)
 
     //--- Kempston -------------------------------------------------------
     , m_kempstonJoystick(false)

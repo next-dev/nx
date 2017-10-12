@@ -23,41 +23,6 @@ enum class Joystick
 };
 
 //----------------------------------------------------------------------------------------------------------------------
-// Signals
-//----------------------------------------------------------------------------------------------------------------------
-
-class Signal
-{
-public:
-    Signal()
-        : m_triggered(false)
-    {
-
-    }
-
-    // Trigger a signal from remote thread
-    void trigger()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-
-        m_triggered = true;
-    }
-
-    // Will reset the signal state when checked if triggered.
-    bool isTriggered()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        bool result = m_triggered;
-        m_triggered = false;
-        return result;
-    }
-
-private:
-    std::mutex      m_mutex;
-    bool            m_triggered;
-};
-
-//----------------------------------------------------------------------------------------------------------------------
 // Emulator class
 //----------------------------------------------------------------------------------------------------------------------
 
