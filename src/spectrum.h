@@ -214,6 +214,7 @@ private:
     // ULA state
     u8              m_borderColour;
     vector<u8>      m_keys;
+    u8              m_speaker;
 
     // Debugger state
     vector<Breakpoint>  m_breakpoints;

@@ -35,6 +35,7 @@ Spectrum::Spectrum(function<void()> frameFunc)
     //--- ULA state ------------------------------------------------------
     , m_borderColour(7)
     , m_keys(8, 0)
+    , m_speaker(0)
 
     //--- Kempston -------------------------------------------------------
     , m_kempstonJoystick(false)
@@ -104,6 +105,7 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
         {
             m_z80.step(m_tState);
             updateVideo();
+            m_audio.updateBeeper(m_tState, m_speaker);
             if ((runMode == RunMode::Normal) && shouldBreak(m_z80.PC()))
             {
                 breakpointHit = true;
@@ -359,6 +361,7 @@ void Spectrum::out(u16 port, u8 x, TState& t)
     if (isUlaPort)
     {
         m_borderColour = x & 7;
+        m_speaker = (x & 0x18) ? 1 : 0;
     }
 
     //
