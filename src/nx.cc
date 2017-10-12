@@ -5,6 +5,8 @@
 #include "nx.h"
 
 #include <cassert>
+#include <chrono>
+
 
 #ifdef __APPLE__
 #   include "ResourcePath.hpp"
@@ -22,6 +24,7 @@ static const int kUiScale = 2;
 
 Nx::Nx(int argc, char** argv)
     : m_machine(new Spectrum)       // #todo: Allow the debugger to switch Spectrums
+    , m_quit(false)
 
     //--- Keyboard state ------------------------------------------------------------
     , m_speccyKeys((int)Key::COUNT)
@@ -109,6 +112,8 @@ void Nx::render()
 
 void Nx::run()
 {
+    std::thread t(std::bind(&Nx::frame, this));
+
     while (m_window.isOpen())
     {
         sf::Event event;
@@ -153,16 +158,22 @@ void Nx::run()
         // Generate a frame
         //
         m_machine->setKeyboardState(m_keyRows);
-        frame();
-        render();
+        //frame();
+        if (m_renderSignal.isTriggered())
+        {
+            render();
+        }
 
         //
         // Synchronise with real time
         //
-        sf::Time elapsedTime = clk.restart();
-        sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
-        sf::sleep(timeLeft);
+//         sf::Time elapsedTime = clk.restart();
+//         sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
+//         sf::sleep(timeLeft);
     }
+
+    m_quit = true;
+    t.join();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -171,12 +182,23 @@ void Nx::run()
 
 void Nx::frame()
 {
-    bool breakpointHit = false;
-    m_machine->update(m_runMode, breakpointHit);
-    if (breakpointHit)
+    while(!m_quit)
     {
-        m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
-        togglePause(true);
+        sf::Clock clk;
+
+        bool breakpointHit = false;
+        m_machine->update(m_runMode, breakpointHit);
+        if (breakpointHit)
+        {
+            m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
+            togglePause(true);
+        }
+
+        m_renderSignal.trigger();
+
+        sf::Time elapsedTime = clk.restart();
+        sf::Time timeLeft = sf::milliseconds(20) - elapsedTime;
+        sf::sleep(timeLeft);
     }
 }
 
