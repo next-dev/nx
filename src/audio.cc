@@ -55,7 +55,8 @@ Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
     output.device = m_audioDevice;
     output.hostApiSpecificStreamInfo = nullptr;
     output.sampleFormat = paInt16;
-    output.suggestedLatency = 0;
+    //output.suggestedLatency = 0;
+    output.suggestedLatency = deviceInfo->defaultLowOutputLatency;
 
     Pa_OpenStream(&m_stream,
         nullptr,
