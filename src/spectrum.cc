@@ -578,9 +578,12 @@ void Spectrum::updateVideo()
 
 vector<Spectrum::Breakpoint>::iterator Spectrum::findBreakpoint(u16 address)
 {
-    return std::find_if(m_breakpoints.begin(), m_breakpoints.end(),
-        std::bind([](Breakpoint& bp, u16 address) -> bool { return bp.address == address; },
-            std::placeholders::_1, address));
+    for (auto it = m_breakpoints.begin(); it != m_breakpoints.end(); ++it)
+    {
+        if (it->address == address) return it;
+    }
+
+    return m_breakpoints.end();
 }
 
 void Spectrum::toggleBreakpoint(u16 address)
@@ -607,6 +610,7 @@ void Spectrum::addTemporaryBreakpoint(u16 address)
 
 bool Spectrum::shouldBreak(u16 address)
 {
+    if (m_breakpoints.size() == 0) return false;
     auto it = findBreakpoint(address);
     bool result = it != m_breakpoints.end();
     if (result && (it->type == BreakpointType::Temporary))
