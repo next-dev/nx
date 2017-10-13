@@ -49,6 +49,7 @@ Nx::Nx(int argc, char** argv)
     string romFileName = "48.rom";
 #endif
     m_machine->load(0, loadFile(romFileName));
+    m_machine->setRomWriteState(false);
     
     // Deal with the command line
     for (int i = 1; i < argc; ++i)

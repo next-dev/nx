@@ -73,6 +73,11 @@ void Spectrum::setBorderColour(u8 borderColour)
     m_borderColour = borderColour & 7;
 }
 
+void Spectrum::setRomWriteState(bool writable)
+{
+    m_romWritable = writable;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Overrides
 //----------------------------------------------------------------------------------------------------------------------
