@@ -608,8 +608,8 @@ bool Nx::loadSnapshot(string fileName)
     z80.HL() = WORD_OF(data, 9);
     z80.DE() = WORD_OF(data, 11);
     z80.BC() = WORD_OF(data, 13);
-    z80.IX() = WORD_OF(data, 15);
-    z80.IY() = WORD_OF(data, 17);
+    z80.IY() = WORD_OF(data, 15);
+    z80.IX() = WORD_OF(data, 17);
     z80.IFF1() = (BYTE_OF(data, 19) & 0x01) != 0;
     z80.IFF2() = (BYTE_OF(data, 19) & 0x04) != 0;
     z80.R() = BYTE_OF(data, 20);
