@@ -284,7 +284,7 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
                 case 0: result("ret", 1);           break;
                 case 1: result("exx", 1);           break;
                 case 2: result("jp", "hl", 1);      break;
-                case 3: result("ld" "sp,hl", 1);    break;
+                case 3: result("ld", "sp,hl", 1);    break;
                 }
             }
             else
@@ -294,7 +294,7 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
             break;
 
         case 2: // x, z = (3, 2)
-            result("jp", flags(y) + word(b2, b3), 3);
+            result("jp", flags(y) + "," + word(b2, b3), 3);
             break;
 
         case 3: // x, z = (3, 3)
