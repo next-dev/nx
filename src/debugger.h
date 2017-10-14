@@ -89,6 +89,7 @@ public:
 
     void onKey(sf::Keyboard::Key key);
     void render();
+    void renderOverlay(bool stopped);
     sf::Sprite& getSprite() { return m_ui.getSprite(); }
 
     MemoryDumpWindow&   getMemoryDumpWindow() { return m_memoryDumpWindow; }

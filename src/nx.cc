@@ -102,8 +102,12 @@ void Nx::render()
     if (m_debuggerEnabled)
     {
         m_debugger.render();
-        m_window.draw(m_debugger.getSprite());
     }
+    else
+    {
+        m_debugger.renderOverlay(m_runMode == RunMode::Stopped);
+    }
+    m_window.draw(m_debugger.getSprite());
     m_window.display();
 }
 
@@ -655,6 +659,7 @@ void Nx::updateSettings()
 void Nx::togglePause(bool breakpointHit)
 {
     m_runMode = (m_runMode != RunMode::Normal) ? RunMode::Normal : RunMode::Stopped;
+    m_machine->getAudio().mute(m_runMode == RunMode::Stopped);
 
     if (!m_debuggerEnabled)
     {

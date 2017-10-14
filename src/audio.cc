@@ -6,6 +6,8 @@
 
 #include <cassert>
 
+#define NX_VOLUME       10000
+
 //----------------------------------------------------------------------------------------------------------------------
 // Audio
 //----------------------------------------------------------------------------------------------------------------------
@@ -25,6 +27,7 @@ Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
     , m_audioDevice(0)
     , m_stream(nullptr)
     , m_frameFunc(frameFunc)
+    , m_mute(false)
 {
     Pa_Initialize();
     m_audioHost = Pa_GetDefaultHostApi();
@@ -102,8 +105,14 @@ int Audio::callback(const void *input,
 {
     Audio* self = (Audio *)userData;
     i16* outputBuffer = (i16 *)output;
-    memcpy(outputBuffer, self->m_playBuffer, frameCount * sizeof(i16));
-//    self->m_frameFunc();
+    if (self->m_mute)
+    {
+        memset(outputBuffer, 0, frameCount * sizeof(i16));
+    }
+    else
+    {
+        memcpy(outputBuffer, self->m_playBuffer, frameCount * sizeof(i16));
+    }
     self->m_renderSignal.trigger();
 
     return paContinue;
@@ -111,13 +120,15 @@ int Audio::callback(const void *input,
 
 void Audio::updateBeeper(i64 tState, u8 speaker)
 {
+    if (m_mute) speaker = 0;
+
     if (m_writePosition < m_numSamplesPerFrame)
     {
         i64 dt = tState - m_tStatesUpdated;
         if (m_tStateCounter + dt > m_numTStatesPerSample)
         {
             m_audioValue += int(speaker ? (m_numTStatesPerSample - m_tStateCounter) : 0);
-            m_fillBuffer[m_writePosition++] = ((m_audioValue * 65535) / m_numTStatesPerSample) - 32768;
+            m_fillBuffer[m_writePosition++] = ((m_audioValue * (2 * NX_VOLUME)) / m_numTStatesPerSample) - NX_VOLUME;
 
             dt = (m_tStateCounter + dt) - m_numTStatesPerSample;
             m_audioValue = 0;
@@ -135,25 +146,6 @@ void Audio::updateBeeper(i64 tState, u8 speaker)
         std::swap(m_fillBuffer, m_playBuffer);
         m_tStatesUpdated -= m_numTStatesPerFrame;
     }
-
-
-    //     i64 beforeIndex = m_tStatesUpdated / m_numTStatesPerSample;
-    //     i64 afterIndex = tState / m_numTStatesPerSample;
-    //     if (afterIndex > m_numSamplesPerFrame) afterIndex = m_numSamplesPerFrame;
-    // 
-    //     for (i64 i = beforeIndex; i < afterIndex; ++i)
-    //     {
-    //         m_fillBuffer[i] = speaker ? 32767 : -32767;
-    //     }
-    // 
-    //     m_tStatesUpdated = tState;
-    // 
-    //     // Check to see if we're done filling the buffer
-    //     if (tState > m_numTStatesPerFrame)
-    //     {
-    //         std::swap(m_fillBuffer, m_playBuffer);
-    //         m_tStatesUpdated = 0;
-    //     }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

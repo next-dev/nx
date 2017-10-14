@@ -41,5 +41,18 @@ void Debugger::render()
     m_ui.render();
 }
 
+void Debugger::renderOverlay(bool stopped)
+{
+    Draw draw(m_ui.getPixels(), m_ui.getAttrs());
+
+    m_ui.clear();
+    if (stopped)
+    {
+        draw.printSquashedString(70, 60, "Stopped", draw.attr(Colour::Black, Colour::White, true));
+    }
+
+    m_ui.render();
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

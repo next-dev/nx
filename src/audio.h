@@ -60,6 +60,7 @@ public:
     ~Audio();
 
     void updateBeeper(i64 tState, u8 speaker);
+    void mute(bool enabled) { m_mute = enabled; }
 
     Signal& getSignal() { return m_renderSignal; }
 
@@ -92,6 +93,8 @@ private:
 
     Signal              m_renderSignal;
     function<void()>    m_frameFunc;
+
+    bool                m_mute;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
