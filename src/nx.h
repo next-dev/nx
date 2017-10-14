@@ -59,7 +59,7 @@ public:
     
 private:
     // Keyboard routines
-    void spectrumKey(sf::Keyboard::Key key, bool down);
+    void spectrumKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
     void debuggerKey(sf::Keyboard::Key key);
     void joystickKey(Joystick key, bool down);
     void calculateKeys();

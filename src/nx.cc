@@ -136,20 +136,22 @@ void Nx::run()
                 break;
 
             case sf::Event::KeyPressed:
+                // Forward the key controls to the right mode handler
                 if (m_debuggerEnabled)
                 {
                     debuggerKey(event.key.code);
                 }
                 else
                 {
-                    spectrumKey(event.key.code, true);
+                    spectrumKey(event.key.code, true, event.key.shift, event.key.control, event.key.alt);
                 }
                 break;
 
             case sf::Event::KeyReleased:
+                // Forward the key controls to the right mode handler
                 if (!m_debuggerEnabled)
                 {
-                    spectrumKey(event.key.code, false);
+                    spectrumKey(event.key.code, false, event.key.shift, event.key.control, event.key.alt);
                 }
                 break;
 
@@ -302,15 +304,18 @@ const char* windowFileSaveAs(WindowFileOpenConfig* config)
 // Keyboard
 //----------------------------------------------------------------------------------------------------------------------
 
-void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
+void Nx::spectrumKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     Key key1 = Key::COUNT;
     Key key2 = Key::COUNT;
 
     using K = sf::Keyboard;
-    
+
     switch (key)
     {
+        //
+        // Numbers
+        //
         case K::Num1:       key1 = Key::_1;         break;
         case K::Num2:       key1 = Key::_2;         break;
         case K::Num3:       key1 = Key::_3;         break;
@@ -321,7 +326,10 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
         case K::Num8:       key1 = Key::_8;         break;
         case K::Num9:       key1 = Key::_9;         break;
         case K::Num0:       key1 = Key::_0;         break;
-            
+
+        //
+        // Letters
+        //
         case K::A:          key1 = Key::A;          break;
         case K::B:          key1 = Key::B;          break;
         case K::C:          key1 = Key::C;          break;
@@ -348,14 +356,55 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
         case K::X:          key1 = Key::X;          break;
         case K::Y:          key1 = Key::Y;          break;
         case K::Z:          key1 = Key::Z;          break;
-            
+
+        //
+        // Other keys on the Speccy
+        //
         case K::LShift:     key1 = Key::Shift;      break;
         case K::RShift:     key1 = Key::SymShift;   break;
         case K::Return:     key1 = Key::Enter;      break;
         case K::Space:      key1 = Key::Space;      break;
-            
+
+        //
+        // Map PC keys to various keys on the Speccy
+        //
         case K::BackSpace:  key1 = Key::Shift;      key2 = Key::_0;     break;
         case K::Escape:     key1 = Key::Shift;      key2 = Key::Space;  break;
+
+        case K::SemiColon:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::Z : Key::O;
+            break;
+
+        case K::Comma:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::R : Key::N;
+            break;
+
+        case K::Period:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::T : Key::M;
+            break;
+
+        case K::Quote:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::P : Key::_7;
+            break;
+
+        case K::Slash:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::C : Key::V;
+            break;
+
+        case K::Dash:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::_0 : Key::J;
+            break;
+
+        case K::Equal:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::K : Key::L;
+            break;
             
         case K::Left:
             if (usesKempstonJoystick())
@@ -459,8 +508,6 @@ void Nx::spectrumKey(sf::Keyboard::Key key, bool down)
         }
         break;
 #endif
-
-
             
         default:
             // If releasing a non-speccy key, clear all key map.
