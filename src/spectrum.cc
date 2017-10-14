@@ -366,7 +366,7 @@ void Spectrum::out(u16 port, u8 x, TState& t)
     if (isUlaPort)
     {
         m_borderColour = x & 7;
-        m_speaker = (x & 0x18) ? 1 : 0;
+        m_speaker = (x & 0x10) ? 1 : 0;
     }
 
     //

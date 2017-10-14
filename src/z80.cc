@@ -2,6 +2,29 @@
 // Z80 implementation
 //----------------------------------------------------------------------------------------------------------------------
 
+
+//----------------------------------------------------------------------------------------------------------------------
+// Debug settings
+//----------------------------------------------------------------------------------------------------------------------
+
+#define NX_DEBUG_IN     0
+#define NX_DEBUG_OUT    0
+
+//----------------------------------------------------------------------------------------------------------------------
+
+#if NX_DEBUG_IN
+#   define NX_LOG_IN(p,b) NX_LOG("In: (%04x) -> %02x\n", p, b);
+#else
+#   define NX_LOG_IN(...)
+#endif
+
+#if NX_DEBUG_OUT
+#   define NX_LOG_OUT(p,b) NX_LOG("Out: (%04x) <- %02x\n", p, b);
+#else
+#   define NX_LOG_OUT(...)
+#endif
+
+
 #include "z80.h"
 
 #include <algorithm>
@@ -1036,12 +1059,14 @@ void Z80::executeED(i64& tState)
             r = (y == 6) ? &v : &getReg8(y);
             MP() = BC() + 1;
             *r = m_ext.in(BC(), tState);
+            NX_LOG_IN(BC(), *r);
             F() = (F() & F_CARRY) | m_SZ53P[*r];
             break;
 
         case 1:
             v = 0;
             r = (y == 6) ? &v : &getReg8(y);
+            NX_LOG_OUT(BC(), *r);
             m_ext.out(BC(), *r, tState);
             MP() = BC() + 1;
             break;
@@ -1187,6 +1212,7 @@ void Z80::executeED(i64& tState)
                 u8 t1, t2;
                 CONTEND(IR(), 1, 1);
                 t1 = m_ext.in(BC(), tState);
+                NX_LOG_IN(BC(), t1);
                 POKE(HL(), t1);
                 MP() = BC() + 1;
                 --B();
@@ -1249,6 +1275,7 @@ void Z80::executeED(i64& tState)
                 u8 t1, t2;
                 CONTEND(IR(), 1, 1);
                 t1 = m_ext.in(BC(), tState);
+                NX_LOG_IN(BC(), t1);
                 POKE(HL(), t1);
                 MP() = BC() - 1;
                 --B();
@@ -1268,6 +1295,7 @@ void Z80::executeED(i64& tState)
                 t1 = PEEK(HL());
                 --B();
                 MP() = BC() - 1;
+                NX_LOG_OUT(BC(), t1);
                 m_ext.out(BC(), t1, tState);
                 --HL();
                 t2 = t1 + L();
@@ -1326,6 +1354,7 @@ void Z80::executeED(i64& tState)
                 u8 t1, t2;
                 CONTEND(IR(), 1, 1);
                 t1 = m_ext.in(BC(), tState);
+                NX_LOG_IN(BC(), t1);
                 POKE(HL(), t1);
                 MP() = BC() + 1;
                 --B();
@@ -1350,6 +1379,7 @@ void Z80::executeED(i64& tState)
                 t1 = PEEK(HL());
                 --B();
                 MP() = BC() + 1;
+                NX_LOG_OUT(BC(), t1);
                 m_ext.out(BC(), t1, tState);
                 ++HL();
                 t2 = t1 + L();
@@ -1413,6 +1443,7 @@ void Z80::executeED(i64& tState)
                 u8 t1, t2;
                 CONTEND(IR(), 1, 1);
                 t1 = m_ext.in(BC(), tState);
+                NX_LOG_IN(BC(), t1);
                 POKE(HL(), t1);
                 MP() = BC() - 1;
                 --B();
@@ -1437,6 +1468,7 @@ void Z80::executeED(i64& tState)
                 t1 = PEEK(HL());
                 --B();
                 MP() = BC() - 1;
+                NX_LOG_OUT(BC(), t1);
                 m_ext.out(BC(), t1, tState);
                 --HL();
                 t2 = t1 + L();
@@ -1897,6 +1929,7 @@ void Z80::execute(u8 opCode, i64& tState)
 
             case 2:     // D3 - OUT (n),A()       A() -> $AAnn
                 d = PEEK(PC());
+                NX_LOG_OUT((u16)d | ((u16)A() << 8), A());
                 m_ext.out((u16)d | ((u16)A() << 8), A(), tState);
                 m_mp.h = A();
                 m_mp.l = (u8)(d + 1);
@@ -1909,6 +1942,7 @@ void Z80::execute(u8 opCode, i64& tState)
                 m_mp.h = A();
                 m_mp.l = (u8)(d + 1);
                 A() = m_ext.in(tt, tState);
+                NX_LOG_IN(tt, A());
                 ++PC();
                 break;
 

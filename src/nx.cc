@@ -621,6 +621,7 @@ bool Nx::loadSnapshot(string fileName)
     
     TState t = 0;
     z80.PC() = z80.pop(t);
+    z80.IFF1() = z80.IFF2();
     m_machine->resetTState();
     
     return true;
