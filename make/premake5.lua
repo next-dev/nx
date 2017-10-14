@@ -75,7 +75,8 @@ solution "nx"
                 "sfml-main-d.lib",
                 "sfml-network-s-d.lib",
                 "sfml-system-s-d.lib",
-                "sfml-window-s-d.lib"
+                "sfml-window-s-d.lib",
+                "portaudio_static_x64-d.lib",
             }
 
         configuration "Release"
@@ -85,7 +86,8 @@ solution "nx"
                 "sfml-main.lib",
                 "sfml-network-s.lib",
                 "sfml-system-s.lib",
-                "sfml-window-s.lib"
+                "sfml-window-s.lib",
+                "portaudio_static_x64.lib",
             }
 
         -- postbuildcommands {

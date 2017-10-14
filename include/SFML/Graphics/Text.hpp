@@ -445,7 +445,7 @@ private:
 /// sf::Text text("hello", font);
 /// text.setCharacterSize(30);
 /// text.setStyle(sf::Text::Bold);
-/// text.setFillColor(sf::Color::Red);
+/// text.setColor(sf::Color::Red);
 ///
 /// // Draw it
 /// window.draw(text);
