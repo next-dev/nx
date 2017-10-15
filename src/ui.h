@@ -81,6 +81,37 @@ private:
 };
 
 //----------------------------------------------------------------------------------------------------------------------
+// Overlay
+// An overlay is a editing context.  There can only be one overlay active at any moment.  It controls the keys and
+// renders into the UI.
+//----------------------------------------------------------------------------------------------------------------------
+
+class Nx;
+
+class Overlay
+{
+public:
+    Overlay(Nx& nx);
+
+    void toggle(Overlay& fallbackOverlay);
+    void select();
+    void selectIf(bool selectCond, Overlay& fallbackOverlay);
+
+    virtual void render(Draw& draw) = 0;
+    virtual void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) = 0;
+
+    static Overlay* currentOverlay() { return ms_currentOverlay; }
+
+protected:
+    Nx& getEmulator();
+    Spectrum& getSpeccy();
+
+private:
+    static Overlay*     ms_currentOverlay;
+    Nx&                 m_nx;
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Ui class
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -89,6 +120,9 @@ class Ui
 public:
     Ui(Spectrum& speccy);
 
+    // Overlay selection
+    void toggle(Overlay& overlay);
+    void select(Overlay& overlay);
 
     // Clear the screen
     void clear();

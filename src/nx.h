@@ -23,6 +23,32 @@ enum class Joystick
 };
 
 //----------------------------------------------------------------------------------------------------------------------
+// Emulator overlay
+//----------------------------------------------------------------------------------------------------------------------
+
+class Nx;
+
+class Emulator : public Overlay
+{
+public:
+    Emulator(Nx& nx);
+
+    void render(Draw& draw) override;
+    void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
+
+private:
+    void joystickKey(Joystick key, bool down);
+    void calculateKeys();
+
+private:
+    // Keyboard state
+    vector<bool>        m_speccyKeys;
+    vector<u8>          m_keyRows;
+
+
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Emulator class
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -31,6 +57,9 @@ class Nx
 public:
     Nx(int argc, char** argv);
     ~Nx();
+
+    // Obtain a reference to the current machine.
+    Spectrum& getSpeccy() { return *m_machine; }
 
     // Render the currently generated display
     void render();
@@ -50,35 +79,31 @@ public:
     void updateSettings();
 
     // Debugging
+    bool isDebugging() const { return Overlay::currentOverlay() == &m_debugger; }
+    void toggleDebugger();
     void togglePause(bool breakpointHit);
     void stepOver();
     void stepIn();
+    RunMode getRunMode() const { return m_runMode; }
 
     // Peripherals
     bool usesKempstonJoystick() const { return m_kempstonJoystick; }
     
 private:
-    // Keyboard routines
-    void spectrumKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
-    void debuggerKey(sf::Keyboard::Key key);
-    void joystickKey(Joystick key, bool down);
-    void calculateKeys();
-    
     // File routines
     vector<u8> loadFile(string fileName);
 
 private:
     Spectrum*           m_machine;
+    Ui                  m_ui;
     Signal              m_renderSignal;
     bool                m_quit;
 
-    // Keyboard state
-    vector<bool>        m_speccyKeys;
-    vector<u8>          m_keyRows;
+    // Emulator overlay
+    Emulator            m_emulator;
 
     // Debugger state
     Debugger            m_debugger;
-    bool                m_debuggerEnabled;
     RunMode             m_runMode;
 
     // Settings

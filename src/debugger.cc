@@ -3,16 +3,17 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "debugger.h"
+#include "nx.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-Debugger::Debugger(Spectrum& speccy)
-    : m_ui(speccy)
-    , m_memoryDumpWindow(speccy)
-    , m_disassemblyWindow(speccy)
-    , m_cpuStatusWindow(speccy)
+Debugger::Debugger(Nx& nx)
+    : Overlay(nx)
+    , m_memoryDumpWindow(nx.getSpeccy())
+    , m_disassemblyWindow(nx.getSpeccy())
+    , m_cpuStatusWindow(nx.getSpeccy())
 {
     m_disassemblyWindow.Select();
 }
@@ -21,37 +22,55 @@ Debugger::Debugger(Spectrum& speccy)
 // Keyboard handling
 //----------------------------------------------------------------------------------------------------------------------
 
-void Debugger::onKey(sf::Keyboard::Key key)
+void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    SelectableWindow::getSelected().keyPress(key);
+    using K = sf::Keyboard::Key;
+    if (!down) return;
+
+    switch (key)
+    {
+    case K::Tilde:
+        getEmulator().toggleDebugger();
+        break;
+
+    case K::F5:
+        getEmulator().togglePause(false);
+        break;
+
+    case K::F6:
+        getEmulator().stepOver();
+        break;
+
+    case K::F7:
+        getEmulator().stepIn();
+        break;
+
+    case K::Tab:
+        // #todo: put cycling logic into SelectableWindow
+        if (getDisassemblyWindow().isSelected())
+        {
+            getMemoryDumpWindow().Select();
+        }
+        else
+        {
+            getDisassemblyWindow().Select();
+        }
+        break;
+
+    default:
+        SelectableWindow::getSelected().keyPress(key);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 // Rendering
 //----------------------------------------------------------------------------------------------------------------------
 
-void Debugger::render()
+void Debugger::render(Draw& draw)
 {
-    Draw draw(m_ui.getPixels(), m_ui.getAttrs());
-
-    m_ui.clear();
     m_memoryDumpWindow.draw(draw);
     m_disassemblyWindow.draw(draw);
     m_cpuStatusWindow.draw(draw);
-    m_ui.render();
-}
-
-void Debugger::renderOverlay(bool stopped)
-{
-    Draw draw(m_ui.getPixels(), m_ui.getAttrs());
-
-    m_ui.clear();
-    if (stopped)
-    {
-        draw.printSquashedString(70, 60, "Stopped", draw.attr(Colour::Black, Colour::White, true));
-    }
-
-    m_ui.render();
 }
 
 //----------------------------------------------------------------------------------------------------------------------

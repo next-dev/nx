@@ -82,25 +82,46 @@ protected:
 // Debugger
 //----------------------------------------------------------------------------------------------------------------------
 
-class Debugger
+// class Debugger
+// {
+// public:
+//     Debugger(Spectrum& speccy);
+// 
+//     void onKey(sf::Keyboard::Key key);
+//     void render();
+//     void renderOverlay(bool stopped);
+//     sf::Sprite& getSprite() { return m_ui.getSprite(); }
+// 
+//     MemoryDumpWindow&   getMemoryDumpWindow() { return m_memoryDumpWindow; }
+//     DisassemblyWindow&  getDisassemblyWindow() { return m_disassemblyWindow; }
+//     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
+// 
+// private:
+//     Ui                  m_ui;
+//     MemoryDumpWindow    m_memoryDumpWindow;
+//     DisassemblyWindow   m_disassemblyWindow;
+//     CpuStatusWindow     m_cpuStatusWindow;
+// };
+
+class Nx;
+
+class Debugger : public Overlay
 {
 public:
-    Debugger(Spectrum& speccy);
+    Debugger(Nx& nx);
 
-    void onKey(sf::Keyboard::Key key);
-    void render();
-    void renderOverlay(bool stopped);
-    sf::Sprite& getSprite() { return m_ui.getSprite(); }
+    void render(Draw& draw) override;
+    void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
 
     MemoryDumpWindow&   getMemoryDumpWindow() { return m_memoryDumpWindow; }
     DisassemblyWindow&  getDisassemblyWindow() { return m_disassemblyWindow; }
     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
 
 private:
-    Ui                  m_ui;
     MemoryDumpWindow    m_memoryDumpWindow;
     DisassemblyWindow   m_disassemblyWindow;
     CpuStatusWindow     m_cpuStatusWindow;
+
 };
 
 //----------------------------------------------------------------------------------------------------------------------

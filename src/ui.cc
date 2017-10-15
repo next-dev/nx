@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "ui.h"
+#include "nx.h"
 
 #include <cassert>
 #include <cstdarg>
@@ -100,6 +101,44 @@ const u8 gGfxFont[] = {
     0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0xff,     // Upside down T        (
     0x00, 0x3c, 0x7e, 0x7e, 0x7e, 0x7e, 0x3c, 0x00,     // Breakpoint symbol    )
 };
+
+//----------------------------------------------------------------------------------------------------------------------
+// Overlays
+//----------------------------------------------------------------------------------------------------------------------
+
+Overlay* Overlay::ms_currentOverlay = 0;
+
+Overlay::Overlay(Nx& nx)
+    : m_nx(nx)
+{
+
+}
+
+void Overlay::toggle(Overlay& fallbackOverlay)
+{
+    selectIf(ms_currentOverlay != this, fallbackOverlay);
+}
+
+void Overlay::select()
+{
+    ms_currentOverlay = this;
+}
+
+void Overlay::selectIf(bool selectCond, Overlay& fallbackOverlay)
+{
+    if (selectCond) select();
+    else fallbackOverlay.select();
+}
+
+Nx& Overlay::getEmulator()
+{
+    return m_nx;
+}
+
+Spectrum& Overlay::getSpeccy()
+{
+    return getEmulator().getSpeccy();
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // Draw
@@ -380,6 +419,20 @@ void Ui::clear()
 
 void Ui::render()
 {
+    //
+    // Render the overlay
+    //
+    Draw draw(m_pixels, m_attrs);
+    clear();
+    if (Overlay::currentOverlay())
+    {
+        Overlay::currentOverlay()->render(draw);
+    }
+
+    //
+    // Convert the Ui VRAM into actual renderable pixels
+    //
+
     static const u32 colours[16] =
     {
         0xdf000000, 0xdfd70000, 0xdf0000d7, 0xdfd700d7, 0xdf00d700, 0xdfd7d700, 0xdf00d7d7, 0xdfd7d7d7,
