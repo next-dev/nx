@@ -41,6 +41,7 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 | Ctrl             | Symbol shift                                          |
 | F1               | Open file                                             |
 | F2               | Restart the machine                                   |
+| F4               | Tape browser                                          |
 | F5               | Pause the machine and enter debugger mode             |
 | ~                | Enter debugger mode                                   |
 

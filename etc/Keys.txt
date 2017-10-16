@@ -4,7 +4,7 @@ KEY     EMULATOR        DEBUGGER
 F1      Load file
 F2      Reset
 F3
-F4
+F4      Tape browser
 F5      Toggle Pause    Toggle Pause
 F6                      Step over
 F7                      Step in
