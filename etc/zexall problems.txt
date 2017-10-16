@@ -1,0 +1,18 @@
+ZEXALL
+
+aluop a,(<ix, iy>+1)
+bit n,(<ix, iy>+1)
+bit n,<b,c,d,e,h,l,(hl),a>
+cpd<r>
+cpi<r>
+
+<inc,dec> (hl)
+<inc,dec> (<ix,iy>+1)
+
+ld a,<(bc),(de)>
+ld (<ix,iy>+1),nn
+ld <b,c,d,e>,(<ix,iy>+1)
+ld <h,l>,(<ix,iy>+1)
+ld a,(<ix,iy>+1)
+ld <bcdehla>,<bcdehla>
+
