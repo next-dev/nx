@@ -1,0 +1,601 @@
+                               Ramsoft presents
+
+                     -= The ZX Spectrum Loaders Guide =-
+
+                                   VOLUME 1
+
+                   The ZX Spectrum Normal Speed Tape-Loader
+
+
+INDEX
+
+Introduction...........................................
+PART I............Basic Knowledges And Signal Structure
+PART II........The ZX Spectrum Loading Routine Analysis
+Appendix.......................Frequencies And T-states
+
+------------------------------------------------------------------------------
+Introduction
+
+Welcome to Ramsoft's ZX Spectrum loader guide.
+These documents are intended to provide a useful help for anyone interested on
+learning loader working. All the most common loader types have been treated to
+give a complete view of the mainly used protection systems. The very first
+volume of this guide is dedicated to the normal speed loader in the Spectrum 
+ROM, which is the base for understanding loaders like Speedlock and Alkatraz
+and their amazing effects.
+
+NOTE: the author takes NO responsibility and won't be liable, under any
+      circumstances, for copyright infringements or any other direct or 
+      indirect damage.      
+
+Last revised on 9-12-1997
+
+------------------------------------------------------------------------------
+
+PART I - Basic knowledges and signal structure.
+
+Let's start saying what a BLOCK is. When you save a BASIC program or a piece
+of CODE with the BASIC command SAVE, you always save 2 BLOCKs. The first one
+is called the HEADER and it's always 17 bytes long; the second one is the DATA
+block, and its length changes depending on the amount of bytes saved. In the
+HEADER you will find the necessary informations the system needs to load the
+program such as the TYPE (BASIC,CODE,ARRAY), the NAME, the LENGTH of the BLOCK
+and some other things depending on the type of data you are saving; the DATA
+block is the actual BASIC program or piece of CODE you want to save.
+
+You might think to find something like this on your tape:
+
+                                   LH   LD 
+
+(L=LEADER,H=HEADER,D=DATA)
+
+Since the header is only a particular kind of data we can write the following:
+
+                                   LD   LD
+
+Actually things are a little more complicated.In fact between LEADER and DATA
+there's something to mark the end of one and the beginning of the other,as the
+first one has a fixed frequency but the other doesn't: so here we find what is
+commonly called a SYNC PULSE (S).
+
+So you may imagine something like that:
+
+                                  LSD   LSD
+
+That's not enough. We find another 2 things: the first byte of the DATA is a
+MARKER that tells the system which kind of block is loading; the last byte is
+the a CHECKSUM for error checking; so when you save a code block of, say, 6912
+bytes you'll find that on tape they are actually 6914 instead (even if the 1st
+one and the last one won't be stored in memory); so we have that:
+
+                           DATA=MARKER+BYTES+CHECKSUM
+
+Finally:
+
+1) LEADER
+2) SYNC PULSE
+3) MARKER (M)
+4) BYTES (B)
+5) CHECKSUM (C)
+
+and the tape looks like this:
+
+                                LSMBC   LSMBC
+
+This representation is valid for every kind of normal speed saved block, since
+headers are only a particular kind of data, as we said above.
+
+Now let's have a look to each component in detail.
+
+1 - LEADER
+
+The LEADER is an introduction to the DATA: its frequency is nearly 807.2Hz,
+so the halfwave length is 2168 T. Remember that there's NO DATA stored into
+the LEADER.
+
+2 - SYNC PULSE
+
+The SYNC PULSE is the endmarker for the LEADER and the introduction to the
+MARKER byte and the others following. It's composed of 2 halfwaves of 2
+different frequencies: the first one is about 2623.7 Hz, the second one is
+2381 Hz; the halfwave lengths are respectively 667 and 735 T.
+                         
+3 - DATA 
+
+In normal speed blocks, each bit is saved with a standard frequency:
+
+BIT=0 : about 2046.8 Hz (855 T)
+BIT=1 : about 1023.4 Hz (1710 T)
+
+3.1 - MARKER
+
+The MARKER is a byte that tells what sort of BLOCK is ready to be loaded. The
+only values you may find in BLOCKs saved by the BASIC commands SAVE and LOAD
+are 0 for HEADERs and 255 (FFh) for DATA blocks.
+
+3.2 - BYTES
+
+This is the byte sequence in memory from the start of BASIC area (for a BASIC
+program) or from the specified address (for a piece of CODE). Even the BYTES
+are saved in the above illustrated form.
+
+3.3 - CHECKSUM
+This byte is for error checking: when saving, the content of a register
+(which is initially set to 0) is XORed with the current byte that has to be
+saved, even the marker; at the end this byte is saved too. The same thing
+happens when loading in a block, so that the last byte loaded will be XORed
+with the register above: if the result is 0, then the loading was OK (the SAVE
+and LOAD checksums are the same, so there have been no errors) and the CARRY
+flag is set, otherwise the CARRY flag is reset signaling that an error
+occurred.
+
+------------------------------------------------------------------------------
+
+PART II - The ZX Spectrum loading routine analysis.
+
+We are now going to analyze each action of the loading routine in the Spectrum
+ROM: to do this, we will consider a SQUARE wave signal. Please note that we do
+this in theory, because the signal recorded on tape is far away from being a
+square wave. Even if the ULA's output is a square wave, the resulting waveform
+is actually much similar to a SINE; this is due to the physical and mechanical
+characteristics of the tape (wow & flutter, etc.); also treble and bass tones
+settings could alter the resulting waveform.
+
+The ZX Spectrum loader routine starts from address 0556h in ROM and here's a
+completly commented disassembled.
+
+NOTE: the labels used in this disassembled piece of code are the ones given by
+      Dr. Ian Logan & Dr. Franklin O'Hara in their book:
+
+      "The complete ZX Spectrum ROM disassembly" , Melbourne House 1983.
+
+      ISBN 0 86759 117 X
+
+------------------------------------------------------------------------------
+
+Input:  IX=start address (where to place the block)
+        DE=block length
+        A=expected marker (0 or 255 as said above)
+
+        Cy=SET for loading, RESET for verifying
+
+Output: IX=address of the last loaded byte plus 1
+        DE=remaining bytes to load (0 if all block has been loaded)
+
+        Cy=SET if loading was OK, RESET otherwise
+
+------------------------------------------------------------------------------
+
+053F LD-RET    PUSH AF          
+
+Keep safe the loading results
+
+               LD A,(5C48h)           
+
+Pick up the border and the last two lines colour from system variables area
+
+               AND  38h          
+
+Keep the border colour only (bits 3-5)
+
+               RRCA             
+               RRCA             
+               RRCA             
+
+Make of it a suitable value for OUTing
+
+               OUT  (FEh),A      
+
+Change border colour and shut MIC output
+
+               POP  AF          
+
+Restore the loading results
+
+               RET             
+
+Return control to the main program
+
+0556 LD-BYTES  INC D
+
+Here begins the actual loading routine.
+The routine starts adding 1 to D: this would TEMPORARILY increase the block
+length by 256 bytes, but also resets the Z flag; this will be useful later for
+handling the first byte loaded (the marker). Note that if D holds 255 at the
+start, this would reset the Cy and set the Z flag causing an error later in
+the routine: this means that we can't load blocks larger than 65279 bytes
+
+               EX AF,AF'
+
+Here the expected marker is kept away for later check
+
+               DEC D
+
+Restore the original length
+
+               DI
+
+Disable the interrupts; leaving interrupts enabled the routine is halted every
+50th of a second to execute the interrupt routine and timings would be lost
+
+               LD A,0Fh
+               OUT (FEh),A
+
+Turn the screen border WHITE and turn OFF the MIC signal
+
+               LD HL,053Fh   (Ld-Ret)
+               PUSH HL
+
+Now push the return address in the stack
+
+               IN A,(FEh)
+
+Sample the EAR port; its status is held in bit 6 of the A register. This is
+done to find the opposite edge of the wave.
+
+               RRA
+
+Rotate the byte, so now the EAR port status is in bit 5 of the A register
+
+               AND 20h
+
+Keep only byte 5, for the others are useless
+
+               OR 02h
+
+As this is the byte that will be OUTed to the MIC port later, this operation
+turns the screen border RED.
+
+               LD C,A
+
+Store the byte in C. C will hold the byte to be OUTed to MIC port (i.e. the
+current EAR status in bit 5 and the border colour) for all the routine
+duration
+
+               CP A
+
+Reset the Z flag
+
+056B LD-BREAK  RET NZ
+
+Stop loading if Z flag is reset; this may happen if the BREAK key has been
+pressed (see later)
+
+056C LD-START  CALL 05E7h    (LD-EDGE-1)
+
+Find the opposite edge of the one held in C
+
+               JR NC,056Bh   (LD-BREAK)
+
+Jump back if an error has occurred (i.e. BREAK pressed or no edge found)
+
+               LD HL,0415h
+0574 LD-WAIT   DJNZ 0574h    (LD-WAIT)
+               DEC HL
+               LD A,H
+               OR L
+               JR NZ,0574h   (LD-WAIT)
+
+This loop causes a pause of about 1 second. At the end H holds 0 (see below)
+
+               CALL 05E3h    (LD-EDGE-2)
+
+Search for 2 edges for 31475 T states, so for a wave of at least of 222.4 Hz
+
+               JR NC,056Bh   (LD-BREAK)
+
+Jump back if the edges haven't been found (tape blurr)
+
+0580 LD-LEADER LD B,9Ch
+
+Load B with the timing constant         
+
+               CALL 05E3h    (LD-EDGE-2)
+
+Look for 2 edges
+                                             
+               JR NC,056Bh   (LD-BREAK)
+
+Jump back if the leader is not continuous
+
+               LD A,C6h
+               CP B
+               JR NC,056Ch   (LD-START)
+
+Now check how long the wave is: the 2 edges must have been found in between
+6341 and 13185 T states, so the wave frequency must be between 530 and 1102 Hz
+The leader is about 807.2 Hz, so it' nearly in the middle of the search range
+
+               INC H
+               JR NZ,0580h   (LD-LEADER)
+
+Increase H and check for it to be 0; this will repeat the above process 256
+times as H holds 0 since before. To leave the loop, the leader must have a
+minimum length of about 0.3 seconds
+
+058F LD-SYNC   LD B,C9h
+               CALL 05E7h    (LD-EDGE-1)
+
+Now it's time to look for the sync pulse. Load B with the timing constant and
+look for only 1 edge
+
+               JR NC,056Bh   (LD-BREAK)
+
+The edge hadn't been found: again tape blurr or faulty tape
+
+               LD A,B
+               CP D4h
+               JR NC,058Fh   (LD-SYNC)
+
+Check how distant is the new edge from the previous one. They must be found in
+max 7757 T states but only the ones found in less than 2565 T states are good
+to leave the loop: this means that the frequency should be more than 1364 Hz,
+otherwise the edges we are considering are still the ones of the tone leader
+
+               CALL 05E7h    (LD-EDGE-1)
+
+If the first halfwave of the sync pulse has been found, then look for the
+other one. The available time to look for the second halfwave depends on the
+time spent for the search of the previous halfwave
+
+               RET NC
+
+Stop loading, as the sync pulse search was not successful
+
+               LD A,C
+               XOR 03h
+               LD C,A
+
+Invert the last 3 bits of the C register. This turns the border from CYAN to
+YELLOW or from RED to BLUE
+
+               LD H,00h
+
+Initialise H with 0. This is the register holding the checksum
+
+               LD B,B0h
+
+Load B with the timing constant
+
+               JR 05C8h      (LD-MARKER)
+
+Jump forward to load the marker byte
+
+05A9 LD-LOOP   EX AF,AF'
+
+Restore the register holding the expected marker
+
+               JR NZ,05B3h   (LD-FLAG)
+
+Jump forward if considering the first byte loaded
+
+               JR NC,05BDh   (LD-VERIFY)
+
+Jump forward if we are verifying.
+Note that if D was holding 255 at the beginning, the Z flag would be set and
+the Cy flag reset: this causes an error, as the marker would be loaded into
+memory and not compared with the one stored in the A register here
+
+               LD (IX+00h),L
+
+We are loading, so put the byte loaded in memory (held in the L register)
+
+               JR 05C2h      (LD-NEXT)
+
+Jump forward to load another byte
+
+05B3 LD-FLAG   RL C
+
+Here the first byte is handled. The first step is to keep safe the Cy flag
+
+               XOR L
+
+Then the 2 values are compared
+
+               RET NZ
+
+If they weren't the same, then we're loading the wrong block: stop loading
+
+               LD A,C
+               RRA
+               LD C,A
+
+Otherwise restore the Cy flag. Now the Z flag is set, so next byte won't be
+compared to the expected marker, but stored directly into memory
+
+               INC DE
+
+Increase DE for its later decreasee
+
+               JR 05C4       (LD-DEC)
+
+Jump forward to load the first byte to store in memory
+
+05BD LD-VERIFY LD A,(IX+00h)
+               XOR L
+               RET NZ
+
+This is the routine for verifying blocks: fetch the memory content at the
+location pointed by IX and compare it with the loaded byte: stop loading if
+they are different
+
+05C2 LD-NEXT   INC IX
+05C4 LD-DEC    DEC DE
+
+Make IX pointing ti the next memory location and decrease length
+
+               EX AF,AF'
+
+Keep safe the flags in the alternate register
+
+               LD B,B2h
+
+Load B with the timing constant
+
+05C8 LD-MARKER LD L,01h
+
+Now prepare to load 8 bits: L starts with bit 0 set.
+
+05CA LD-8-BITS CALL 05E3h    (LD-EDGE-2)
+
+Go searching for 2 edges for about 10707 T states (min freq.=@653.8 Hz)
+
+               RET NC
+
+Stop loading if an error occurred (i.e. BREAK pressed or faulty tape)
+
+               LD A,CBh
+               CP B
+
+Now decide if the bit is 0 or 1. If the number of T states between the 2 edges
+is less than 4453 (i.e. the frequency is higher than about 1572 Hz), then the
+bit is 0; otherwise it's 1.
+Remember that bit 0's frequency is about 2046.8 Hz and bit 1's about 1023.4 Hz
+The result of the comparison is stored in the Cy flag
+
+               RL L
+
+Now store the loaded bit in L. If it was the last bit to complete the byte,
+the carry holds 1, because 8 bits were loaded and the starting bit 0 of the L
+register (which was SET) is now the carry flag; otherwise the carry is always
+reset (it would hold the bit 7 of L)
+
+               LD B,B0h
+
+Set B with the timing constant for the next byte (if any)
+
+               JP NC,05CAh   (LD-8-BITS)
+
+Go for another bit if L is not full
+
+               LD A,H
+               XOR L
+               LD H,A
+
+Update the checksum: the current byte loaded is XORed with H holding the
+current checksum. Note that the last byte of the sequence is the checksum that
+has been generated at the end of the saving routine; at the end of loading
+we must have that: H XOR L = 0 ,otherwise there's been a loading error
+
+               LD A,D
+               OR E
+               JR NZ,05A9h   (LD-LOOP)
+
+Check if we are at the end of loading and jump to store the byte in memory if
+not
+
+               LD A,H
+               CP 01h
+
+Check for correct loading: as said above, H must hold 0. The comparison with
+1 returns the carry flag set only if H is holding 0, otherwise the carry flag
+is reset
+
+               RET
+
+End of loading.
+
+05E3 LD-EDGE-2 CALL 05E7h    (LD-EDGE-1)
+
+Look for an edge.
+
+               RET NC
+
+Stop loading if BREAK was pressed or the edge hasn't been found, otherwise
+search for another edge
+
+05E7 LD-EDGE-1 LD A,16h
+05E9 LD-DELAY  DEC A
+               JR NZ,05E9    (LD-DELAY)
+               AND A
+
+The loops loses 354 T states + 4 for the AND A instruction that resets the Cy
+flag
+
+05ED LD-SAMPLE INC B
+
+B is increased before every sample
+
+               RET Z
+
+Stop loading if the time's up (too much distance between 2 edges)
+
+               LD A,7Fh
+               IN A,(FEh)
+
+Sample the EAR port and the keyboard ('BNM[SS][SPACE]' row)
+
+               RRA
+
+Shift the byte right: the bit holding the status of the BREAK key is now in
+the Cy register
+
+               RET NC
+
+Return if BREAK was pressed
+
+               XOR C
+
+Compare the current status of the EAR port with the previous one (held in the
+C register)
+
+               AND 20h
+
+Consider only bit 5
+
+               JR Z,05ED     (LD-SAMPLE)
+
+Jumpp back if they are the same (no signal variation)
+
+               LD A,C
+               CPL
+               LD C,A
+
+Invert the content of the C register, i.e. change the current status bit and
+change border colour (BLUE to YELLOW or vice-versa)
+
+               AND 07h
+               OR 08h
+
+Keep only the border colour and signal MIC off
+
+               OUT (FEh),A
+
+OUT to port (change border and turn MIC off)
+
+               SCF
+               RET
+
+Signal successful search and return.
+
+------------------------------------------------------------------------------
+
+Appendix - Frequencies and T-states
+
+Some of the values in this document may appear strange or maybe someone's
+wondering how to calculate them. There's a well known formula to do this and
+it's the following:
+
+                 CPU Clock                             CPU Clock
+     T-States = -----------     or vice-versa    f =  ------------
+                   2 * f                              2 * T-States  
+
+The CPU Clock and the frequency are given in Hz; so for the ZX Spectrum 48K
+the value for CPU Clock is 3500000 and for 128K is 3540000.
+
+The T-States values are always counted starting from one I/O instruction to
+another (i.e. from IN to IN); I wrote down a formula to calculate the total
+amount of T-States between 2 calls to the LD-EDGE-2 routine:
+
+      T-States = 206 + 118 * (MaxB - StartB - 1) + 56 * A + STUFF
+
+where MaxB is the maximum value admitted for the B register, StartB is the
+starting value for the B register and A is the starting value of the A
+register in the sampling loop. Someone may ask why instead of (MaxB - StartB)
+I wrote (MaxB - StartB - 1): it's because for a successful loading, you should
+always find 2 edges, so we must have 2 successful samplings; as 59 is the
+number of T-States for each unsuccessful pass on the sampling loop, you must
+subtract 59 * 2 T-States and add the ones for the successful passes (already
+included in 206). STUFF is the amount of T-States lost from a CALL to the
+routine LD-EDGE-2.

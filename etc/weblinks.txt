@@ -1,0 +1,19 @@
+IMPORTANT WEB LINKS
+~~~~~~~~~~~~~~~~~~~
+
+Tape
+
+    http://www.worldofspectrum.org/tapsamp.html
+    http://zxds.raxoft.cz/docs/pzx.txt
+
+Hardware
+
+    http://ramsoft.bbk.org.omegahg.com/floatingbus.html
+
+General
+
+    http://ramsoft.bbk.org.omegahg.com/tech.html
+
+Software
+
+    http://skoolkid.github.io/rom/index.html
