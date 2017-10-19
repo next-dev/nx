@@ -112,6 +112,7 @@ public:
 
     void render(Draw& draw) override;
     void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
+    const vector<string>& commands() const override;
 
     MemoryDumpWindow&   getMemoryDumpWindow() { return m_memoryDumpWindow; }
     DisassemblyWindow&  getDisassemblyWindow() { return m_disassemblyWindow; }
@@ -122,6 +123,8 @@ private:
     DisassemblyWindow   m_disassemblyWindow;
     CpuStatusWindow     m_cpuStatusWindow;
 
+    vector<string>      m_memoryDumpCommands;
+    vector<string>      m_disassemblyCommands;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

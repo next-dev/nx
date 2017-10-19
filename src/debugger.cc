@@ -14,6 +14,24 @@ Debugger::Debugger(Nx& nx)
     , m_memoryDumpWindow(nx.getSpeccy())
     , m_disassemblyWindow(nx.getSpeccy())
     , m_cpuStatusWindow(nx.getSpeccy())
+    , m_memoryDumpCommands({
+        "Up|Scroll up",
+        "Down|Scroll down",
+        "PgUp|Page up",
+        "PgDn|Page down",
+        "~|Exit",
+        "Tab|Switch window"})
+    , m_disassemblyCommands({
+        "F5|Pause/Run",
+        "F6|Step Over",
+        "F7|Step In",
+        "F9|Breakpoint",
+        "Up|Scroll up",
+        "Down|Scroll down",
+        "PgUp|Page up",
+        "PgDn|Page down",
+        "~|Exit",
+        "Tab|Switch window"})
 {
     m_disassemblyWindow.Select();
 }
@@ -71,6 +89,15 @@ void Debugger::render(Draw& draw)
     m_memoryDumpWindow.draw(draw);
     m_disassemblyWindow.draw(draw);
     m_cpuStatusWindow.draw(draw);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Commands
+//----------------------------------------------------------------------------------------------------------------------
+
+const vector<string>& Debugger::commands() const
+{
+    return m_memoryDumpWindow.isSelected() ? m_memoryDumpCommands : m_disassemblyCommands;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

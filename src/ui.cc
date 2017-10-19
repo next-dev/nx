@@ -281,7 +281,7 @@ int Draw::printChar(int xPixel, int yCell, char c, const u8* font)
     return width;
 }
 
-void Draw::printString(int xCell, int yCell, const string& str, u8 attr, const u8* font)
+int Draw::printString(int xCell, int yCell, const string& str, u8 attr, const u8* font)
 {
     for (char c : str)
     {
@@ -290,9 +290,10 @@ void Draw::printString(int xCell, int yCell, const string& str, u8 attr, const u
         {
             ++yCell;
             xCell = 0;
-            if (yCell >= (kUiHeight / 8)) return;
+            if (yCell >= (kUiHeight / 8)) return 0;
         }
     }
+    return xCell;
 }
 
 int Draw::printSquashedString(int xCell, int yCell, const string& str, u8 attr, const u8* font)
@@ -427,6 +428,33 @@ void Ui::render()
     if (Overlay::currentOverlay())
     {
         Overlay::currentOverlay()->render(draw);
+    }
+
+    //
+    // Render the commands
+    //
+    const vector<string>& commands = Overlay::currentOverlay()->commands();
+    if (commands.size() > 0)
+    {
+        int y = 63;
+        int x = 0;
+        u8 bkg = draw.attr(Colour::Black, Colour::White, true);
+        u8 hi = draw.attr(Colour::White, Colour::Red, true);
+        for (const auto& str : commands)
+        {
+            vector<string> ss = split(str, '|');
+            int len = (int)ss[0].length() + draw.squashedStringWidth(ss[1]);
+            if (x + len >= 80)
+            {
+                for (; x < 80; ++x) draw.printChar(x, y, ' ', bkg);
+                --y;
+                x = 0;
+            }
+            x = draw.printString(x, y, ss[0], hi);
+            x += draw.printSquashedString(x, y, ss[1], bkg);
+            draw.printChar(x++, y, ' ', bkg);
+        }
+        for (; x < 80; ++x) draw.printChar(x, y, ' ', bkg);
     }
 
     //

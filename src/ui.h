@@ -62,7 +62,7 @@ public:
     //
     void printChar(int xCell, int yCell, char c, u8 attr, const u8* font = gFont);
     int printChar(int xPixel, int yCell, char c, const u8* font = gFont);        // X is in pixels, returns width of character
-    void printString(int xCell, int yCell, const string& str, u8 attr, const u8* font = gFont);
+    int printString(int xCell, int yCell, const string& str, u8 attr, const u8* font = gFont);
     int printSquashedString(int xCell, int yCell, const string& str, u8 attr, const u8* font = gFont);
     int squashedStringWidth(const string& str, const u8* font = gFont);
     void attrRect(int xCell, int yCell, int width, int height, u8 colour);
@@ -99,6 +99,7 @@ public:
 
     virtual void render(Draw& draw) = 0;
     virtual void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) = 0;
+    virtual const vector<string>& commands() const { static vector<string> vs; return vs; }
 
     static Overlay* currentOverlay() { return ms_currentOverlay; }
 
