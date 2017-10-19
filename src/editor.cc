@@ -41,11 +41,91 @@ void EditorData::clear()
 {
     m_cursor = 0;
     m_endBuffer = m_buffer.size();
+    m_lines.clear();
+    m_lines.push_back(0);
 }
 
 SplitView EditorData::getLine(int n) const
 {
-    return SplitView(m_buffer, 0, 0, 0, 0);
+    if (m_currentLine == n)
+    {
+        return SplitView(m_buffer,
+                         m_lines[n], m_cursor,
+                         m_endBuffer, m_buffer.size());
+    }
+    else
+    {
+        int i = m_lines[n];
+        for (; m_buffer.begin() + i < m_buffer.end() && m_buffer[i] != '\n'; ++i) ;
+        return SplitView(m_buffer, m_lines[n], i);
+    }
+}
+
+SplitView EditorData::getText() const
+{
+    return SplitView(m_buffer, 0, m_cursor, m_endBuffer, m_buffer.size());
+}
+
+size_t EditorData::lineLength(int n) const
+{
+    int start = m_lines[n];
+    int end;
+    if (n == m_currentLine)
+    {
+        end = m_endBuffer;
+        start = m_endBuffer - (m_cursor - start);
+    }
+    else
+    {
+        end = start;
+    }
+    for (; m_buffer.begin() + end < m_buffer.end() && m_buffer[end] != '\n'; ++end) ;
+    return end - start;
+}
+
+bool EditorData::insert(char ch)
+{
+    bool result = ensureSpace(1);
+    if (result)
+    {
+        m_buffer[m_cursor++] = ch;
+    }
+    
+    return result;
+}
+
+bool EditorData::backspace()
+{
+    size_t lineStart = m_lines[m_currentLine];
+    if (m_cursor == lineStart)
+    {
+        // Delete newline
+        if (m_currentLine == 0) return false;
+        --m_currentLine;
+    }
+    --m_cursor;
+    return true;
+}
+
+bool EditorData::ensureSpace(size_t numChars)
+{
+    if (m_cursor + numChars <= m_endBuffer) return true;
+    
+    // There is no space
+    bool result = false;
+    if (m_increaseSize)
+    {
+        size_t oldSize = m_buffer.size();
+        m_buffer.resize(oldSize + m_increaseSize);
+        result = true;
+    
+        // Move text afterwards forward
+        size_t len = (size_t)(m_buffer.end() - (m_buffer.begin() + m_endBuffer));
+        move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + oldSize, m_buffer.end() - len);
+    }
+    
+    return result;
+    
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -63,8 +143,32 @@ Editor::Editor(int xCell, int yCell, int width, int height, u8 bkgColour, bool f
     , m_currentX(0)
     , m_font6(font6)
     , m_bkgColour(bkgColour)
+    , m_allowedChars(128, true)
 {
+    for (int i = 0; i < 32; ++i) m_allowedChars[i] = false;
+    m_allowedChars[127] = false;
+    m_allowedChars[8] = true;
+    m_allowedChars[13] = true;
+}
 
+void Editor::onlyAllowDecimal()
+{
+    fill(m_allowedChars.begin(), m_allowedChars.end(), false);
+    m_allowedChars[8] = true;
+    m_allowedChars[13] = true;
+    for (int i = '0'; i <= '9'; ++i) m_allowedChars[i] = true;
+}
+
+void Editor::onlyAllowHex()
+{
+    onlyAllowDecimal();
+    for (int i = 'a'; i <= 'f'; ++i) m_allowedChars[i] = true;
+    for (int i = 'A'; i <= 'F'; ++i) m_allowedChars[i] = true;
+}
+
+SplitView Editor::getText() const
+{
+    return m_data.getText();
 }
 
 void Editor::render(Draw& draw, int line)
@@ -90,9 +194,38 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
     return false;
 }
 
+bool Editor::text(char ch)
+{
+    if (m_allowedChars[ch])
+    {
+        if (m_currentX < m_width)
+        {
+            if (ch >= ' ' && ch < 127)
+            {
+                if (m_data.insert(ch)) ++m_currentX;
+                return true;
+            }
+            else if (ch == 8)
+            {
+                // Backspace
+                if (m_data.backspace())
+                {
+                    if (--m_currentX < 0)
+                    {
+                        m_currentX = m_data.lineLength(--m_currentLine);
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 void Editor::clear()
 {
     m_data.clear();
+    m_currentX = 0;
+    m_currentLine = 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

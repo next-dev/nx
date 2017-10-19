@@ -20,11 +20,13 @@ public:
 protected:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
+    void onText(char ch) override;
+    void onUnselected() override;
 
 private:
     u16     m_address;
     Editor  m_gotoEditor;
-    bool    m_enableGoto;
+    int     m_enableGoto;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -44,6 +46,8 @@ public:
 private:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
+    void onText(char ch) override;
+    void onUnselected() override;
 
     u16 backInstruction(u16 address);
     u16 disassemble(Disassembler& d, u16 address);
@@ -59,6 +63,9 @@ private:
 
     // This is used to improve cursor movement on disassembly.
     std::vector<u16> m_viewedAddresses;
+    
+    Editor  m_gotoEditor;
+    int     m_enableGoto;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -75,6 +82,7 @@ public:
 private:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
+    void onText(char ch) override;
 
 protected:
     Z80&        m_z80;
@@ -93,6 +101,7 @@ public:
 
     void render(Draw& draw) override;
     void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
+    void text(char ch) override;
     const vector<string>& commands() const override;
 
     MemoryDumpWindow&   getMemoryDumpWindow() { return m_memoryDumpWindow; }

@@ -537,6 +537,11 @@ void Window::keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
     onKey(key, shift, ctrl, alt);
 }
 
+void Window::text(char ch)
+{
+    onText(ch);
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // SelectableWindow class
 //----------------------------------------------------------------------------------------------------------------------
@@ -578,6 +583,8 @@ void SelectableWindow::Select()
     {
         ms_currentWindow->m_bkgColour &= ~0x40;
     }
+    if (ms_currentWindow) ms_currentWindow->onUnselected();
     ms_currentWindow = this;
+    ms_currentWindow->onSelected();
     m_bkgColour |= 0x40;
 }

@@ -16,9 +16,9 @@ MemoryDumpWindow::MemoryDumpWindow(Spectrum& speccy)
     : SelectableWindow(speccy, 1, 1, 43, 20, "Memory Viewer", Colour::Black, Colour::White)
     , m_address(0)
     , m_gotoEditor(6, 2, 43, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 4, 0)
-    , m_enableGoto(false)
+    , m_enableGoto(0)
 {
-
+    m_gotoEditor.onlyAllowHex();
 }
 
 void MemoryDumpWindow::onDraw(Draw& draw)
@@ -81,7 +81,7 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool 
 
         case K::G:
             m_gotoEditor.clear();
-            m_enableGoto = true;
+            m_enableGoto = 1;
             break;
 
         default:
@@ -90,3 +90,46 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool 
     }
 }
 
+void MemoryDumpWindow::onUnselected()
+{
+    m_enableGoto = 0;
+}
+
+void MemoryDumpWindow::onText(char ch)
+{
+    if (m_enableGoto == 0) return;
+    if (m_enableGoto == 1)
+    {
+        // We swallow the first event, because it will be the key that enabled the goto.
+        m_gotoEditor.clear();
+        m_enableGoto = 2;
+        return;
+    }
+    
+    if (m_enableGoto)
+    {
+        switch(ch)
+        {
+            case 10:
+            {
+                m_enableGoto = 0;
+                u16 t = 0;
+                auto view = m_gotoEditor.getText();
+                size_t len = view.size();
+                for (size_t i = 0; i < len; ++i)
+                {
+                    t *= 16;
+                    char c = view[i];
+                    if (c >= '0' && c <= '9') t += (c - '0');
+                    else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
+                    else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
+                }
+                
+                m_address = t;
+            }
+                
+            default:
+                return m_gotoEditor.text(ch);
+        }
+    }
+}

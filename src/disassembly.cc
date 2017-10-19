@@ -15,10 +15,13 @@
 
 DisassemblyWindow::DisassemblyWindow(Spectrum& speccy)
     : SelectableWindow(speccy, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
-    , m_address(0x8000)
-    , m_topAddress(0x8000)
+    , m_address(0x0000)
+    , m_topAddress(0x0000)
+    , m_gotoEditor(6, 23, 43, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 4, 0)
+    , m_enableGoto(0)
 {
     adjustBar();
+    m_gotoEditor.onlyAllowHex();
 }
 
 void DisassemblyWindow::adjustBar()
@@ -172,6 +175,13 @@ void DisassemblyWindow::onDraw(Draw& draw)
         a = next;
     }
 
+    if (m_enableGoto)
+    {
+        draw.attrRect(m_x, m_y + 1, m_width, 1, draw.attr(Colour::Black, Colour::Magenta, true));
+        draw.printString(m_x + 1, m_y + 1, "    ", draw.attr(Colour::White, Colour::Magenta, true));
+        draw.printSquashedString(m_x + 1, m_y + 1, "Goto:", draw.attr(Colour::Yellow, Colour::Magenta, true));
+        m_gotoEditor.render(draw, 0);
+    }
 }
 
 void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
@@ -208,9 +218,53 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool
     case K::F9:
         m_speccy.toggleBreakpoint(m_address);
         break;
+            
+    case K::G:
+        m_gotoEditor.clear();
+        m_enableGoto = 1;
+        break;
 
     default:
         break;
+    }
+}
+
+void DisassemblyWindow::onText(char ch)
+{
+    if (m_enableGoto == 0) return;
+    if (m_enableGoto == 1)
+    {
+        // We swallow the first event, because it will be the key that enabled the goto.
+        m_gotoEditor.clear();
+        m_enableGoto = 2;
+        return;
+    }
+    
+    if (m_enableGoto)
+    {
+        switch(ch)
+        {
+            case 10:
+            {
+                m_enableGoto = 0;
+                u16 t = 0;
+                auto view = m_gotoEditor.getText();
+                size_t len = view.size();
+                for (size_t i = 0; i < len; ++i)
+                {
+                    t *= 16;
+                    char c = view[i];
+                    if (c >= '0' && c <= '9') t += (c - '0');
+                    else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
+                    else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
+                }
+                
+                setCursor(t);
+            }
+                
+            default:
+                return m_gotoEditor.text(ch);
+        }
     }
 }
 
@@ -245,3 +299,7 @@ u16 DisassemblyWindow::disassemble(Disassembler& d, u16 address)
         m_speccy.peek(address + 3));
 }
 
+void DisassemblyWindow::onUnselected()
+{
+    m_enableGoto = 0;
+}

@@ -27,6 +27,11 @@ public:
                 ? m_array[m_start[1] + n]
                 : ' ';
     }
+    
+    size_t size() const
+    {
+        return m_end[0] - m_start[0] + m_end[1] - m_start[1];
+    }
 
 public:
     const vector<char>& m_array;
@@ -55,6 +60,14 @@ public:
 
     void clear();
     SplitView getLine(int n) const;
+    SplitView getText() const;
+    size_t lineLength(int n) const;
+    
+    bool insert(char ch);
+    bool backspace();
+    
+private:
+    bool ensureSpace(size_t numChars);
 
 private:
     vector<char>    m_buffer;
@@ -75,12 +88,18 @@ class Editor
 public:
     Editor(int xCell, int yCell, int width, int height, u8 bkgColour, bool font6,
         int initialSize, int increaseSize);
+    
+    void onlyAllowDecimal();
+    void onlyAllowHex();
+
+    SplitView getText() const;
 
     void render(Draw& draw, int line);
     bool key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
+    bool text(char ch);
 
     void clear();
-
+    
 private:
     EditorData      m_data;
     int             m_x;
@@ -92,6 +111,7 @@ private:
     int             m_currentX;
     bool            m_font6;
     u8              m_bkgColour;
+    vector<bool>    m_allowedChars;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

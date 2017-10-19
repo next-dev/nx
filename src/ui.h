@@ -99,6 +99,7 @@ public:
 
     virtual void render(Draw& draw) = 0;
     virtual void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) = 0;
+    virtual void text(char ch) = 0;
     virtual const vector<string>& commands() const { static vector<string> vs; return vs; }
 
     static Overlay* currentOverlay() { return ms_currentOverlay; }
@@ -159,6 +160,7 @@ public:
 
     virtual void draw(Draw& draw);
     virtual void keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt);
+    virtual void text(char ch);
 
 protected:
     //
@@ -166,6 +168,7 @@ protected:
     //
     virtual void onDraw(Draw& draw) = 0;
     virtual void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) = 0;
+    virtual void onText(char ch) = 0;
 
     //
     // Helper functions
@@ -198,6 +201,9 @@ public:
 
     static SelectableWindow& getSelected() { return *ms_currentWindow; }
 
+    virtual void onSelected() { }
+    virtual void onUnselected() { }
+    
 private:
     static SelectableWindow* ms_currentWindow;
 };

@@ -35,6 +35,7 @@ public:
 
     void render(Draw& draw) override;
     void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
+    void text(char ch) override;
 
     void showStatus();
 

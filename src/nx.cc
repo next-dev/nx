@@ -405,6 +405,11 @@ void Emulator::calculateKeys()
     getSpeccy().setKeyboardState(m_keyRows);
 }
 
+void Emulator::text(char ch)
+{
+    
+}
+
 void Emulator::joystickKey(Joystick key, bool down)
 {
     u8 bit = 0;
@@ -580,6 +585,10 @@ void Nx::run()
             case sf::Event::KeyReleased:
                 // Forward the key controls to the right mode handler
                 Overlay::currentOverlay()->key(event.key.code, false, event.key.shift, event.key.control, event.key.alt);
+                break;
+                    
+            case sf::Event::TextEntered:
+                Overlay::currentOverlay()->text((char)event.text.unicode);
                 break;
 
             default:
