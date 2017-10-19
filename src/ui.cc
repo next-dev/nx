@@ -418,7 +418,7 @@ void Ui::clear()
     m_attrs.assign(kUiWidth / 8 * kUiHeight / 8, 0x00);
 }
 
-void Ui::render()
+void Ui::render(bool flash)
 {
     //
     // Render the overlay
@@ -489,6 +489,11 @@ void Ui::render()
                 u8 paper = (a & 0x38) >> 3;
                 u8 bright = (a & 0x40) >> 3;
 
+                if (flash && ((a & 0x80) != 0))
+                {
+                    swap(ink, paper);
+                }
+
                 for (int bit = 0; bit < 8; ++bit)
                 {
                     *img++ = (p & 0x80) != 0 ? colours[ink + bright] : colours[paper + bright];
@@ -527,9 +532,9 @@ void Window::draw(Draw& draw)
     onDraw(draw);
 }
 
-void Window::keyPress(sf::Keyboard::Key key)
+void Window::keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
-    onKey(key);
+    onKey(key, shift, ctrl, alt);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -559,11 +564,11 @@ void SelectableWindow::draw(Draw& draw)
     onDraw(draw);
 }
 
-void SelectableWindow::keyPress(sf::Keyboard::Key key)
+void SelectableWindow::keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
     if (ms_currentWindow == this)
     {
-        onKey(key);
+        onKey(key, shift, ctrl, alt);
     }
 }
 

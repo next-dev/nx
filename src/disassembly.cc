@@ -15,8 +15,8 @@
 
 DisassemblyWindow::DisassemblyWindow(Spectrum& speccy)
     : SelectableWindow(speccy, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
-    , m_address(0)
-    , m_topAddress(0)
+    , m_address(0x8000)
+    , m_topAddress(0x8000)
 {
     adjustBar();
 }
@@ -174,7 +174,7 @@ void DisassemblyWindow::onDraw(Draw& draw)
 
 }
 
-void DisassemblyWindow::onKey(sf::Keyboard::Key key)
+void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
     switch (key)

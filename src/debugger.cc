@@ -22,6 +22,7 @@ Debugger::Debugger(Nx& nx)
         "~|Exit",
         "Tab|Switch window"})
     , m_disassemblyCommands({
+        "G|oto",
         "F5|Pause/Run",
         "F6|Step Over",
         "F7|Step In",
@@ -76,7 +77,7 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
         break;
 
     default:
-        SelectableWindow::getSelected().keyPress(key);
+        SelectableWindow::getSelected().keyPress(key, shift, ctrl, alt);
     }
 }
 

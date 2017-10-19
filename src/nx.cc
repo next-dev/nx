@@ -469,6 +469,7 @@ void Emulator::openFile()
 Nx::Nx(int argc, char** argv)
     : m_machine(new Spectrum(std::bind(&Nx::frame, this)))   // #todo: Allow the debugger to switch Spectrums, via proxy
     , m_quit(false)
+    , m_frameCounter(0)
     , m_ui(*m_machine)
 
     //--- Emulator state ------------------------------------------------------------
@@ -542,7 +543,7 @@ void Nx::render()
 {
     m_window.clear();
     m_window.draw(m_machine->getVideoSprite());
-    m_ui.render();
+    m_ui.render((m_frameCounter++ & 16) != 0);
     m_window.draw(m_ui.getSprite());
     m_window.display();
 }

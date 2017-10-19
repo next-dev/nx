@@ -79,7 +79,7 @@ void CpuStatusWindow::onDraw(Draw &draw)
     }
 }
 
-void CpuStatusWindow::onKey(sf::Keyboard::Key key)
+void CpuStatusWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
 
 }

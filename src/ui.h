@@ -53,8 +53,8 @@ public:
     void orPixel(int xCell, int yPixel, u8 bits);
     void xorPixel(int xCell, int yPixel, u8 bits);
     void pokeAttr(int xCell, int yCell, u8 attr);
-    u8 attr(Colour ink, Colour paper, bool bright);
-    string format(const char* format, ...);
+    static u8 attr(Colour ink, Colour paper, bool bright);
+    static string format(const char* format, ...);
 
     //
     // Level 1 - character rendering & attr painting
@@ -129,7 +129,7 @@ public:
     void clear();
 
     // Render the screen
-    void render();
+    void render(bool flash);
 
     // UI sprite
     sf::Sprite& getSprite();
@@ -158,14 +158,14 @@ public:
     Window(Spectrum& speccy, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright);
 
     virtual void draw(Draw& draw);
-    virtual void keyPress(sf::Keyboard::Key key);
+    virtual void keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt);
 
 protected:
     //
     // Hooks
     //
     virtual void onDraw(Draw& draw) = 0;
-    virtual void onKey(sf::Keyboard::Key key) = 0;
+    virtual void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) = 0;
 
     //
     // Helper functions
@@ -194,7 +194,7 @@ public:
     bool isSelected() const { return ms_currentWindow == this; }
 
     void draw(Draw& draw) override;
-    void keyPress(sf::Keyboard::Key key) override;
+    void keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
 
     static SelectableWindow& getSelected() { return *ms_currentWindow; }
 

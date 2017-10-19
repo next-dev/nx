@@ -103,6 +103,7 @@ private:
     Ui                  m_ui;
     Signal              m_renderSignal;
     bool                m_quit;
+    int                 m_frameCounter;
 
     // Emulator overlay
     Emulator            m_emulator;

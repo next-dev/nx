@@ -85,12 +85,11 @@ Z80::Z80(IExternals& ext)
 
 void Z80::restart()
 {
-    // #todo: Check these values
     AF() = 0xffff;
     BC() = 0xffff;
     DE() = 0xffff;
     HL() = 0xffff;
-    SP() = 0x0000;
+    SP() = 0xffff;
     PC() = 0x0000;
     IX() = 0xffff;
     IY() = 0xffff;

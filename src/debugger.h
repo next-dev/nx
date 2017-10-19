@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "ui.h"
+#include "editor.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // Memory dump
@@ -19,10 +19,12 @@ public:
 
 protected:
     void onDraw(Draw& draw) override;
-    void onKey(sf::Keyboard::Key key) override;
+    void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
 
 private:
     u16     m_address;
+    Editor  m_gotoEditor;
+    bool    m_enableGoto;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -41,7 +43,7 @@ public:
 
 private:
     void onDraw(Draw& draw) override;
-    void onKey(sf::Keyboard::Key key) override;
+    void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
 
     u16 backInstruction(u16 address);
     u16 disassemble(Disassembler& d, u16 address);
@@ -72,7 +74,7 @@ public:
 
 private:
     void onDraw(Draw& draw) override;
-    void onKey(sf::Keyboard::Key key) override;
+    void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
 
 protected:
     Z80&        m_z80;
@@ -81,27 +83,6 @@ protected:
 //----------------------------------------------------------------------------------------------------------------------
 // Debugger
 //----------------------------------------------------------------------------------------------------------------------
-
-// class Debugger
-// {
-// public:
-//     Debugger(Spectrum& speccy);
-// 
-//     void onKey(sf::Keyboard::Key key);
-//     void render();
-//     void renderOverlay(bool stopped);
-//     sf::Sprite& getSprite() { return m_ui.getSprite(); }
-// 
-//     MemoryDumpWindow&   getMemoryDumpWindow() { return m_memoryDumpWindow; }
-//     DisassemblyWindow&  getDisassemblyWindow() { return m_disassemblyWindow; }
-//     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
-// 
-// private:
-//     Ui                  m_ui;
-//     MemoryDumpWindow    m_memoryDumpWindow;
-//     DisassemblyWindow   m_disassemblyWindow;
-//     CpuStatusWindow     m_cpuStatusWindow;
-// };
 
 class Nx;
 
