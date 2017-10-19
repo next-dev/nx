@@ -1,8 +1,8 @@
 KEY     EMULATOR        DEBUGGER
 
 ~       Debugger        Emulator
-F1      Load file
-F2      Reset
+F1      
+F2      
 F3
 F4      Tape browser
 F5      Toggle Pause    Toggle Pause
@@ -13,3 +13,7 @@ F9                      Toggle breakpoint
 F10
 F11
 F12
+
+Ctrl+O  Open file
+Ctrl+R  Reset machine
+Ctrl+K  Toggle Kempston Joystick

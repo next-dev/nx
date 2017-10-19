@@ -135,6 +135,7 @@ Emulator::Emulator(Nx& nx)
     : Overlay(nx)
     , m_speccyKeys((int)Key::COUNT)
     , m_keyRows(8)
+    , m_counter(0)
 {
 
 }
@@ -145,6 +146,21 @@ void Emulator::render(Draw& draw)
     {
         draw.printSquashedString(70, 60, "Stopped", draw.attr(Colour::Black, Colour::White, true));
     }
+
+    u8 colour = draw.attr(Colour::Red, Colour::White, true);
+
+    if (m_counter > 0)
+    {
+        draw.printSquashedString(1, 62,
+            draw.format("Kempston Joystick: %s", getEmulator().usesKempstonJoystick() ? "Enabled" : "Disabled"),
+            colour);
+        --m_counter;
+    }
+}
+
+void Emulator::showStatus()
+{
+    m_counter = 100;
 }
 
 void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
@@ -154,207 +170,198 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
 
     using K = sf::Keyboard;
 
-    switch (key)
+    if (down && ctrl && !shift && !alt)
     {
-        //
-        // Numbers
-        //
-    case K::Num1:       key1 = Key::_1;         break;
-    case K::Num2:       key1 = Key::_2;         break;
-    case K::Num3:       key1 = Key::_3;         break;
-    case K::Num4:       key1 = Key::_4;         break;
-    case K::Num5:       key1 = Key::_5;         break;
-    case K::Num6:       key1 = Key::_6;         break;
-    case K::Num7:       key1 = Key::_7;         break;
-    case K::Num8:       key1 = Key::_8;         break;
-    case K::Num9:       key1 = Key::_9;         break;
-    case K::Num0:       key1 = Key::_0;         break;
-
-        //
-        // Letters
-        //
-    case K::A:          key1 = Key::A;          break;
-    case K::B:          key1 = Key::B;          break;
-    case K::C:          key1 = Key::C;          break;
-    case K::D:          key1 = Key::D;          break;
-    case K::E:          key1 = Key::E;          break;
-    case K::F:          key1 = Key::F;          break;
-    case K::G:          key1 = Key::G;          break;
-    case K::H:          key1 = Key::H;          break;
-    case K::I:          key1 = Key::I;          break;
-    case K::J:          key1 = Key::J;          break;
-    case K::K:          key1 = Key::K;          break;
-    case K::L:          key1 = Key::L;          break;
-    case K::M:          key1 = Key::M;          break;
-    case K::N:          key1 = Key::N;          break;
-    case K::O:          key1 = Key::O;          break;
-    case K::P:          key1 = Key::P;          break;
-    case K::Q:          key1 = Key::Q;          break;
-    case K::R:          key1 = Key::R;          break;
-    case K::S:          key1 = Key::S;          break;
-    case K::T:          key1 = Key::T;          break;
-    case K::U:          key1 = Key::U;          break;
-    case K::V:          key1 = Key::V;          break;
-    case K::W:          key1 = Key::W;          break;
-    case K::X:          key1 = Key::X;          break;
-    case K::Y:          key1 = Key::Y;          break;
-    case K::Z:          key1 = Key::Z;          break;
-
-        //
-        // Other keys on the Speccy
-        //
-    case K::LShift:     key1 = Key::Shift;      break;
-    case K::RShift:     key1 = Key::SymShift;   break;
-    case K::Return:     key1 = Key::Enter;      break;
-    case K::Space:      key1 = Key::Space;      break;
-
-        //
-        // Map PC keys to various keys on the Speccy
-        //
-    case K::BackSpace:  key1 = Key::Shift;      key2 = Key::_0;     break;
-    case K::Escape:     key1 = Key::Shift;      key2 = Key::Space;  break;
-
-    case K::SemiColon:
-        key1 = Key::SymShift;
-        key2 = shift ? Key::Z : Key::O;
-        break;
-
-    case K::Comma:
-        key1 = Key::SymShift;
-        key2 = shift ? Key::R : Key::N;
-        break;
-
-    case K::Period:
-        key1 = Key::SymShift;
-        key2 = shift ? Key::T : Key::M;
-        break;
-
-    case K::Quote:
-        key1 = Key::SymShift;
-        key2 = shift ? Key::P : Key::_7;
-        break;
-
-    case K::Slash:
-        key1 = Key::SymShift;
-        key2 = shift ? Key::C : Key::V;
-        break;
-
-    case K::Dash:
-        key1 = Key::SymShift;
-        key2 = shift ? Key::_0 : Key::J;
-        break;
-
-    case K::Equal:
-        key1 = Key::SymShift;
-        key2 = shift ? Key::K : Key::L;
-        break;
-
-    case K::Left:
-        if (getEmulator().usesKempstonJoystick())
+        switch (key)
         {
-            joystickKey(Joystick::Left, down);
-        }
-        else
-        {
-            key1 = Key::Shift;
-            key2 = Key::_5;
-        }
-        break;
+        case K::K:
+            getEmulator().setSetting("kempston", getEmulator().getSetting("kempston") == "yes" ? "no" : "yes");
+            getEmulator().updateSettings();
+            showStatus();
+            break;
 
-    case K::Down:
-        if (getEmulator().usesKempstonJoystick())
-        {
-            joystickKey(Joystick::Down, down);
-        }
-        else
-        {
-            key1 = Key::Shift;
-            key2 = Key::_6;
-        }
-        break;
+        case K::R:
+            getSpeccy().reset(false);
+            break;
 
-    case K::Up:
-        if (getEmulator().usesKempstonJoystick())
-        {
-            joystickKey(Joystick::Up, down);
-        }
-        else
-        {
-            key1 = Key::Shift;
-            key2 = Key::_7;
-        }
-        break;
+        case K::O:
+            fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
+            openFile();
+            break;
 
-    case K::Right:
-        if (getEmulator().usesKempstonJoystick())
-        {
-            joystickKey(Joystick::Right, down);
-        }
-        else
-        {
-            key1 = Key::Shift;
-            key2 = Key::_8;
-        }
-        break;
-
-    case K::Tab:
-        if (getEmulator().usesKempstonJoystick())
-        {
-            joystickKey(Joystick::Fire, down);
-        }
-        else
-        {
-            key1 = Key::Shift;
-            key2 = Key::SymShift;
-        }
-        break;
-
-    case K::Tilde:
-        if (down) getEmulator().toggleDebugger();
-        break;
-
-    case K::F2:
-        if (down) getSpeccy().reset(false);
-        break;
-
-    case K::F5:
-        if (down) getEmulator().togglePause(false);
-        break;
-
-#ifdef _WIN32
-    case K::F1:
-        // File Open
-    {
-        fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
-
-        // Last path opened
-        static char path[2048] = { 0 };
-
-        // Open file
-        WindowFileOpenConfig cfg = {
-            "Open file",
-            path,
-            "NX files",
-            "*.sna"
-        };
-        const char* fileName = windowFileOpen(&cfg);
-        if (!fileName) break;
-
-        // Store the path for next time
-        const char* end = strrchr(fileName, '\\');
-        strncpy(path, (const char *)fileName, (size_t)(path - end));
-
-        if (!getEmulator().loadSnapshot(fileName))
-        {
-            MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
+        default:
+            break;
         }
     }
-    break;
-#endif
+    else
+    {
+        switch (key)
+        {
+            //
+            // Numbers
+            //
+        case K::Num1:       key1 = Key::_1;         break;
+        case K::Num2:       key1 = Key::_2;         break;
+        case K::Num3:       key1 = Key::_3;         break;
+        case K::Num4:       key1 = Key::_4;         break;
+        case K::Num5:       key1 = Key::_5;         break;
+        case K::Num6:       key1 = Key::_6;         break;
+        case K::Num7:       key1 = Key::_7;         break;
+        case K::Num8:       key1 = Key::_8;         break;
+        case K::Num9:       key1 = Key::_9;         break;
+        case K::Num0:       key1 = Key::_0;         break;
 
-    default:
-        // If releasing a non-speccy key, clear all key map.
-        fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
+            //
+            // Letters
+            //
+        case K::A:          key1 = Key::A;          break;
+        case K::B:          key1 = Key::B;          break;
+        case K::C:          key1 = Key::C;          break;
+        case K::D:          key1 = Key::D;          break;
+        case K::E:          key1 = Key::E;          break;
+        case K::F:          key1 = Key::F;          break;
+        case K::G:          key1 = Key::G;          break;
+        case K::H:          key1 = Key::H;          break;
+        case K::I:          key1 = Key::I;          break;
+        case K::J:          key1 = Key::J;          break;
+        case K::K:          key1 = Key::K;          break;
+        case K::L:          key1 = Key::L;          break;
+        case K::M:          key1 = Key::M;          break;
+        case K::N:          key1 = Key::N;          break;
+        case K::O:          key1 = Key::O;          break;
+        case K::P:          key1 = Key::P;          break;
+        case K::Q:          key1 = Key::Q;          break;
+        case K::R:          key1 = Key::R;          break;
+        case K::S:          key1 = Key::S;          break;
+        case K::T:          key1 = Key::T;          break;
+        case K::U:          key1 = Key::U;          break;
+        case K::V:          key1 = Key::V;          break;
+        case K::W:          key1 = Key::W;          break;
+        case K::X:          key1 = Key::X;          break;
+        case K::Y:          key1 = Key::Y;          break;
+        case K::Z:          key1 = Key::Z;          break;
+
+            //
+            // Other keys on the Speccy
+            //
+        case K::LShift:     key1 = Key::Shift;      break;
+        case K::RShift:     key1 = Key::SymShift;   break;
+        case K::Return:     key1 = Key::Enter;      break;
+        case K::Space:      key1 = Key::Space;      break;
+
+            //
+            // Map PC keys to various keys on the Speccy
+            //
+        case K::BackSpace:  key1 = Key::Shift;      key2 = Key::_0;     break;
+        case K::Escape:     key1 = Key::Shift;      key2 = Key::Space;  break;
+
+        case K::SemiColon:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::Z : Key::O;
+            break;
+
+        case K::Comma:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::R : Key::N;
+            break;
+
+        case K::Period:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::T : Key::M;
+            break;
+
+        case K::Quote:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::P : Key::_7;
+            break;
+
+        case K::Slash:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::C : Key::V;
+            break;
+
+        case K::Dash:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::_0 : Key::J;
+            break;
+
+        case K::Equal:
+            key1 = Key::SymShift;
+            key2 = shift ? Key::K : Key::L;
+            break;
+
+        case K::Left:
+            if (getEmulator().usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Left, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_5;
+            }
+            break;
+
+        case K::Down:
+            if (getEmulator().usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Down, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_6;
+            }
+            break;
+
+        case K::Up:
+            if (getEmulator().usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Up, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_7;
+            }
+            break;
+
+        case K::Right:
+            if (getEmulator().usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Right, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::_8;
+            }
+            break;
+
+        case K::Tab:
+            if (getEmulator().usesKempstonJoystick())
+            {
+                joystickKey(Joystick::Fire, down);
+            }
+            else
+            {
+                key1 = Key::Shift;
+                key2 = Key::SymShift;
+            }
+            break;
+
+        case K::Tilde:
+            if (down) getEmulator().toggleDebugger();
+            break;
+
+        case K::F5:
+            if (down) getEmulator().togglePause(false);
+            break;
+
+        default:
+            // If releasing a non-speccy key, clear all key map.
+            fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
+        }
     }
 
     if (key1 != Key::COUNT)
@@ -420,6 +427,39 @@ void Emulator::joystickKey(Joystick key, bool down)
     {
         getSpeccy().setKempstonState(getSpeccy().getKempstonState() & ~bit);
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// File opening
+//----------------------------------------------------------------------------------------------------------------------
+
+void Emulator::openFile()
+{
+#ifdef _WIN32
+    // Last path opened
+    static char path[2048] = { 0 };
+
+    // Open file
+    WindowFileOpenConfig cfg = {
+        "Open file",
+        path,
+        "NX files",
+        "*.sna"
+    };
+    const char* fileName = windowFileOpen(&cfg);
+
+    if (fileName)
+    {
+        // Store the path for next time
+        const char* end = strrchr(fileName, '\\');
+        strncpy(path, (const char *)fileName, (size_t)(path - end));
+
+        if (!getEmulator().loadSnapshot(fileName))
+        {
+            MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
+        }
+    }
+#endif
 }
 
 //----------------------------------------------------------------------------------------------------------------------

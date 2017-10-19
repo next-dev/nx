@@ -36,6 +36,10 @@ public:
     void render(Draw& draw) override;
     void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
 
+    void showStatus();
+
+    void openFile();
+
 private:
     void joystickKey(Joystick key, bool down);
     void calculateKeys();
@@ -44,6 +48,7 @@ private:
     // Keyboard state
     vector<bool>        m_speccyKeys;
     vector<u8>          m_keyRows;
+    int                 m_counter;
 
 
 };
