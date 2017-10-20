@@ -111,25 +111,33 @@ void MemoryDumpWindow::onText(char ch)
         switch(ch)
         {
             case 10:
+            case 13:
             {
                 m_enableGoto = 0;
                 u16 t = 0;
                 auto view = m_gotoEditor.getText();
                 size_t len = view.size();
-                for (size_t i = 0; i < len; ++i)
+                if (len == 0)
                 {
-                    t *= 16;
-                    char c = view[i];
-                    if (c >= '0' && c <= '9') t += (c - '0');
-                    else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
-                    else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
+                    t = m_speccy.getZ80().HL();
+                }
+                else
+                {
+                    for (size_t i = 0; i < len; ++i)
+                    {
+                        t *= 16;
+                        char c = view[i];
+                        if (c >= '0' && c <= '9') t += (c - '0');
+                        else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
+                        else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
+                    }
                 }
                 
                 m_address = t;
             }
                 
             default:
-                return m_gotoEditor.text(ch);
+                m_gotoEditor.text(ch);
         }
     }
 }

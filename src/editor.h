@@ -21,11 +21,25 @@ public:
 
     char operator[] (size_t n) const
     {
-        return (n < m_end[0])
-            ? m_array[m_start[0] + n]
-            : (n < m_end[1])
-                ? m_array[m_start[1] + n]
-                : ' ';
+        //  +-----+-------+------+
+        //  |XXXXX|       |XXXXXX|
+        //  +-----+-------+------+
+        //  S0    E0      S1     E1
+
+        size_t l0 = m_end[0] - m_start[0];
+        size_t l1 = m_end[1] - m_start[1];
+
+        if ((n + m_start[0]) < m_end[0])
+        {
+            // Index is first part
+            return m_array[m_start[0] + n];
+        }
+        else if (n - l0 < l1)
+        {
+            // Index is in second part
+            return m_array[m_start[1] + (n - l0)];
+        }
+        else return ' ';
     }
     
     size_t size() const

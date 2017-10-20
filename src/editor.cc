@@ -55,7 +55,7 @@ SplitView EditorData::getLine(int n) const
     }
     else
     {
-        int i = m_lines[n];
+        size_t i = m_lines[n];
         for (; m_buffer.begin() + i < m_buffer.end() && m_buffer[i] != '\n'; ++i) ;
         return SplitView(m_buffer, m_lines[n], i);
     }
@@ -68,8 +68,8 @@ SplitView EditorData::getText() const
 
 size_t EditorData::lineLength(int n) const
 {
-    int start = m_lines[n];
-    int end;
+    size_t start = m_lines[n];
+    size_t end;
     if (n == m_currentLine)
     {
         end = m_endBuffer;
@@ -212,7 +212,7 @@ bool Editor::text(char ch)
                 {
                     if (--m_currentX < 0)
                     {
-                        m_currentX = m_data.lineLength(--m_currentLine);
+                        m_currentX = (int)m_data.lineLength(--m_currentLine);
                     }
                 }
             }

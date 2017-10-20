@@ -15,6 +15,7 @@ Debugger::Debugger(Nx& nx)
     , m_disassemblyWindow(nx.getSpeccy())
     , m_cpuStatusWindow(nx.getSpeccy())
     , m_memoryDumpCommands({
+        "G|oto",
         "Up|Scroll up",
         "Down|Scroll down",
         "PgUp|Page up",
