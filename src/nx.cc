@@ -756,7 +756,6 @@ void Nx::stepOver()
 
     // #todo: use assembler and static analysis to better support where to place the BP (e.g. trailing params).
 
-    bool breakpointHit;
     m_runMode = RunMode::Normal;
 }
 
