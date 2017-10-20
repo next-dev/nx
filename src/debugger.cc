@@ -11,9 +11,9 @@
 
 Debugger::Debugger(Nx& nx)
     : Overlay(nx)
-    , m_memoryDumpWindow(nx.getSpeccy())
-    , m_disassemblyWindow(nx.getSpeccy())
-    , m_cpuStatusWindow(nx.getSpeccy())
+    , m_memoryDumpWindow(nx)
+    , m_disassemblyWindow(nx)
+    , m_cpuStatusWindow(nx)
     , m_memoryDumpCommands({
         "G|oto",
         "Up|Scroll up",
@@ -25,6 +25,7 @@ Debugger::Debugger(Nx& nx)
     , m_disassemblyCommands({
         "G|oto",
         "F5|Pause/Run",
+        "Ctrl-F5|Run to",
         "F6|Step Over",
         "F7|Step In",
         "F9|Breakpoint",
@@ -47,37 +48,44 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
     using K = sf::Keyboard::Key;
     if (!down) return;
 
-    switch (key)
+    if (!shift && !ctrl && !alt)
     {
-    case K::Tilde:
-        getEmulator().toggleDebugger();
-        break;
-
-    case K::F5:
-        getEmulator().togglePause(false);
-        break;
-
-    case K::F6:
-        getEmulator().stepOver();
-        break;
-
-    case K::F7:
-        getEmulator().stepIn();
-        break;
-
-    case K::Tab:
-        // #todo: put cycling logic into SelectableWindow
-        if (getDisassemblyWindow().isSelected())
+        switch (key)
         {
-            getMemoryDumpWindow().Select();
-        }
-        else
-        {
-            getDisassemblyWindow().Select();
-        }
-        break;
+        case K::Tilde:
+            getEmulator().toggleDebugger();
+            break;
 
-    default:
+        case K::F5:
+            getEmulator().togglePause(false);
+            break;
+
+        case K::F6:
+            getEmulator().stepOver();
+            break;
+
+        case K::F7:
+            getEmulator().stepIn();
+            break;
+
+        case K::Tab:
+            // #todo: put cycling logic into SelectableWindow
+            if (getDisassemblyWindow().isSelected())
+            {
+                getMemoryDumpWindow().Select();
+            }
+            else
+            {
+                getDisassemblyWindow().Select();
+            }
+            break;
+
+        default:
+            SelectableWindow::getSelected().keyPress(key, shift, ctrl, alt);
+        }
+    }
+    else
+    {
         SelectableWindow::getSelected().keyPress(key, shift, ctrl, alt);
     }
 }

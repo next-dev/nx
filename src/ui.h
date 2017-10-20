@@ -153,10 +153,12 @@ private:
 // Window class
 //----------------------------------------------------------------------------------------------------------------------
 
+class Nx;
+
 class Window
 {
 public:
-    Window(Spectrum& speccy, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright);
+    Window(Nx& nx, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright);
 
     virtual void draw(Draw& draw);
     virtual void keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt);
@@ -175,7 +177,7 @@ protected:
     //
 
 protected:
-    Spectrum&       m_speccy;
+    Nx&             m_nx;
     int             m_x;
     int             m_y;
     int             m_width;
@@ -191,7 +193,7 @@ protected:
 class SelectableWindow : public Window
 {
 public:
-    SelectableWindow(Spectrum& speccy, int x, int y, int width, int height, std::string title, Colour ink, Colour paper);
+    SelectableWindow(Nx& nx, int x, int y, int width, int height, std::string title, Colour ink, Colour paper);
 
     void Select();
     bool isSelected() const { return ms_currentWindow == this; }

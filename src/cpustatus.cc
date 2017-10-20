@@ -3,15 +3,15 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "debugger.h"
-#include "spectrum.h"
+#include "nx.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // CPU Status window
 //----------------------------------------------------------------------------------------------------------------------
 
-CpuStatusWindow::CpuStatusWindow(Spectrum& speccy)
-    : Window(speccy, 45, 1, 34, 20, "CPU Status", Colour::Black, Colour::White, false)
-    , m_z80(speccy.getZ80())
+CpuStatusWindow::CpuStatusWindow(Nx& nx)
+    : Window(nx, 45, 1, 34, 20, "CPU Status", Colour::Black, Colour::White, false)
+    , m_z80(nx.getSpeccy().getZ80())
 {
 
 }
@@ -42,7 +42,7 @@ void CpuStatusWindow::onDraw(Draw &draw)
         m_z80.AF_(), m_z80.BC_(), m_z80.DE_(), m_z80.HL_()), colour);
     draw.printString(m_x + 1, m_y + 6, draw.format("%04X %04X %04X %04X %04X",
         m_z80.SP(), m_z80.IX(), m_z80.IY(), m_z80.IR(), m_z80.MP()), colour);
-    draw.printString(m_x + 1, m_y + 9, draw.format("%05d", (int)m_speccy.getTState()), colour);
+    draw.printString(m_x + 1, m_y + 9, draw.format("%05d", (int)m_nx.getSpeccy().getTState()), colour);
 
     // Print out the flags
     u8 f = m_z80.F();
@@ -74,7 +74,7 @@ void CpuStatusWindow::onDraw(Draw &draw)
     i64 ts = 0;
     for (int i = 0; i < 16; ++i)
     {
-        draw.printString(m_x + 29, m_y + 3 + i, draw.format("%04X", m_speccy.peek16(a, ts)), colour);
+        draw.printString(m_x + 29, m_y + 3 + i, draw.format("%04X", m_nx.getSpeccy().peek16(a, ts)), colour);
         a += 2;
     }
 }

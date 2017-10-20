@@ -43,6 +43,8 @@ solution "nx"
 		files {
             "../src/**.h",
 			"../src/**.cc",
+            "../README.md",
+            "../etc/keys.txt"
 		}
         includedirs {
             "../include",

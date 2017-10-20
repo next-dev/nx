@@ -514,8 +514,8 @@ sf::Sprite& Ui::getSprite()
 // Window base class
 //----------------------------------------------------------------------------------------------------------------------
 
-Window::Window(Spectrum& speccy, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright)
-    : m_speccy(speccy)
+Window::Window(Nx& nx, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright)
+    : m_nx(nx)
     , m_x(x)
     , m_y(y)
     , m_width(width)
@@ -548,8 +548,8 @@ void Window::text(char ch)
 
 SelectableWindow* SelectableWindow::ms_currentWindow = 0;
 
-SelectableWindow::SelectableWindow(Spectrum& speccy, int x, int y, int width, int height, std::string title, Colour ink, Colour paper)
-    : Window(speccy, x, y, width, height, title, ink, paper, false)
+SelectableWindow::SelectableWindow(Nx& nx, int x, int y, int width, int height, std::string title, Colour ink, Colour paper)
+    : Window(nx, x, y, width, height, title, ink, paper, false)
 {
 
 }

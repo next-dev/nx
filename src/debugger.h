@@ -15,7 +15,7 @@
 class MemoryDumpWindow final : public SelectableWindow
 {
 public:
-    MemoryDumpWindow(Spectrum& speccy);
+    MemoryDumpWindow(Nx& nx);
 
 protected:
     void onDraw(Draw& draw) override;
@@ -38,7 +38,7 @@ class Disassembler;
 class DisassemblyWindow final : public SelectableWindow
 {
 public:
-    DisassemblyWindow(Spectrum& speccy);
+    DisassemblyWindow(Nx& nx);
 
     void adjustBar();
     void setCursor(u16 address);
@@ -78,7 +78,7 @@ class Z80;
 class CpuStatusWindow final : public Window
 {
 public:
-    CpuStatusWindow(Spectrum& speccy);
+    CpuStatusWindow(Nx& nx);
 
 private:
     void onDraw(Draw& draw) override;
