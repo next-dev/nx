@@ -3,7 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "debugger.h"
-#include "spectrum.h"
+#include "nx.h"
 
 #include <cassert>
 
@@ -13,8 +13,8 @@
 
 #include "disasm.h"
 
-DisassemblyWindow::DisassemblyWindow(Spectrum& speccy)
-    : SelectableWindow(speccy, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
+DisassemblyWindow::DisassemblyWindow(Nx& nx)
+    : SelectableWindow(nx, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
     , m_address(0x0000)
     , m_topAddress(0x0000)
     , m_gotoEditor(6, 23, 43, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 4, 0)
@@ -155,9 +155,9 @@ void DisassemblyWindow::onDraw(Draw& draw)
         u16 next = disassemble(d, a);
         u8 colour = (a == m_address)
             ? selectColour
-            : (a == m_speccy.getZ80().PC())
+            : (a == m_nx.getSpeccy().getZ80().PC())
                 ? pcColour
-                : m_speccy.hasUserBreakpointAt(a)
+                : m_nx.getSpeccy().hasUserBreakpointAt(a)
                     ? breakpointColour
                     : row & 1
                         ? m_bkgColour
@@ -168,7 +168,7 @@ void DisassemblyWindow::onDraw(Draw& draw)
         draw.printString(m_x + 21, m_y + row, d.opCode().c_str(), colour);
         draw.printString(m_x + 26, m_y + row, d.operands().c_str(), colour);
 
-        if (m_speccy.hasUserBreakpointAt(a))
+        if (m_nx.getSpeccy().hasUserBreakpointAt(a))
         {
             draw.printChar(m_x + 1, m_y + row, ')', colour, gGfxFont);
         }
@@ -187,45 +187,64 @@ void DisassemblyWindow::onDraw(Draw& draw)
 void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
-    switch (key)
+
+    if (!shift && !ctrl && !alt)
     {
-    case K::Up:
-        cursorUp();
-        adjustBar();
-        break;
-
-    case K::Down:
-        cursorDown();
-        adjustBar();
-        break;
-
-    case K::PageUp:
-        for (int i = 0; i < (m_height - 2); ++i)
+        switch (key)
         {
+        case K::Up:
             cursorUp();
-        }
-        adjustBar();
-        break;
+            adjustBar();
+            break;
 
-    case K::PageDown:
-        for (int i = 0; i < (m_height - 2); ++i)
-        {
+        case K::Down:
             cursorDown();
+            adjustBar();
+            break;
+
+        case K::PageUp:
+            for (int i = 0; i < (m_height - 2); ++i)
+            {
+                cursorUp();
+            }
+            adjustBar();
+            break;
+
+        case K::PageDown:
+            for (int i = 0; i < (m_height - 2); ++i)
+            {
+                cursorDown();
+            }
+            adjustBar();
+            break;
+
+        case K::F9:
+            m_nx.getSpeccy().toggleBreakpoint(m_address);
+            break;
+
+        case K::G:
+            m_gotoEditor.clear();
+            m_enableGoto = 1;
+            break;
+
+        default:
+            break;
         }
-        adjustBar();
-        break;
+    }
+    else if (!shift && ctrl && !alt)
+    {
+        switch (key)
+        {
+        case K::F5:
+            // Run to
+            m_nx.getSpeccy().addTemporaryBreakpoint(m_address);
+            m_nx.setRunMode(RunMode::Normal);
+            if (m_nx.getRunMode() == RunMode::Stopped) m_nx.togglePause(false);
+            break;
 
-    case K::F9:
-        m_speccy.toggleBreakpoint(m_address);
-        break;
-            
-    case K::G:
-        m_gotoEditor.clear();
-        m_enableGoto = 1;
-        break;
-
-    default:
-        break;
+        default:
+            break;
+        }
     }
 }
 
@@ -253,7 +272,7 @@ void DisassemblyWindow::onText(char ch)
                 size_t len = view.size();
                 if (len == 0)
                 {
-                    t = m_speccy.getZ80().PC();
+                    t = m_nx.getSpeccy().getZ80().PC();
                 }
                 else
                 {
@@ -301,10 +320,10 @@ u16 DisassemblyWindow::backInstruction(u16 address)
 u16 DisassemblyWindow::disassemble(Disassembler& d, u16 address)
 {
     return d.disassemble(address,
-        m_speccy.peek(address + 0),
-        m_speccy.peek(address + 1),
-        m_speccy.peek(address + 2),
-        m_speccy.peek(address + 3));
+        m_nx.getSpeccy().peek(address + 0),
+        m_nx.getSpeccy().peek(address + 1),
+        m_nx.getSpeccy().peek(address + 2),
+        m_nx.getSpeccy().peek(address + 3));
 }
 
 u16 DisassemblyWindow::disassemble(u16 address)

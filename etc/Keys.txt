@@ -6,6 +6,7 @@ F2
 F3
 F4      Tape browser
 F5      Toggle Pause    Toggle Pause
+C+F5                    Run to
 F6                      Step over
 F7                      Step in
 F8

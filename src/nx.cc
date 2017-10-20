@@ -747,16 +747,57 @@ void Nx::stepIn()
 
 void Nx::stepOver()
 {
-    assert(isDebugging());
-    if (m_runMode == RunMode::Normal) togglePause(false);
-
     u16 pc = getSpeccy().getZ80().PC();
-    pc = m_debugger.getDisassemblyWindow().disassemble(pc);
-    m_machine->addTemporaryBreakpoint(pc);
+    if (isCallInstructionAt(pc))
+    {
+        assert(isDebugging());
+        if (m_runMode == RunMode::Normal) togglePause(false);
 
-    // #todo: use assembler and static analysis to better support where to place the BP (e.g. trailing params).
+        // #todo: use assembler and static analysis to better support where to place the BP (e.g. trailing params).
+        pc = nextInstructionAt(pc);
+        m_machine->addTemporaryBreakpoint(pc);
+        m_runMode = RunMode::Normal;
+    }
+    else
+    {
+        stepIn();
+    }
+}
 
-    m_runMode = RunMode::Normal;
+u16 Nx::nextInstructionAt(u16 address)
+{
+    return m_debugger.getDisassemblyWindow().disassemble(address);
+}
+
+bool Nx::isCallInstructionAt(u16 address)
+{
+    u8 opCode = getSpeccy().peek(address);
+
+    switch (opCode)
+    {
+    case 0xc4:  // call nz,nnnn
+    case 0xcc:  // call z,nnnn
+    case 0xcd:  // call nnnn
+    case 0xd4:  // call nc,nnnn
+    case 0xdc:  // call c,nnnn
+    case 0xe4:  // call po,nnnn
+    case 0xec:  // call pe,nnnn
+    case 0xf4:  // call p,nnnn
+    case 0xfc:  // call m,nnnn
+
+    case 0xc7:  // rst 0
+    case 0xcf:  // rst 8
+    case 0xd7:  // rst 16
+    case 0xdf:  // rst 24
+    case 0xe7:  // rst 32
+    case 0xef:  // rst 40
+    case 0xf7:  // rst 48
+    case 0xff:  // rst 56
+        return true;
+
+    default:
+        return false;
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

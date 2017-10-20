@@ -3,7 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "debugger.h"
-#include "spectrum.h"
+#include "nx.h"
 
 #include <sstream>
 #include <iomanip>
@@ -12,8 +12,8 @@
 // Memory dump class
 //----------------------------------------------------------------------------------------------------------------------
 
-MemoryDumpWindow::MemoryDumpWindow(Spectrum& speccy)
-    : SelectableWindow(speccy, 1, 1, 43, 20, "Memory Viewer", Colour::Black, Colour::White)
+MemoryDumpWindow::MemoryDumpWindow(Nx& nx)
+    : SelectableWindow(nx, 1, 1, 43, 20, "Memory Viewer", Colour::Black, Colour::White)
     , m_address(0)
     , m_gotoEditor(6, 2, 43, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 4, 0)
     , m_enableGoto(0)
@@ -31,12 +31,12 @@ void MemoryDumpWindow::onDraw(Draw& draw)
         ss << setfill('0') << setw(4) << hex << uppercase << a << " : ";
         for (int b = 0; b < 8; ++b)
         {
-            ss << setfill('0') << setw(2) << hex << uppercase << (int)m_speccy.peek(a + b) << " ";
+            ss << setfill('0') << setw(2) << hex << uppercase << (int)m_nx.getSpeccy().peek(a + b) << " ";
         }
         ss << "  ";
         for (int b = 0; b < 8; ++b)
         {
-            char ch = m_speccy.peek(a + b);
+            char ch = m_nx.getSpeccy().peek(a + b);
             ss << ((ch < 32 || ch > 127) ? '.' : ch);
         }
         draw.printString(m_x + 1, m_y + i, ss.str(), m_bkgColour);
@@ -119,7 +119,7 @@ void MemoryDumpWindow::onText(char ch)
                 size_t len = view.size();
                 if (len == 0)
                 {
-                    t = m_speccy.getZ80().HL();
+                    t = m_nx.getSpeccy().getZ80().HL();
                 }
                 else
                 {

@@ -91,6 +91,7 @@ public:
     void stepOver();
     void stepIn();
     RunMode getRunMode() const { return m_runMode; }
+    void setRunMode(RunMode runMode) { m_runMode = m_runMode; }
 
     // Peripherals
     bool usesKempstonJoystick() const { return m_kempstonJoystick; }
@@ -98,6 +99,10 @@ public:
 private:
     // File routines
     vector<u8> loadFile(string fileName);
+
+    // Debugging helper functions
+    u16 nextInstructionAt(u16 address);
+    bool isCallInstructionAt(u16 address);
 
 private:
     Spectrum*           m_machine;
