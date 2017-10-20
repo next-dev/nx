@@ -149,8 +149,9 @@ public:
     // Debugger interface
     //------------------------------------------------------------------------------------------------------------------
 
-    void            toggleBreakpoint    (u16 address);
-    bool            hasUserBreakpointAt (u16 address);
+    void            toggleBreakpoint        (u16 address);
+    void            addTemporaryBreakpoint  (u16 address);
+    bool            hasUserBreakpointAt     (u16 address);
 
 private:
     //
@@ -180,7 +181,6 @@ private:
     };
 
     vector<Breakpoint>::iterator    findBreakpoint          (u16 address);
-    void                            addTemporaryBreakpoint  (u16 address);
     bool                            shouldBreak             (u16 address);
 
 

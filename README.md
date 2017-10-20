@@ -55,7 +55,7 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 | PgUp/PgDn        | Page through current window                                      |
 | Tab              | Cycle through current window                                     |
 | F5               | Toggle pause.  Pausing while running will bring up the debugger. |
-| F6               | Step over.  Will pause when running.  (Currently unimplemented). |
+| F6               | Step over.  Will pause when running.                             |
 | F7               | Step in.  Will pause when running.                               |
 | F9               | Toggle breakpoint.                                               |
 

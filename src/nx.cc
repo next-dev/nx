@@ -750,9 +750,14 @@ void Nx::stepOver()
     assert(isDebugging());
     if (m_runMode == RunMode::Normal) togglePause(false);
 
+    u16 pc = getSpeccy().getZ80().PC();
+    pc = m_debugger.getDisassemblyWindow().disassemble(pc);
+    m_machine->addTemporaryBreakpoint(pc);
+
+    // #todo: use assembler and static analysis to better support where to place the BP (e.g. trailing params).
+
     bool breakpointHit;
-    m_machine->update(RunMode::StepIn, breakpointHit);
-    m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
+    m_runMode = RunMode::Normal;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

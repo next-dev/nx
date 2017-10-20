@@ -307,6 +307,12 @@ u16 DisassemblyWindow::disassemble(Disassembler& d, u16 address)
         m_speccy.peek(address + 3));
 }
 
+u16 DisassemblyWindow::disassemble(u16 address)
+{
+    Disassembler d;
+    return disassemble(d, address);
+}
+
 void DisassemblyWindow::onUnselected()
 {
     m_enableGoto = 0;

@@ -42,6 +42,8 @@ public:
 
     void adjustBar();
     void setCursor(u16 address);
+    u16 disassemble(Disassembler& d, u16 address);
+    u16 disassemble(u16 address);
 
 private:
     void onDraw(Draw& draw) override;
@@ -50,7 +52,6 @@ private:
     void onUnselected() override;
 
     u16 backInstruction(u16 address);
-    u16 disassemble(Disassembler& d, u16 address);
 
     void setView(u16 newTopAddress);
     int findViewAddress(u16 address);

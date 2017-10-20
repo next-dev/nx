@@ -8,7 +8,7 @@ F4      Tape browser
 F5      Toggle Pause    Toggle Pause
 F6                      Step over
 F7                      Step in
-F8                      Step out
+F8
 F9                      Toggle breakpoint
 F10
 F11
