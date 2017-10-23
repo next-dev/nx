@@ -459,12 +459,29 @@ void Emulator::openFile()
         const char* end = strrchr(fileName, '\\');
         strncpy(path, (const char *)fileName, (size_t)(path - end));
 
-        if (!getEmulator().loadSnapshot(fileName))
+        if (!m_nx.openFile(fileName))
         {
             MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
         }
     }
 #endif
+}
+
+bool Nx::openFile(string fileName)
+{
+    // Get extension
+    auto extIt = fileName.find_last_of('.');
+    if (extIt != string::npos)
+    {
+        string ext = fileName.substr(extIt + 1);
+        
+        if (ext == "sna")
+        {
+            return loadSnapshot(fileName);
+        }
+    }
+    
+    return false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -523,7 +540,7 @@ Nx::Nx(int argc, char** argv)
         }
         else
         {
-            loadSnapshot(arg);
+            openFile(arg);
         }
     }
     

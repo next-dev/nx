@@ -76,8 +76,8 @@ public:
     // Generate a single frame, including processing audio.
     void frame();
     
-    // Load a snapshot
-    bool loadSnapshot(string fileName);
+    // Open a file, detect it's type and try to open it
+    bool openFile(string fileName);
     
     // Settings
     void setSetting(string key, string value);
@@ -97,6 +97,9 @@ public:
     bool usesKempstonJoystick() const { return m_kempstonJoystick; }
     
 private:
+    // Load a snapshot
+    bool loadSnapshot(string fileName);
+    
     // File routines
     vector<u8> loadFile(string fileName);
 
