@@ -7,6 +7,7 @@
 
 #include "spectrum.h"
 #include "debugger.h"
+#include "tape.h"
 
 #include <SFML/Graphics.hpp>
 #include <map>
@@ -86,7 +87,6 @@ public:
 
     // Debugging
     bool isDebugging() const { return Overlay::currentOverlay() == &m_debugger; }
-    void toggleDebugger();
     void togglePause(bool breakpointHit);
     void stepOver();
     void stepIn();
@@ -95,10 +95,16 @@ public:
 
     // Peripherals
     bool usesKempstonJoystick() const { return m_kempstonJoystick; }
+
+    // Mode selection
+    void showTapeBrowser();
+    void toggleDebugger();
+    void hideAll();
     
 private:
     // Load a snapshot
     bool loadSnapshot(string fileName);
+    bool loadTape(string fileName);
     
     // File routines
     vector<u8> loadFile(string fileName);
@@ -129,6 +135,9 @@ private:
 
     // Peripherals
     bool                m_kempstonJoystick;
+
+    // Tape emulation
+    TapeBrowser         m_tapeBrowser;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

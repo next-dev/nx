@@ -189,6 +189,10 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             openFile();
             break;
 
+        case K::T:
+            getEmulator().showTapeBrowser();
+            break;
+
         default:
             break;
         }
@@ -459,7 +463,7 @@ void Emulator::openFile()
         const char* end = strrchr(fileName, '\\');
         strncpy(path, (const char *)fileName, (size_t)(path - end));
 
-        if (!m_nx.openFile(fileName))
+        if (!getEmulator().openFile(fileName))
         {
             MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
         }
@@ -476,6 +480,10 @@ bool Nx::openFile(string fileName)
         string ext = fileName.substr(extIt + 1);
         
         if (ext == "sna")
+        {
+            return loadSnapshot(fileName);
+        }
+        else if (ext == "tap")
         {
             return loadSnapshot(fileName);
         }
@@ -507,6 +515,9 @@ Nx::Nx(int argc, char** argv)
 
     //--- Peripherals ---------------------------------------------------------------
     , m_kempstonJoystick(false)
+
+    //--- Tape Browser --------------------------------------------------------------
+    , m_tapeBrowser(*this)
 {
     sf::FileInputStream f;
 #ifdef __APPLE__
@@ -704,6 +715,24 @@ bool Nx::loadSnapshot(string fileName)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Tape loading
+//----------------------------------------------------------------------------------------------------------------------
+
+bool Nx::loadTape(string fileName)
+{
+    vector<u8> file = loadFile(fileName);
+    if (file.size())
+    {
+        m_tapeBrowser.loadTape(file);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Settings
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -815,6 +844,20 @@ bool Nx::isCallInstructionAt(u16 address)
     default:
         return false;
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Tape browser
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::showTapeBrowser()
+{
+    m_tapeBrowser.select();
+}
+
+void Nx::hideAll()
+{
+    m_emulator.select();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
