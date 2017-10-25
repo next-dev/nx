@@ -73,8 +73,16 @@ public:
     // Get the header information for a block
     Header getHeader(int i) const;
 
+    //
+    // Tape header control
+    //
+
+    void selectBlock(int i);
+    int getCurrentBlock() const { return m_currentBlock; }
+
 private:
     vector<Block> m_blocks;
+    int m_currentBlock;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -87,7 +95,7 @@ public:
     TapeWindow(Nx& nx);
 
     void reset();
-    void setTape(Tape *tape)    { m_tape = tape; reset(); }
+    void setTape(Tape *tape)    { m_tape = tape; reset(); m_tape->selectBlock(0); }
     void ejectTape()            { m_tape = nullptr; reset(); }
 
 protected:

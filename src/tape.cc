@@ -12,6 +12,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 Tape::Tape()
+    : m_currentBlock(-1)
 {
 
 }
@@ -99,6 +100,11 @@ Tape::Header Tape::getHeader(int i) const
     }
 
     return hdr;
+}
+
+void Tape::selectBlock(int i)
+{
+    m_currentBlock = i;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -194,9 +200,14 @@ void TapeWindow::onDraw(Draw& draw)
                 break;
             }
 
-            draw.printString(m_x + 1, y, category.c_str(), colour);
-            draw.printSquashedString(m_x + 15, y, desc1.c_str(), colour);
-            draw.printSquashedString(m_x + 15, y + 1, desc2.c_str(), colour);
+            draw.printString(m_x + 2, y, category.c_str(), colour);
+            draw.printSquashedString(m_x + 16, y, desc1.c_str(), colour);
+            draw.printSquashedString(m_x + 16, y + 1, desc2.c_str(), colour);
+
+            if (m_tape->getCurrentBlock() == i)
+            {
+                draw.printChar(m_x + 1, y, ')', colour, gGfxFont);
+            }
         }
     }
 }
