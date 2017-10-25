@@ -453,7 +453,7 @@ void Emulator::openFile()
         "Open file",
         path,
         "NX files",
-        "*.sna"
+        "*.sna;*.tap"
     };
     const char* fileName = windowFileOpen(&cfg);
 
@@ -485,7 +485,7 @@ bool Nx::openFile(string fileName)
         }
         else if (ext == "tap")
         {
-            return loadSnapshot(fileName);
+            return loadTape(fileName);
         }
     }
     
@@ -673,9 +673,6 @@ vector<u8> Nx::loadFile(string fileName)
 //----------------------------------------------------------------------------------------------------------------------
 // Snapshot loading
 //----------------------------------------------------------------------------------------------------------------------
-
-#define BYTE_OF(arr, offset) arr[offset]
-#define WORD_OF(arr, offset) (*(u16 *)&arr[offset])
 
 bool Nx::loadSnapshot(string fileName)
 {

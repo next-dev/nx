@@ -22,6 +22,59 @@ class Tape
 public:
     Tape();
     Tape(const vector<u8>& data);
+
+    using Block = vector<u8>;
+
+    enum class BlockType
+    {
+        Program,
+        NumberArray,
+        StringArray,
+        Bytes,
+        Block,
+    };
+
+    struct Header
+    {
+        string      fileName;
+        BlockType   type;
+
+        union {
+            struct ProgramHeader
+            {
+                u16     autoStartLine;
+                u16     programLength;
+                u16     variableOffset;
+            } p;
+            struct ArrayHeader
+            {
+                char    variableName;
+                u16     arrayLength;
+            } a;
+            struct BytesHeader
+            {
+                u16     startAddress;
+                u16     dataLength;
+            } b;
+        };
+
+        u8      checkSum;
+    };
+
+    // Return the number of tape blocks
+    int numBlocks() const { return (int)m_blocks.size(); }
+
+    // Get the block type
+    BlockType getBlockType(int i) const;
+
+    // Return the length of the data block
+    u16 getBlockLength(int i) const;
+
+    // Get the header information for a block
+    Header getHeader(int i) const;
+
+private:
+    vector<Block> m_blocks;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -34,6 +87,8 @@ public:
     TapeWindow(Nx& nx);
 
     void reset();
+    void setTape(Tape *tape)    { m_tape = tape; reset(); }
+    void ejectTape()            { m_tape = nullptr; reset(); }
 
 protected:
     void onDraw(Draw& draw) override;
@@ -43,6 +98,7 @@ protected:
 private:
     int m_topIndex;
     int m_index;
+    Tape* m_tape;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

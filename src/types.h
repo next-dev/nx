@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <string>
 #include <sstream>
@@ -21,6 +22,16 @@ using u32 = uint32_t;
 using u64 = uint64_t;
 
 using TState = i64;
+
+#define NX_ASSERT(...) assert(__VA_ARGS__)
+
+//----------------------------------------------------------------------------------------------------------------------
+// Data access
+//----------------------------------------------------------------------------------------------------------------------
+
+#define TYPE_OF(arr, offset, type) ((type *)&arr[offset])
+#define BYTE_OF(arr, offset) *TYPE_OF((arr), (offset), u8)
+#define WORD_OF(arr, offset) *TYPE_OF((arr), (offset), u16)
 
 //----------------------------------------------------------------------------------------------------------------------
 // Register structure
