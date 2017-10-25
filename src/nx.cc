@@ -193,6 +193,13 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             getEmulator().showTapeBrowser();
             break;
 
+        case K::Space:
+            if (getSpeccy().getTape())
+            {
+                getSpeccy().getTape()->toggle();
+            }
+            break;
+
         default:
             break;
         }
@@ -720,7 +727,8 @@ bool Nx::loadTape(string fileName)
     vector<u8> file = loadFile(fileName);
     if (file.size())
     {
-        m_tapeBrowser.loadTape(file);
+        Tape* tape = m_tapeBrowser.loadTape(file);
+        getSpeccy().setTape(tape);
         return true;
     }
     else

@@ -58,6 +58,8 @@ enum class RunMode
 // Each model must override this and implement the specifics
 //----------------------------------------------------------------------------------------------------------------------
 
+class Tape;
+
 class Spectrum: public IExternals
 {
 public:
@@ -87,6 +89,7 @@ public:
     Z80&            getZ80              () { return m_z80; }
     TState          getTState           () { return m_tState;}
     Audio&          getAudio            () { return m_audio; }
+    Tape*           getTape             () { return m_tape; }
 
     //------------------------------------------------------------------------------------------------------------------
     // IExternals interface
@@ -120,6 +123,9 @@ public:
 
     // Reset the tState counter
     void            resetTState         () { m_tState = 0; }
+
+    // Set the tape, it will be played if not stopped.
+    void            setTape             (Tape* tape) { m_tape = tape;}
 
     //------------------------------------------------------------------------------------------------------------------
     // Memory interface
@@ -166,6 +172,11 @@ private:
     void            updateVideo         ();
 
     //
+    // Tape
+    //
+    void            updateTape          (TState numTStates);
+
+    //
     // Breakpoints
     //
     enum class BreakpointType
@@ -201,6 +212,7 @@ private:
 
     // Audio state
     Audio           m_audio;
+    Tape*           m_tape;
 
     // Memory state
     vector<u8>      m_ram;
@@ -214,6 +226,7 @@ private:
     u8              m_borderColour;
     vector<u8>      m_keys;
     u8              m_speaker;
+    u8              m_tapeEar;
 
     // Debugger state
     vector<Breakpoint>  m_breakpoints;

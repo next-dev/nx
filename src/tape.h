@@ -77,12 +77,40 @@ public:
     // Tape header control
     //
 
+    void play();
+    void stop();
+    void toggle();
+
     void selectBlock(int i);
     int getCurrentBlock() const { return m_currentBlock; }
+    u8 play(TState tStates);
+
+private:
+    // Returns true if end of block
+    bool nextBit();
 
 private:
     vector<Block> m_blocks;
     int m_currentBlock;
+
+    //
+    // Play state
+    //
+
+    enum class State
+    {
+        Stopped,
+        Quiet,          // No sound for 2 secs (140,000 T)
+        Pilot,          // Pilot (pulsing at 2168T)
+        Sync1,          // High for 667T
+        Sync2,          // Low for 735T
+        Data,
+    };
+
+    State       m_state;
+    int         m_index;
+    int         m_bitIndex;
+    int         m_counter;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -119,7 +147,7 @@ class TapeBrowser final : public Overlay
 public:
     TapeBrowser(Nx& nx);
 
-    void loadTape(const vector<u8>& data);
+    Tape* loadTape(const vector<u8>& data);
 
 protected:
     void render(Draw& draw) override;

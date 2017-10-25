@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include "spectrum.h"
+#include "tape.h"
 
 #include <algorithm>
 #include <cassert>
@@ -25,6 +26,7 @@ Spectrum::Spectrum(function<void()> frameFunc)
 
     //--- Audio state ----------------------------------------------------
     , m_audio(69888, frameFunc)
+    , m_tape(nullptr)
 
     //--- Memory state ---------------------------------------------------
     , m_romWritable(true)
@@ -97,11 +99,20 @@ void Spectrum::reset(bool hard /* = true */)
 // Frame emulation
 //----------------------------------------------------------------------------------------------------------------------
 
+void Spectrum::updateTape(TState numTStates)
+{
+    if (m_tape)
+    {
+        m_tapeEar = m_tape->play(numTStates);
+    }
+}
+
 bool Spectrum::update(RunMode runMode, bool& breakpointHit)
 {
     bool result = false;
     breakpointHit = false;
     TState frameTime = getFrameTime();
+    TState startTState = m_tState;
 
     switch (runMode)
     {
@@ -110,7 +121,9 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
         {
             m_z80.step(m_tState);
             updateVideo();
-            m_audio.updateBeeper(m_tState, m_speaker);
+            updateTape(m_tState - startTState);
+            //m_audio.updateBeeper(m_tState, m_speaker);
+            m_audio.updateBeeper(m_tState, m_tapeEar ? 1 : 0);
             if ((runMode == RunMode::Normal) && shouldBreak(m_z80.PC()))
             {
                 breakpointHit = true;
@@ -123,6 +136,7 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
     case RunMode::StepOver:
         m_z80.step(m_tState);
         updateVideo();
+        updateTape(m_tState - startTState);
         break;
 
     case RunMode::Stopped:

@@ -13,11 +13,16 @@
 
 Tape::Tape()
     : m_currentBlock(-1)
+    , m_state(State::Stopped)
+    , m_index(0)
+    , m_bitIndex(15)
+    , m_counter(0)
 {
 
 }
 
 Tape::Tape(const vector<u8>& data)
+    : Tape()
 {
     const u8* t = data.data();
     const u8* end = data.data() + data.size();
@@ -102,9 +107,167 @@ Tape::Header Tape::getHeader(int i) const
     return hdr;
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+// Tape header control
+//----------------------------------------------------------------------------------------------------------------------
+
+void Tape::play()
+{
+    if (m_state == State::Stopped)
+    {
+        m_index = 0;
+        m_bitIndex = 15;
+        m_counter = 6988800;
+        m_state = State::Quiet;
+    }
+}
+
+void Tape::stop()
+{
+    m_state = State::Stopped;
+    m_index = 0;
+    m_bitIndex = 0;
+    m_counter = 0;
+}
+
+void Tape::toggle()
+{
+    if (m_state == State::Stopped)
+    {
+        play();
+    }
+    else
+    {
+        stop();
+    }
+}
+
 void Tape::selectBlock(int i)
 {
     m_currentBlock = i;
+}
+
+u8 Tape::play(TState tStates)
+{
+    m_counter -= (int)tStates;
+    u8 result = 0;
+
+    for (;;)
+    {
+        switch (m_state)
+        {
+        case State::Stopped:
+            m_counter = 0;
+            return 0;
+
+        case State::Quiet:
+            if (m_counter <= 0)
+            {
+                // End of quiet, start header or data pilot
+                if (m_blocks[m_currentBlock][0])
+                {
+                    // Data block
+                    m_counter = 3222 * 2168;
+                }
+                else
+                {
+                    // Header block
+                    m_counter = 8059 * 2168;
+                }
+                m_state = State::Pilot;
+                continue;
+            }
+            break;
+
+        case State::Pilot:
+            if (m_counter <= 0)
+            {
+                // Transition to sync1
+                m_counter += 667;
+                m_state = State::Sync1;
+                continue;
+            }
+            result = (u8)((m_counter / 2168) & 1);
+            break;
+
+        case State::Sync1:
+            if (m_counter <= 0)
+            {
+                // Transition to sync2
+                m_counter += 735;
+                m_state = State::Sync2;
+                continue;
+            }
+            result = 1;
+            break;
+
+        case State::Sync2:
+            if (m_counter <= 0)
+            {
+                // Transition to Data
+                m_bitIndex = 15;
+                nextBit();
+                continue;
+            }
+            result = 0;
+            break;
+
+        case State::Data:
+            if (m_counter <= 0)
+            {
+                nextBit();
+            }
+
+            result = m_bitIndex & 1;
+            break;
+        }
+
+        break;
+    }
+
+    return result << 6;
+}
+
+bool Tape::nextBit()
+{
+    bool result = false;
+    m_state = State::Data;
+
+    u8 b = m_blocks[m_currentBlock][m_index];
+
+    // Notice the right shift.  We process each bit twice so can do a high and low pulse per bit
+    u8 bit = b & (1 << (m_bitIndex >> 1));
+
+    m_counter += bit ? 1710 : 855;
+
+    if (--m_bitIndex < 0)
+    {
+        m_bitIndex += 16;
+        ++m_index;
+        if (m_index == m_blocks[m_currentBlock].size())
+        {
+            // Reached end of block
+            if (++m_currentBlock == m_blocks.size())
+            {
+                // No more blocks!
+                m_state = State::Stopped;
+                m_index = 0;
+                m_bitIndex = 0;
+                m_counter = 0;
+            }
+            else
+            {
+                // Next block
+                m_state = State::Quiet;
+                m_counter = 6988800;
+                m_index = 0;
+                m_bitIndex = 15;
+            }
+            result = true;
+        }
+    }
+
+    return result;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -271,7 +434,7 @@ TapeBrowser::TapeBrowser(Nx& nx)
 
 }
 
-void TapeBrowser::loadTape(const vector<u8>& data)
+Tape* TapeBrowser::loadTape(const vector<u8>& data)
 {
     if (m_currentTape)
     {
@@ -280,6 +443,7 @@ void TapeBrowser::loadTape(const vector<u8>& data)
 
     m_currentTape = new Tape(data);
     m_window.setTape(m_currentTape);
+    return m_currentTape;
 }
 
 void TapeBrowser::render(Draw& draw)
@@ -289,9 +453,10 @@ void TapeBrowser::render(Draw& draw)
 
 void TapeBrowser::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
+    using K = sf::Keyboard::Key;
+
     if (down && !shift && !ctrl && !alt)
     {
-        using K = sf::Keyboard::Key;
         switch (key)
         {
         case K::Escape:
@@ -300,6 +465,13 @@ void TapeBrowser::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, b
 
         default:
             if (down) m_window.keyPress(key, shift, ctrl, alt);
+        }
+    }
+    else if (down && !shift && ctrl && !alt)
+    {
+        if (key == K::Space)
+        {
+            if (m_currentTape) m_currentTape->toggle();
         }
     }
 }
