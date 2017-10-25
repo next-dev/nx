@@ -214,7 +214,41 @@ void TapeWindow::onDraw(Draw& draw)
 
 void TapeWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
+    using K = sf::Keyboard::Key;
 
+    if (!m_tape) return;
+
+    int halfSize = (m_height - 2) / 4;
+
+    if (!shift && !ctrl && !alt)
+    {
+        switch (key)
+        {
+        case K::Up:
+            if (m_index > 0)
+            {
+                --m_index;
+                while (m_index < m_topIndex)
+                {
+                    m_topIndex = max(0, m_topIndex - ((m_height - 2) / 4));
+                }
+            }
+            break;
+
+        case K::Down:
+            if (m_index < (m_tape->numBlocks() - 1))
+            {
+                ++m_index;
+                if ((m_index >= (m_topIndex + halfSize)) &&
+                    (m_tape->numBlocks() > (2 * halfSize)))
+                {
+                    // Cursor has gone past halfway on a list that's bigger than the window
+                    ++m_topIndex;
+                }
+            }
+            break;
+        }
+    }
 }
 
 void TapeWindow::onText(char ch)
@@ -263,6 +297,9 @@ void TapeBrowser::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, b
         case K::Escape:
             getEmulator().hideAll();
             break;
+
+        default:
+            if (down) m_window.keyPress(key, shift, ctrl, alt);
         }
     }
 }
