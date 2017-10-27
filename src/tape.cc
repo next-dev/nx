@@ -152,6 +152,8 @@ u8 Tape::play(TState tStates)
     m_counter -= (int)tStates;
     u8 result = 0;
 
+    static int bits = 0;
+
     for (;;)
     {
         switch (m_state)
@@ -177,6 +179,7 @@ u8 Tape::play(TState tStates)
                 m_state = State::Pilot;
                 continue;
             }
+            result = 1;
             break;
 
         case State::Pilot:
@@ -206,6 +209,7 @@ u8 Tape::play(TState tStates)
             {
                 // Transition to Data
                 m_bitIndex = 15;
+                bits = 0;
                 nextBit();
                 continue;
             }
@@ -218,12 +222,30 @@ u8 Tape::play(TState tStates)
                 nextBit();
             }
 
-            result = m_bitIndex & 1;
+            result = !(m_bitIndex & 1);
             break;
         }
 
         break;
     }
+
+    static TState total = 0;
+    static u8 lastBit = result;
+
+    total += tStates;
+    if (result != lastBit)
+    {
+        // Edge detected
+        NX_LOG("Edge after: %dT [%d->%d]\n", (int)total, lastBit, result);
+        total = 0;
+        if (bits++ == 16)
+        {
+            NX_LOG("--------------------------------------------------\n");
+            bits = 0;
+        }
+    }
+    lastBit = result;
+
 
     return result << 6;
 }
@@ -232,6 +254,30 @@ bool Tape::nextBit()
 {
     bool result = false;
     m_state = State::Data;
+
+    // Check for end of block
+    if (m_index == m_blocks[m_currentBlock].size())
+    {
+        // Reached end of block
+        if (++m_currentBlock == m_blocks.size())
+        {
+            // No more blocks!
+            m_state = State::Stopped;
+            m_index = 0;
+            m_bitIndex = 0;
+            m_counter = 0;
+            return true;
+        }
+        else
+        {
+            // Next block
+            m_state = State::Quiet;
+            m_counter = 6988800;
+            m_index = 0;
+            m_bitIndex = 15;
+            return true;
+        }
+    }
 
     u8 b = m_blocks[m_currentBlock][m_index];
 
@@ -244,30 +290,9 @@ bool Tape::nextBit()
     {
         m_bitIndex += 16;
         ++m_index;
-        if (m_index == m_blocks[m_currentBlock].size())
-        {
-            // Reached end of block
-            if (++m_currentBlock == m_blocks.size())
-            {
-                // No more blocks!
-                m_state = State::Stopped;
-                m_index = 0;
-                m_bitIndex = 0;
-                m_counter = 0;
-            }
-            else
-            {
-                // Next block
-                m_state = State::Quiet;
-                m_counter = 6988800;
-                m_index = 0;
-                m_bitIndex = 15;
-            }
-            result = true;
-        }
     }
 
-    return result;
+    return false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -410,6 +435,11 @@ void TapeWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
                 }
             }
             break;
+
+        case K::Return:
+            m_tape->stop();
+            m_tape->selectBlock(m_index);
+            break;
         }
     }
 }
@@ -428,6 +458,10 @@ TapeBrowser::TapeBrowser(Nx& nx)
     , m_window(nx)
     , m_commands({
         "Esc|Exit",
+        "Up|Cursor up",
+        "Down|Cursor down",
+        "Enter|Select tape position",
+        "Ctrl-Space|Play/Stop"
         })
     , m_currentTape(nullptr)
 {

@@ -112,13 +112,14 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
     bool result = false;
     breakpointHit = false;
     TState frameTime = getFrameTime();
-    TState startTState = m_tState;
+    TState startTState;
 
     switch (runMode)
     {
     case RunMode::Normal:
         while (m_tState < getFrameTime())
         {
+            startTState = m_tState;
             m_z80.step(m_tState);
             updateVideo();
             updateTape(m_tState - startTState);
@@ -134,6 +135,7 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
 
     case RunMode::StepIn:
     case RunMode::StepOver:
+        startTState = m_tState;
         m_z80.step(m_tState);
         updateVideo();
         updateTape(m_tState - startTState);
@@ -340,6 +342,8 @@ u8 Spectrum::in(u16 port, TState& t)
             }
             row >>= 1;
         }
+
+        x = (x & 0xbf) | m_tapeEar;
     }
     else
     {
