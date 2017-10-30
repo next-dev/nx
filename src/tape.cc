@@ -160,7 +160,8 @@ u8 Tape::play(TState tStates)
         {
         case State::Stopped:
             m_counter = 0;
-            return 0;
+            result = 1;
+            break;
 
         case State::Quiet:
             if (m_counter <= 0)
@@ -266,6 +267,7 @@ bool Tape::nextBit()
             m_index = 0;
             m_bitIndex = 0;
             m_counter = 0;
+            m_currentBlock = 0;
             return true;
         }
         else
