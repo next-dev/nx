@@ -160,7 +160,7 @@ u8 Tape::play(TState tStates)
         {
         case State::Stopped:
             m_counter = 0;
-            result = 1;
+            result = 0;
             break;
 
         case State::Quiet:
@@ -260,7 +260,7 @@ bool Tape::nextBit()
     if (m_index == m_blocks[m_currentBlock].size())
     {
         // Reached end of block
-        if (++m_currentBlock == m_blocks.size())
+        if (m_currentBlock == m_blocks.size())
         {
             // No more blocks!
             m_state = State::Stopped;
@@ -268,7 +268,6 @@ bool Tape::nextBit()
             m_bitIndex = 0;
             m_counter = 0;
             m_currentBlock = 0;
-            return true;
         }
         else
         {
@@ -277,8 +276,9 @@ bool Tape::nextBit()
             m_counter = 6988800;
             m_index = 0;
             m_bitIndex = 15;
-            return true;
         }
+        ++m_currentBlock;
+        return true;
     }
 
     u8 b = m_blocks[m_currentBlock][m_index];
