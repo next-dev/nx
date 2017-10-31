@@ -38,6 +38,7 @@ Spectrum::Spectrum(function<void()> frameFunc)
     , m_borderColour(7)
     , m_keys(8, 0)
     , m_speaker(0)
+    , m_tapeEar(0)
 
     //--- Kempston -------------------------------------------------------
     , m_kempstonJoystick(false)

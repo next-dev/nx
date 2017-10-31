@@ -456,7 +456,7 @@ TapeBrowser::TapeBrowser(Nx& nx)
     : Overlay(nx)
     , m_window(nx)
     , m_commands({
-        "Esc|Exit",
+        "Esc/Ctrl-T|Exit",
         "Up|Cursor up",
         "Down|Cursor down",
         "Enter|Select tape position",
@@ -502,9 +502,15 @@ void TapeBrowser::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, b
     }
     else if (down && !shift && ctrl && !alt)
     {
-        if (key == K::Space)
+        switch (key)
         {
+        case K::Space:
             if (m_currentTape) m_currentTape->toggle();
+            break;
+
+        case K::T:
+            getEmulator().hideAll();
+            break;
         }
     }
 }

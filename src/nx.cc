@@ -147,6 +147,11 @@ void Emulator::render(Draw& draw)
         draw.printSquashedString(70, 60, "Stopped", draw.attr(Colour::Black, Colour::White, true));
     }
 
+    if (getEmulator().getZoom())
+    {
+        draw.printSquashedString(70, 58, "ZOOM!", draw.attr(Colour::Black, Colour::White, true));
+    }
+
     u8 colour = draw.attr(Colour::Red, Colour::White, true);
 
     if (m_counter > 0)
@@ -199,6 +204,10 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
                 getSpeccy().getTape()->toggle();
             }
             break;
+
+        case K::Z:
+            getEmulator().toggleZoom();
+
 
         default:
             break;
@@ -507,6 +516,7 @@ Nx::Nx(int argc, char** argv)
     : m_machine(new Spectrum(std::bind(&Nx::frame, this)))   // #todo: Allow the debugger to switch Spectrums, via proxy
     , m_quit(false)
     , m_frameCounter(0)
+    , m_zoom(false)
     , m_ui(*m_machine)
 
     //--- Emulator state ------------------------------------------------------------
@@ -634,7 +644,7 @@ void Nx::run()
         //
         // Generate a frame
         //
-        if (m_machine->getAudio().getSignal().isTriggered())
+        if (m_zoom || m_machine->getAudio().getSignal().isTriggered())
         {
             frame();
             render();
@@ -863,6 +873,16 @@ void Nx::showTapeBrowser()
 void Nx::hideAll()
 {
     m_emulator.select();
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Zooming
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::toggleZoom()
+{
+    m_zoom = !m_zoom;
+    getSpeccy().getAudio().mute(m_zoom);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

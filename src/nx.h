@@ -100,6 +100,10 @@ public:
     void showTapeBrowser();
     void toggleDebugger();
     void hideAll();
+
+    // Zoom
+    void toggleZoom();
+    bool getZoom() const { return m_zoom; }
     
 private:
     // Load a snapshot
@@ -119,6 +123,7 @@ private:
     Signal              m_renderSignal;
     bool                m_quit;
     int                 m_frameCounter;
+    bool                m_zoom;
 
     // Emulator overlay
     Emulator            m_emulator;
