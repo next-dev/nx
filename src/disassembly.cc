@@ -148,6 +148,7 @@ void DisassemblyWindow::onDraw(Draw& draw)
     u8 selectColour = draw.attr(Colour::Black, Colour::Yellow, true);
     u8 breakpointColour = draw.attr(Colour::Yellow, Colour::Red, true);
     u8 pcColour = draw.attr(Colour::White, Colour::Green, true);
+    u16 pc = m_nx.getSpeccy().getZ80().PC();
 
     u8 bkg2 = m_bkgColour & ~0x40;
     for (int row = 1; row < m_height - 1; ++row)
@@ -155,7 +156,7 @@ void DisassemblyWindow::onDraw(Draw& draw)
         u16 next = disassemble(d, a);
         u8 colour = (a == m_address)
             ? selectColour
-            : (a == m_nx.getSpeccy().getZ80().PC())
+            : (a == pc)
                 ? pcColour
                 : m_nx.getSpeccy().hasUserBreakpointAt(a)
                     ? breakpointColour
@@ -168,10 +169,15 @@ void DisassemblyWindow::onDraw(Draw& draw)
         draw.printString(m_x + 21, m_y + row, d.opCode().c_str(), colour);
         draw.printString(m_x + 26, m_y + row, d.operands().c_str(), colour);
 
-        if (m_nx.getSpeccy().hasUserBreakpointAt(a))
+        if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(a))
         {
             draw.printChar(m_x + 1, m_y + row, ')', colour, gGfxFont);
         }
+        if (a == pc)
+        {
+            draw.printChar(m_x + 1, m_y + row, '*', colour, gGfxFont);
+        }
+
         a = next;
     }
 

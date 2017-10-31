@@ -85,6 +85,8 @@ public:
     int getCurrentBlock() const { return m_currentBlock; }
     u8 play(TState tStates);
 
+    bool isPlaying() const { return m_state != State::Stopped; }
+
 private:
     // Returns true if end of block
     bool nextBit();
