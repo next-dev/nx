@@ -40,8 +40,10 @@ Will support all the new video modes, 3 AYs, hardware sprites and scrolling and 
 |------------------|-------------------------------------------------------|
 | Right Shift      | Symbol shift                                          |
 | Ctrl+O           | Open file                                             |
+| Ctrl+K           | Toggle Kempston joystick                              |
 | Ctrl+R           | Restart the machine                                   |
-| Ctrl+K           | Toggle Kempston joystick
+| Ctrl+T           | Toggle tape browser                                   |
+| Ctrl+Z           | Zoom mode (maximum clock speed)                       |
 | F4               | Tape browser                                          |
 | F5               | Pause the machine and enter debugger mode             |
 | ~                | Enter debugger mode                                   |

@@ -1,8 +1,8 @@
 KEY     EMULATOR        DEBUGGER
 
 ~       Debugger        Emulator
-F1      
-F2      
+F1
+F2
 F3
 F4      Tape browser
 F5      Toggle Pause    Toggle Pause
@@ -15,6 +15,8 @@ F10
 F11
 F12
 
+Ctrl+K  Toggle Kempston Joystick
 Ctrl+O  Open file
 Ctrl+R  Reset machine
-Ctrl+K  Toggle Kempston Joystick
+Ctrl+T  Toggle tape browser
+Ctrl+Z  Zoom! (Maximum speed)
