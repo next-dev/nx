@@ -661,7 +661,8 @@ u8 Z80::fetchInstruction(i64& tState)
     //
     // See http://www.z80.info/decoding.htm
     //
-    ++R();
+    u8 r = R();
+    R() = (r & 0x80) | ((r + 1) & 0x7f);
     CONTEND(PC(), 4, 1);
     return m_ext.peek(PC()++);
 }
