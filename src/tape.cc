@@ -160,12 +160,22 @@ u8 Tape::play(TState tStates)
         {
         case State::Stopped:
             m_counter = 0;
-            result = 1;
+            result = 0;
             break;
 
         case State::Quiet:
             if (m_counter <= 0)
             {
+                if (m_currentBlock == m_blocks.size())
+                {
+                    m_state = State::Stopped;
+                    m_index = 0;
+                    m_bitIndex = 0;
+                    m_counter = 0;
+                    m_currentBlock = 0;
+                    return true;
+                }
+
                 // End of quiet, start header or data pilot
                 if (m_blocks[m_currentBlock][0])
                 {
@@ -259,26 +269,13 @@ bool Tape::nextBit()
     // Check for end of block
     if (m_index == m_blocks[m_currentBlock].size())
     {
-        // Reached end of block
-        if (++m_currentBlock == m_blocks.size())
-        {
-            // No more blocks!
-            m_state = State::Stopped;
-            m_index = 0;
-            m_bitIndex = 0;
-            m_counter = 0;
-            m_currentBlock = 0;
-            return true;
-        }
-        else
-        {
-            // Next block
-            m_state = State::Quiet;
-            m_counter = 6988800;
-            m_index = 0;
-            m_bitIndex = 15;
-            return true;
-        }
+        // Next block
+        m_state = State::Quiet;
+        m_counter = 6988800;
+        m_index = 0;
+        m_bitIndex = 15;
+        ++m_currentBlock;
+        return true;
     }
 
     u8 b = m_blocks[m_currentBlock][m_index];
@@ -396,7 +393,7 @@ void TapeWindow::onDraw(Draw& draw)
 
             if (m_tape->getCurrentBlock() == i)
             {
-                draw.printChar(m_x + 1, y, ')', colour, gGfxFont);
+                draw.printChar(m_x + 1, y, m_tape->isPlaying() ? '*' : ')', colour, gGfxFont);
             }
         }
     }
