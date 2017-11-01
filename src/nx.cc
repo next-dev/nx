@@ -507,6 +507,8 @@ bool Nx::openFile(string fileName)
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
+extern const u8 gRom48[16384];
+
 Nx::Nx(int argc, char** argv)
     : m_machine(new Spectrum(std::bind(&Nx::frame, this)))   // #todo: Allow the debugger to switch Spectrums, via proxy
     , m_quit(false)
@@ -541,7 +543,8 @@ Nx::Nx(int argc, char** argv)
     m_machine->getVideoSprite().setScale(float(kDefaultScale * 2), float(kDefaultScale * 2));
     m_ui.getSprite().setScale(float(kDefaultScale), float(kDefaultScale));
 
-    m_machine->load(0, loadFile(romFileName));
+    //m_machine->load(0, loadFile(romFileName));
+    m_machine->load(0, gRom48, 16384);
     m_machine->setRomWriteState(false);
     
     // Deal with the command line
@@ -600,6 +603,13 @@ void Nx::render()
 void Nx::setScale(int scale)
 {
     m_window.setSize({ unsigned(kWindowWidth * scale * 2), unsigned(kWindowHeight * scale * 2) });
+
+    sf::Vector2i pos = m_window.getPosition();
+    if (pos.x < 0 || pos.y < 0)
+    {
+        // Make sure the menu bar is on-screen
+        m_window.setPosition({ 10, 10 });
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

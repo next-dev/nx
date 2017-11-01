@@ -15,6 +15,8 @@ F10
 F11
 F12
 
+Ctrl+1  Small window
+Ctrl+2  Large window
 Ctrl+K  Toggle Kempston Joystick
 Ctrl+O  Open file
 Ctrl+R  Reset machine

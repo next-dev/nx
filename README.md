@@ -34,7 +34,18 @@ Disk-drive support.
 
 Will support all the new video modes, 3 AYs, hardware sprites and scrolling and extra memory.  Also support SD access.
 
-# Keyboard Controls
+# Global Controls
+
+These controls are available regardless which mode you are in.
+
+| Key              | Description                                           |
+|------------------|-------------------------------------------------------|
+| Ctrl+1           | Selec small window size.                              |
+| Ctrl+2           | Selec large window size.                              |
+
+# Emulator Controls
+
+These controls are only valid when no other window is showing.
 
 | Key              | Description                                           |
 |------------------|-------------------------------------------------------|
