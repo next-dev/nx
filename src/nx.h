@@ -117,6 +117,9 @@ private:
     u16 nextInstructionAt(u16 address);
     bool isCallInstructionAt(u16 address);
 
+    // Window scale
+    void setScale(int scale);
+
 private:
     Spectrum*           m_machine;
     Ui                  m_ui;

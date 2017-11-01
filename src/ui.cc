@@ -410,7 +410,6 @@ Ui::Ui(Spectrum& speccy)
 {
     m_uiTexture.create(kUiWidth, kUiHeight);
     m_uiSprite.setTexture(m_uiTexture);
-    m_uiSprite.setScale(2, 2);
 }
 
 void Ui::clear()

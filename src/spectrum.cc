@@ -416,7 +416,6 @@ void Spectrum::initVideo()
 {
     m_videoTexture.create(kWindowWidth, kWindowHeight);
     m_videoSprite.setTexture(m_videoTexture);
-    m_videoSprite.setScale(4, 4);
 
     m_videoMap.resize(getFrameTime());
 

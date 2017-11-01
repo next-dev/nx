@@ -20,11 +20,6 @@
 #   include <Windows.h>
 #endif
 
-
-// Scaling constants for the Speccy pixel to PC pixel ratio.
-static const int kScale = 4;
-static const int kUiScale = 2;
-
 //----------------------------------------------------------------------------------------------------------------------
 // File open dialog
 //----------------------------------------------------------------------------------------------------------------------
@@ -527,8 +522,8 @@ Nx::Nx(int argc, char** argv)
     , m_runMode(RunMode::Normal)
 
     //--- Rendering -----------------------------------------------------------------
-    , m_window(sf::VideoMode(kWindowWidth * kScale, kWindowHeight * kScale), "NX " NX_VERSION,
-        sf::Style::Titlebar | sf::Style::Close)
+    , m_window(sf::VideoMode(kWindowWidth * kDefaultScale * 2, kWindowHeight * kDefaultScale * 2), "NX " NX_VERSION,
+               sf::Style::Titlebar | sf::Style::Close)
 
     //--- Peripherals ---------------------------------------------------------------
     , m_kempstonJoystick(false)
@@ -542,6 +537,10 @@ Nx::Nx(int argc, char** argv)
 #else
     string romFileName = "48.rom";
 #endif
+    setScale(kDefaultScale);
+    m_machine->getVideoSprite().setScale(float(kDefaultScale * 2), float(kDefaultScale * 2));
+    m_ui.getSprite().setScale(float(kDefaultScale), float(kDefaultScale));
+
     m_machine->load(0, loadFile(romFileName));
     m_machine->setRomWriteState(false);
     
@@ -598,6 +597,11 @@ void Nx::render()
     m_window.display();
 }
 
+void Nx::setScale(int scale)
+{
+    m_window.setSize({ unsigned(kWindowWidth * scale * 2), unsigned(kWindowHeight * scale * 2) });
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Running
 //----------------------------------------------------------------------------------------------------------------------
@@ -624,7 +628,27 @@ void Nx::run()
 
             case sf::Event::KeyPressed:
                 // Forward the key controls to the right mode handler
-                Overlay::currentOverlay()->key(event.key.code, true, event.key.shift, event.key.control, event.key.alt);
+                if (!event.key.shift && event.key.control && !event.key.alt)
+                {
+                    // Possible global key
+                    switch (event.key.code)
+                    {
+                    case sf::Keyboard::Key::Num1:
+                        setScale(1);
+                        break;
+
+                    case sf::Keyboard::Key::Num2:
+                        setScale(2);
+                        break;
+
+                    default:
+                        Overlay::currentOverlay()->key(event.key.code, true, false, true, false);
+                    }
+                }
+                else
+                {
+                    Overlay::currentOverlay()->key(event.key.code, true, event.key.shift, event.key.control, event.key.alt);
+                }
                 break;
 
             case sf::Event::KeyReleased:
