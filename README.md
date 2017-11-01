@@ -40,8 +40,8 @@ These controls are available regardless which mode you are in.
 
 | Key              | Description                                           |
 |------------------|-------------------------------------------------------|
-| Ctrl+1           | Selec small window size.                              |
-| Ctrl+2           | Selec large window size.                              |
+| Ctrl+1           | Select small window size.                             |
+| Ctrl+2           | Select large window size.                             |
 
 # Emulator Controls
 
