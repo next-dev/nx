@@ -132,10 +132,15 @@ private:
 // EditorWindow
 //----------------------------------------------------------------------------------------------------------------------
 
-class EditorWindow : public Window
+class EditorWindow final : public Window
 {
 public:
-    EditorWindow(Nx& nx, std::string title);
+    EditorWindow(Nx& nx, string title);
+
+protected:
+    void onDraw(Draw& draw) override;
+    void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
+    void onText(char ch) override;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

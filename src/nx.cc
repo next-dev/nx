@@ -193,6 +193,10 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             getEmulator().showTapeBrowser();
             break;
 
+        case K::A:
+            getEmulator().showAssembler();
+            break;
+
         case K::Space:
             if (getSpeccy().getTape())
             {
@@ -522,6 +526,9 @@ Nx::Nx(int argc, char** argv)
     //--- Debugger state ------------------------------------------------------------
     , m_debugger(*this)
     , m_runMode(RunMode::Normal)
+
+    //--- Assembler state -----------------------------------------------------------
+    , m_assembler(*this)
 
     //--- Rendering -----------------------------------------------------------------
     , m_window(sf::VideoMode(kWindowWidth * kDefaultScale * 2, kWindowHeight * kDefaultScale * 2), "NX " NX_VERSION,
@@ -917,6 +924,15 @@ void Nx::toggleZoom()
 {
     m_zoom = !m_zoom;
     getSpeccy().getAudio().mute(m_zoom);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Assembler
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::showAssembler()
+{
+    m_assembler.select();
 }
 
 //----------------------------------------------------------------------------------------------------------------------

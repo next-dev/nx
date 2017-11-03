@@ -7,6 +7,7 @@
 
 #include "spectrum.h"
 #include "debugger.h"
+#include "assembler.h"
 #include "tape.h"
 
 #include <SFML/Graphics.hpp>
@@ -99,6 +100,7 @@ public:
     // Mode selection
     void showTapeBrowser();
     void toggleDebugger();
+    void showAssembler();
     void hideAll();
 
     // Zoom
@@ -134,6 +136,9 @@ private:
     // Debugger state
     Debugger            m_debugger;
     RunMode             m_runMode;
+
+    // Assembler state
+    Assembler           m_assembler;
 
     // Settings
     map<string, string> m_settings;
