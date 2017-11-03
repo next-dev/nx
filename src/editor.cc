@@ -8,7 +8,7 @@
 // SplitView
 //----------------------------------------------------------------------------------------------------------------------
 
-SplitView::SplitView(const vector<char>& v, size_t start1, size_t end1, size_t start2, size_t end2)
+SplitView::SplitView(const vector<char>& v, int start1, int end1, int start2, int end2)
     : m_array(v)
     , m_start { start1, start2 }
     , m_end { end1, end2 }
@@ -16,7 +16,7 @@ SplitView::SplitView(const vector<char>& v, size_t start1, size_t end1, size_t s
 
 }
 
-SplitView::SplitView(const vector<char>& v, size_t start, size_t end)
+SplitView::SplitView(const vector<char>& v, int start, int end)
     : SplitView(v, start, end, end, end)
 {
 
@@ -26,13 +26,14 @@ SplitView::SplitView(const vector<char>& v, size_t start, size_t end)
 // EditorData
 //----------------------------------------------------------------------------------------------------------------------
 
-EditorData::EditorData(size_t initialSize, size_t increaseSize)
+EditorData::EditorData(int initialSize, int increaseSize, int maxLineLength)
     : m_buffer(initialSize)
     , m_lines(1, 0)
     , m_cursor(0)
     , m_currentLine(0)
-    , m_endBuffer(m_buffer.size())
+    , m_endBuffer((int)m_buffer.size())
     , m_increaseSize(increaseSize)
+    , m_maxLineLength(maxLineLength)
 {
 
 }
@@ -40,7 +41,7 @@ EditorData::EditorData(size_t initialSize, size_t increaseSize)
 void EditorData::clear()
 {
     m_cursor = 0;
-    m_endBuffer = m_buffer.size();
+    m_endBuffer = (int)m_buffer.size();
     m_lines.clear();
     m_lines.push_back(0);
 }
@@ -51,11 +52,11 @@ SplitView EditorData::getLine(int n) const
     {
         return SplitView(m_buffer,
                          m_lines[n], m_cursor,
-                         m_endBuffer, m_buffer.size());
+                         m_endBuffer, (int)m_buffer.size());
     }
     else if (n < m_lines.size())
     {
-        size_t i = m_lines[n];
+        int i = m_lines[n];
         for (; m_buffer.begin() + i < m_buffer.end() && m_buffer[i] != '\n'; ++i) ;
         return SplitView(m_buffer, m_lines[n], i);
     }
@@ -67,13 +68,13 @@ SplitView EditorData::getLine(int n) const
 
 SplitView EditorData::getText() const
 {
-    return SplitView(m_buffer, 0, m_cursor, m_endBuffer, m_buffer.size());
+    return SplitView(m_buffer, 0, m_cursor, m_endBuffer, (int)m_buffer.size());
 }
 
-size_t EditorData::lineLength(int n) const
+int EditorData::lineLength(int n) const
 {
-    size_t start = m_lines[n];
-    size_t end;
+    int start = m_lines[n];
+    int end;
     if (n == m_currentLine)
     {
         end = m_endBuffer;
@@ -89,6 +90,7 @@ size_t EditorData::lineLength(int n) const
 
 bool EditorData::insert(char ch)
 {
+    if (lineLength(m_currentLine) == m_maxLineLength) return false;
     bool result = ensureSpace(1);
     if (result)
     {
@@ -100,7 +102,7 @@ bool EditorData::insert(char ch)
 
 bool EditorData::backspace()
 {
-    size_t lineStart = m_lines[m_currentLine];
+    int lineStart = m_lines[m_currentLine];
     if (m_cursor == lineStart)
     {
         // Delete newline
@@ -111,7 +113,12 @@ bool EditorData::backspace()
     return true;
 }
 
-bool EditorData::ensureSpace(size_t numChars)
+int EditorData::getCurrentPosInLine() const
+{
+    return m_cursor - m_lines[m_currentLine];
+}
+
+bool EditorData::ensureSpace(int numChars)
 {
     if (m_cursor + numChars <= m_endBuffer) return true;
     
@@ -119,12 +126,12 @@ bool EditorData::ensureSpace(size_t numChars)
     bool result = false;
     if (m_increaseSize)
     {
-        size_t oldSize = m_buffer.size();
+        int oldSize = (int)m_buffer.size();
         m_buffer.resize(oldSize + m_increaseSize);
         result = true;
     
         // Move text afterwards forward
-        size_t len = (size_t)(m_buffer.end() - (m_buffer.begin() + m_endBuffer));
+        int len = (int)(m_buffer.end() - (m_buffer.begin() + m_endBuffer));
         move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + oldSize, m_buffer.end() - len);
     }
     
@@ -137,14 +144,12 @@ bool EditorData::ensureSpace(size_t numChars)
 //----------------------------------------------------------------------------------------------------------------------
 
 Editor::Editor(int xCell, int yCell, int width, int height, u8 bkgColour, bool font6, int initialSize, int increaseSize)
-    : m_data(initialSize, increaseSize)
+    : m_data(initialSize, increaseSize, width-1)
     , m_x(xCell)
     , m_y(yCell)
     , m_width(width)
     , m_height(height)
     , m_topLine(0)
-    , m_currentLine(0)
-    , m_currentX(0)
     , m_font6(font6)
     , m_bkgColour(bkgColour)
     , m_allowedChars(128, true)
@@ -185,16 +190,16 @@ void Editor::render(Draw& draw, int line)
         int x = m_x;
         y += m_y;
 
-        auto view = data.getLine((size_t)line);
-        for (size_t i = 0; x < m_width; ++x, ++i)
+        auto view = data.getLine((int)line);
+        for (int i = 0; x < m_x + m_width; ++x, ++i)
         {
             draw.printChar(x, y, view[i], m_bkgColour);
         }
 
-        if (m_currentLine == line &&
-            (m_currentX < m_width))
+        int currentX = m_data.getCurrentPosInLine();
+        if ((m_data.getCurrentLine() == line) && (m_data.getCurrentPosInLine() < m_width))
         {
-            draw.pokeAttr(m_x + m_currentX, y, m_bkgColour | 0x80);
+            draw.pokeAttr(m_x + currentX, y, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
         }
     }
 }
@@ -221,24 +226,18 @@ bool Editor::text(char ch)
     EditorData& data = getData();
     if (m_allowedChars[ch])
     {
-        if (m_currentX < m_width)
+        if (m_data.getCurrentPosInLine() < m_width)
         {
             if (ch >= ' ' && ch < 127)
             {
-                if (data.insert(ch)) ++m_currentX;
-                return true;
+                return data.insert(ch);
             }
-            else if (ch == 8)
-            {
-                // Backspace
-                if (data.backspace())
-                {
-                    if (--m_currentX < 0)
-                    {
-                        m_currentX = (int)data.lineLength(--m_currentLine);
-                    }
-                }
-            }
+        }
+
+        if (ch == 8)
+        {
+            // Backspace
+            data.backspace();
         }
     }
     return false;
@@ -247,8 +246,6 @@ bool Editor::text(char ch)
 void Editor::clear()
 {
     getData().clear();
-    m_currentX = 0;
-    m_currentLine = 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -256,8 +253,8 @@ void Editor::clear()
 //----------------------------------------------------------------------------------------------------------------------
 
 EditorWindow::EditorWindow(Nx& nx, string title)
-    : Window(nx, 1, 1, 78, 60, title, Colour::Black, Colour::White, true)
-    , m_editor(2, 2, 76, 58, Draw::attr(Colour::Black, Colour::White, true), false, 1024, 1024)
+    : Window(nx, 1, 1, 78, 60, title, Colour::Black, Colour::White, false)
+    , m_editor(2, 2, 76, 58, Draw::attr(Colour::Black, Colour::White, false), false, 1024, 1024)
 {
 
 }

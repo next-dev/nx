@@ -275,14 +275,14 @@ void DisassemblyWindow::onText(char ch)
                 m_enableGoto = 0;
                 u16 t = 0;
                 auto view = m_gotoEditor.getText();
-                size_t len = view.size();
+                int len = view.size();
                 if (len == 0)
                 {
                     t = m_nx.getSpeccy().getZ80().PC();
                 }
                 else
                 {
-                    for (size_t i = 0; i < len; ++i)
+                    for (int i = 0; i < len; ++i)
                     {
                         t *= 16;
                         char c = view[i];

@@ -16,18 +16,18 @@
 class SplitView
 {
 public:
-    SplitView(const vector<char>& v, size_t start, size_t end);
-    SplitView(const vector<char>& v, size_t start1, size_t end1, size_t start2, size_t end2);
+    SplitView(const vector<char>& v, int start, int end);
+    SplitView(const vector<char>& v, int start1, int end1, int start2, int end2);
 
-    char operator[] (size_t n) const
+    char operator[] (int n) const
     {
         //  +-----+-------+------+
         //  |XXXXX|       |XXXXXX|
         //  +-----+-------+------+
         //  S0    E0      S1     E1
 
-        size_t l0 = m_end[0] - m_start[0];
-        size_t l1 = m_end[1] - m_start[1];
+        int l0 = m_end[0] - m_start[0];
+        int l1 = m_end[1] - m_start[1];
 
         if ((n + m_start[0]) < m_end[0])
         {
@@ -42,15 +42,15 @@ public:
         else return ' ';
     }
     
-    size_t size() const
+    int size() const
     {
         return m_end[0] - m_start[0] + m_end[1] - m_start[1];
     }
 
 public:
     const vector<char>& m_array;
-    size_t m_start[2];
-    size_t m_end[2];
+    int m_start[2];
+    int m_end[2];
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -70,26 +70,33 @@ public:
 class EditorData
 {
 public:
-    EditorData(size_t initialSize, size_t increaseSize);
+    EditorData(int initialSize, int increaseSize, int maxLineLength);
 
     void clear();
     SplitView getLine(int n) const;
     SplitView getText() const;
-    size_t lineLength(int n) const;
+    int lineLength(int n) const;
     
     bool insert(char ch);
     bool backspace();
+
+    //
+    // Queries
+    //
+    int getCurrentLine() const { return m_currentLine; }
+    int getCurrentPosInLine() const;
     
 private:
-    bool ensureSpace(size_t numChars);
+    bool ensureSpace(int numChars);
 
 private:
     vector<char>    m_buffer;
-    vector<size_t>  m_lines;
+    vector<int>     m_lines;
     int             m_currentLine;
-    size_t          m_cursor;
-    size_t          m_endBuffer;
-    size_t          m_increaseSize;
+    int             m_cursor;
+    int             m_endBuffer;
+    int             m_increaseSize;
+    int             m_maxLineLength;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -125,8 +132,6 @@ private:
     int             m_width;
     int             m_height;
     int             m_topLine;
-    int             m_currentLine;
-    int             m_currentX;
     bool            m_font6;
     u8              m_bkgColour;
     vector<bool>    m_allowedChars;
