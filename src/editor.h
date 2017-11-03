@@ -109,6 +109,7 @@ public:
     SplitView getText() const;
 
     void render(Draw& draw, int line);
+    void renderAll(Draw& draw);
     bool key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
     bool text(char ch);
 
@@ -141,6 +142,9 @@ protected:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
     void onText(char ch) override;
+
+private:
+    Editor      m_editor;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

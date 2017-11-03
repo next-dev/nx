@@ -53,11 +53,15 @@ SplitView EditorData::getLine(int n) const
                          m_lines[n], m_cursor,
                          m_endBuffer, m_buffer.size());
     }
-    else
+    else if (n < m_lines.size())
     {
         size_t i = m_lines[n];
         for (; m_buffer.begin() + i < m_buffer.end() && m_buffer[i] != '\n'; ++i) ;
         return SplitView(m_buffer, m_lines[n], i);
+    }
+    else
+    {
+        return SplitView(m_buffer, 0, 0);
     }
 }
 
@@ -184,8 +188,25 @@ void Editor::render(Draw& draw, int line)
         for (size_t i = 0; x < m_width; ++x, ++i)
         {
             draw.printChar(x, y, view[i], m_bkgColour);
-            if (m_currentX == i) draw.pokeAttr(x, y, m_bkgColour | 0x80);
         }
+
+        if (m_currentLine == line &&
+            (m_currentX < m_width))
+        {
+            draw.pokeAttr(m_x + m_currentX, y, m_bkgColour | 0x80);
+        }
+    }
+}
+
+void Editor::renderAll(Draw& draw)
+{
+    int line = m_topLine;
+    int y = m_y;
+    int endY = m_y + m_height;
+
+    for (; y < endY; ++y)
+    {
+        render(draw, line++);
     }
 }
 
@@ -234,23 +255,24 @@ void Editor::clear()
 
 EditorWindow::EditorWindow(Nx& nx, string title)
     : Window(nx, 1, 1, 78, 60, title, Colour::Black, Colour::White, true)
+    , m_editor(2, 2, 76, 58, Draw::attr(Colour::Black, Colour::White, true), false, 1024, 1024)
 {
 
 }
 
 void EditorWindow::onDraw(Draw& draw)
 {
-
+    m_editor.renderAll(draw);
 }
 
 void EditorWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
-
+    m_editor.key(key, true, shift, ctrl, alt);
 }
 
 void EditorWindow::onText(char ch)
 {
-
+    m_editor.text(ch);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
