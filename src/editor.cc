@@ -172,11 +172,12 @@ void Editor::onlyAllowHex()
 
 SplitView Editor::getText() const
 {
-    return m_data.getText();
+    return getData().getText();
 }
 
 void Editor::render(Draw& draw, int line)
 {
+    EditorData& data = getData();
     int y = line - m_topLine;
     if (y < m_height)
     {
@@ -184,7 +185,7 @@ void Editor::render(Draw& draw, int line)
         int x = m_x;
         y += m_y;
 
-        auto view = m_data.getLine((size_t)line);
+        auto view = data.getLine((size_t)line);
         for (size_t i = 0; x < m_width; ++x, ++i)
         {
             draw.printChar(x, y, view[i], m_bkgColour);
@@ -217,23 +218,24 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
 bool Editor::text(char ch)
 {
+    EditorData& data = getData();
     if (m_allowedChars[ch])
     {
         if (m_currentX < m_width)
         {
             if (ch >= ' ' && ch < 127)
             {
-                if (m_data.insert(ch)) ++m_currentX;
+                if (data.insert(ch)) ++m_currentX;
                 return true;
             }
             else if (ch == 8)
             {
                 // Backspace
-                if (m_data.backspace())
+                if (data.backspace())
                 {
                     if (--m_currentX < 0)
                     {
-                        m_currentX = (int)m_data.lineLength(--m_currentLine);
+                        m_currentX = (int)data.lineLength(--m_currentLine);
                     }
                 }
             }
@@ -244,7 +246,7 @@ bool Editor::text(char ch)
 
 void Editor::clear()
 {
-    m_data.clear();
+    getData().clear();
     m_currentX = 0;
     m_currentLine = 0;
 }

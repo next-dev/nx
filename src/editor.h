@@ -114,6 +114,9 @@ public:
     bool text(char ch);
 
     void clear();
+
+    EditorData& getData() { return m_data; }
+    const EditorData& getData() const { return m_data; }
     
 private:
     EditorData      m_data;
