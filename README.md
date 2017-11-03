@@ -50,6 +50,7 @@ These controls are only valid when no other window is showing.
 | Key              | Description                                           |
 |------------------|-------------------------------------------------------|
 | Right Shift      | Symbol shift                                          |
+| Ctrl+A           | Open editor/assembler                                 |
 | Ctrl+O           | Open file                                             |
 | Ctrl+K           | Toggle Kempston joystick                              |
 | Ctrl+R           | Restart the machine                                   |
