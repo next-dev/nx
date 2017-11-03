@@ -88,6 +88,11 @@ int EditorData::lineLength(int n) const
     return end - start;
 }
 
+int EditorData::dataLength() const
+{
+    return m_cursor + ((int)m_buffer.size() - m_endBuffer);
+}
+
 bool EditorData::insert(char ch)
 {
     if (lineLength(m_currentLine) == m_maxLineLength) return false;
@@ -98,6 +103,65 @@ bool EditorData::insert(char ch)
     }
     
     return result;
+}
+
+void EditorData::moveTo(int pos)
+{
+    pos = max(0, min(pos, dataLength()));
+    if (pos != m_cursor)
+    {
+        if (pos < m_cursor)
+        {
+            // Moving X->Y
+            //
+            //         <--- l -->
+            // +-------+--------+--------------+--------+-----------+
+            // |       |XXXXXXXX|              |YYYYYYYY|           |
+            // +-------+--------+--------------+--------+-----------+
+            //         pos      cursor         newPos   endBuffer
+            //
+            int l = m_cursor - pos;
+            int newEnd = m_endBuffer - l;
+            move(m_buffer.begin() + pos, m_buffer.begin() + m_cursor, m_buffer.begin() + newEnd);
+            m_endBuffer = newEnd;
+            m_cursor = pos;
+
+            while (pos < m_lines[m_currentLine]) --m_currentLine;
+        }
+        else
+        {
+            // Moving X->Y
+            //
+            //                                   <- l -->
+            // +--------------+------+-----------+------+------------+
+            // |              |YYYYYY|           |XXXXXX|            |
+            // +--------------+------+-----------+------+------------+
+            //                ^      newCursor   ^      pos
+            //                cursor             endBuffer
+            //
+            int actualPos = m_endBuffer + (pos - m_cursor);
+            int l = actualPos - m_endBuffer;
+            move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + actualPos, m_buffer.begin() + m_cursor);
+            m_cursor += l;
+            m_endBuffer = actualPos;
+
+            while ((m_currentLine < (m_lines.size()-1)) &&
+                (pos >= m_lines[m_currentLine + 1]))
+            {
+                ++m_currentLine;
+            }
+        }
+    }
+}
+
+void EditorData::leftChar(int num = 1)
+{
+    moveTo(max(0, m_cursor - num));
+}
+
+void EditorData::rightChar(int num = 1)
+{
+    moveTo(min(dataLength(), m_cursor + num));
 }
 
 bool EditorData::backspace()
@@ -218,7 +282,25 @@ void Editor::renderAll(Draw& draw)
 
 bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    return false;
+    if (down)
+    {
+        using K = sf::Keyboard::Key;
+
+        switch (key)
+        {
+        case K::Left:
+            m_data.leftChar(1);
+            break;
+
+        case K::Right:
+            m_data.rightChar(1);
+            break;
+
+        default:
+            break;
+        }
+    }
+    return true;
 }
 
 bool Editor::text(char ch)

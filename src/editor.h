@@ -76,9 +76,13 @@ public:
     SplitView getLine(int n) const;
     SplitView getText() const;
     int lineLength(int n) const;
+    int dataLength() const;
     
     bool insert(char ch);
     bool backspace();
+    void moveTo(int pos);
+    void leftChar(int num);
+    void rightChar(int num);
 
     //
     // Queries
