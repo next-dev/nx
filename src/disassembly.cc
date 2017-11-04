@@ -17,7 +17,7 @@ DisassemblyWindow::DisassemblyWindow(Nx& nx)
     : SelectableWindow(nx, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
     , m_address(0x0000)
     , m_topAddress(0x0000)
-    , m_gotoEditor(6, 23, 43, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 4, 0)
+    , m_gotoEditor(6, 23, 37, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 40, 0)
     , m_enableGoto(0)
 {
     adjustBar();
@@ -251,6 +251,11 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool
         default:
             break;
         }
+    }
+
+    if (m_enableGoto)
+    {
+        m_gotoEditor.key(key, true, shift, ctrl, alt);
     }
 }
 

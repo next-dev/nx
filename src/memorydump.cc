@@ -15,7 +15,7 @@
 MemoryDumpWindow::MemoryDumpWindow(Nx& nx)
     : SelectableWindow(nx, 1, 1, 43, 20, "Memory Viewer", Colour::Black, Colour::White)
     , m_address(0)
-    , m_gotoEditor(6, 2, 43, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 4, 0)
+    , m_gotoEditor(6, 2, 37, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 40, 0)
     , m_enableGoto(0)
 {
     m_gotoEditor.onlyAllowHex();
@@ -44,7 +44,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
 
     if (m_enableGoto)
     {
-        draw.attrRect(m_x + 1, m_y + 1, 4, 1, draw.attr(Colour::White, Colour::Magenta, true));
+        draw.attrRect(m_x, m_y + 1, m_width, 1, draw.attr(Colour::Black, Colour::Magenta, true));
         draw.printString(m_x + 1, m_y + 1, "    ", draw.attr(Colour::White, Colour::Magenta, true));
         draw.printSquashedString(m_x + 1, m_y + 1, "Goto:", draw.attr(Colour::Yellow, Colour::Magenta, true));
         m_gotoEditor.render(draw, 0);
@@ -87,6 +87,11 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool 
         default:
             break;
         }
+    }
+
+    if (m_enableGoto)
+    {
+        m_gotoEditor.key(key, true, shift, ctrl, alt);
     }
 }
 
