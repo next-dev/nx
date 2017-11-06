@@ -25,6 +25,15 @@ using TState = i64;
 
 #define NX_ASSERT(...) assert(__VA_ARGS__)
 
+#ifdef _WIN32
+#   define WIN32_LEAN_AND_MEAN
+#   define NOMINMAX
+#   include <Windows.h>
+#   define NX_BREAK() DebugBreak();
+#else
+#   define NX_BREAK()
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // Data access
 //----------------------------------------------------------------------------------------------------------------------

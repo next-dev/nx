@@ -116,6 +116,7 @@ public:
 private:
     // Loading
     bool loadSnaSnapshot(string fileName);
+    bool loadZ80Snapshot(string fileName);
     bool loadTape(string fileName);
     bool loadNxSnapshot(string fileName);
 

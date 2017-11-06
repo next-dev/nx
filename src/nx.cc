@@ -467,7 +467,7 @@ void Emulator::openFile()
         "Open file",
         0,
         "NX files",
-        "*.nx;*.sna;*.tap"
+        "*.nx;*.sna;*.z80;*.tap"
     };
     const char* fileName = windowFileOpen(&cfg);
 
@@ -519,6 +519,10 @@ bool Nx::openFile(string fileName)
         else if (ext == ".nx")
         {
             return loadNxSnapshot(fileName);
+        }
+        else if (ext == ".z80")
+        {
+            return loadZ80Snapshot(fileName);
         }
         else if (ext == ".tap")
         {
@@ -801,6 +805,108 @@ bool Nx::loadSnaSnapshot(string fileName)
     z80.IFF1() = z80.IFF2();
     m_machine->resetTState();
     
+    return true;
+}
+
+bool Nx::loadZ80Snapshot(string fileName)
+{
+    vector<u8> buffer = NxFile::loadFile(fileName);
+    u8* data = buffer.data();
+    Z80& z80 = m_machine->getZ80();
+
+    // Only support version 1.0 Z80 files now
+    if (buffer.size() < 30) return false;
+    if (WORD_OF(data, 6) == 0) return false;
+
+    z80.A() = BYTE_OF(data, 0);
+    z80.F() = BYTE_OF(data, 1);
+    z80.BC() = WORD_OF(data, 2);
+    z80.HL() = WORD_OF(data, 4);
+    z80.PC() = WORD_OF(data, 6);
+    z80.SP() = WORD_OF(data, 8);
+    z80.I() = BYTE_OF(data, 10);
+    z80.R() = (BYTE_OF(data, 11) & 0x7f) | ((BYTE_OF(data, 12) & 0x01) << 7);
+    u8 b12 = BYTE_OF(data, 12);
+    if (b12 == 255) b12 = 1;
+    m_machine->setBorderColour((b12 & 0x0e) >> 1);
+    bool compressed = (b12 & 0x20) != 0;
+    z80.DE() = WORD_OF(data, 13);
+    z80.BC_() = WORD_OF(data, 15);
+    z80.DE_() = WORD_OF(data, 17);
+    z80.HL_() = WORD_OF(data, 19);
+    u8 a_ = BYTE_OF(data, 21);
+    u8 f_ = BYTE_OF(data, 22);
+    z80.AF_() = (u16(a_) << 8) + u16(f_);
+    z80.IY() = WORD_OF(data, 23);
+    z80.IX() = WORD_OF(data, 25);
+    z80.IFF1() = BYTE_OF(data, 27) ? 1 : 0;
+    z80.IFF2() = BYTE_OF(data, 28) ? 1 : 0;
+    z80.IM() = int(BYTE_OF(data, 29) & 0x03);
+
+#define CHECK_BUFFER() do { if (size_t(mem - data) >= buffer.size()) { NX_BREAK(); return false; } } while(0)
+
+    if (compressed)
+    {
+        u8* mem = data + 30;
+        u16 a = 0x4000;
+        while (1)
+        {
+            // Check we haven't run out of bytes.
+            CHECK_BUFFER();
+            u8 b = *mem++;
+            if (b == 0x00)
+            {
+                // Not enough room for 4 terminating bytes
+                if (size_t(mem + 3 - data) > buffer.size())
+                {
+                    NX_BREAK();
+                    return false;
+                }
+
+                if (mem[0] == 0xed && mem[1] == 0xed && mem[2] == 0x00)
+                {
+                    // Terminator.
+                    break;
+                }
+
+                m_machine->poke(a++, 0);
+            }
+            else if (b == 0xed)
+            {
+                CHECK_BUFFER();
+                b = *mem++;
+                if (b != 0xed)
+                {
+                    m_machine->poke(a++, 0xed);
+                    m_machine->poke(a++, b);
+                }
+                else
+                {
+                    // Two EDs - compression.
+                    CHECK_BUFFER();
+                    u8 count = *mem++;
+                    CHECK_BUFFER();
+                    b = *mem++;
+
+                    for (u8 i = 0; i < count; ++i)
+                    {
+                        m_machine->poke(a++, b);
+                    }
+                }
+            }
+            else
+            {
+                m_machine->poke(a++, b);
+            }
+        }
+    }
+    else
+    {
+        if (buffer.size() != (0xc000 + 30)) return false;
+
+        m_machine->load(0x4000, data + 30, 0xc000);
+    }
+
     return true;
 }
 
