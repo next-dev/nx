@@ -534,12 +534,15 @@ Nx::Nx(int argc, char** argv)
 
     //--- Tape Browser --------------------------------------------------------------
     , m_tapeBrowser(*this)
+
+    //--- Files ---------------------------------------------------------------------
+    , m_tempPath()
 {
     sf::FileInputStream f;
 #ifdef __APPLE__
-    string romFileName = resourcePath() + "48.rom";
+    m_tempPath = resourcePath();
 #else
-    string romFileName = "48.rom";
+    m_tempPath = fs::path(argv[0]).parent_path();
 #endif
     setScale(kDefaultScale);
     m_machine->getVideoSprite().setScale(float(kDefaultScale * 2), float(kDefaultScale * 2));
@@ -550,6 +553,7 @@ Nx::Nx(int argc, char** argv)
     m_machine->setRomWriteState(false);
     
     // Deal with the command line
+    bool loadedFiles = false;
     for (int i = 1; i < argc; ++i)
     {
         char* arg = argv[i];
@@ -573,10 +577,15 @@ Nx::Nx(int argc, char** argv)
         else
         {
             openFile(arg);
+            loadedFiles = true;
         }
     }
     
     updateSettings();
+    if (!loadedFiles)
+    {
+        loadNxSnapshot((m_tempPath / "cache.nx").string());
+    }
     m_emulator.select();
 }
 
@@ -686,6 +695,9 @@ void Nx::run()
             render();
         }
     }
+
+    // Shutdown
+    saveNxSnapshot((m_tempPath / "cache.nx").string());
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -749,32 +761,32 @@ bool Nx::loadNxSnapshot(string fileName)
     NxFile f;
 
     if (f.load(fileName) &&
-        f.checkSection('SN48', 40) &&
+        f.checkSection('SN48', 36) &&
         f.checkSection('RM48', 49152))
     {
-        const BlockSection& sn48 = f['sn48'];
-        const BlockSection& rm48 = f['rm48'];
+        const BlockSection& sn48 = f['SN48'];
+        const BlockSection& rm48 = f['RM48'];
         Z80& z80 = m_machine->getZ80();
 
         z80.AF() = sn48.peek16(0);
         z80.BC() = sn48.peek16(2);
         z80.DE() = sn48.peek16(4);
-        z80.HL() = sn48.peek16(8);
-        z80.AF_() = sn48.peek16(10);
-        z80.BC_() = sn48.peek16(12);
-        z80.DE_() = sn48.peek16(14);
-        z80.HL_() = sn48.peek16(18);
-        z80.IX() = sn48.peek16(20);
-        z80.IY() = sn48.peek16(22);
-        z80.SP() = sn48.peek16(24);
-        z80.PC() = sn48.peek16(26);
-        z80.IR() = sn48.peek16(28);
-        z80.MP() = sn48.peek16(30);
-        z80.IM() = (int)sn48.peek8(32);
-        z80.IFF1() = sn48.peek8(33) != 0;
-        z80.IFF2() = sn48.peek8(34) != 0;
-        m_machine->setBorderColour(sn48.peek8(35));
-        m_machine->setTState((TState)sn48.peek32(36));
+        z80.HL() = sn48.peek16(6);
+        z80.AF_() = sn48.peek16(8);
+        z80.BC_() = sn48.peek16(10);
+        z80.DE_() = sn48.peek16(12);
+        z80.HL_() = sn48.peek16(14);
+        z80.IX() = sn48.peek16(16);
+        z80.IY() = sn48.peek16(18);
+        z80.SP() = sn48.peek16(20);
+        z80.PC() = sn48.peek16(22);
+        z80.IR() = sn48.peek16(24);
+        z80.MP() = sn48.peek16(26);
+        z80.IM() = (int)sn48.peek8(28);
+        z80.IFF1() = sn48.peek8(29) != 0;
+        z80.IFF2() = sn48.peek8(30) != 0;
+        m_machine->setBorderColour(sn48.peek8(31));
+        m_machine->setTState((TState)sn48.peek32(32));
 
         m_machine->load(0x4000, rm48.data());
 
@@ -809,7 +821,7 @@ bool Nx::saveNxSnapshot(string fileName)
     sn48.poke8(z80.IFF2() ? 1 : 0);
     sn48.poke8(m_machine->getBorderColour());
     sn48.poke32((u32)m_machine->getTState());
-    f.addSection(sn48, 40);
+    f.addSection(sn48, 36);
 
     BlockSection rm48('RM48');
     for (u16 a = 0x4000; a != 0x0000; ++a)

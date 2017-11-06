@@ -18,27 +18,27 @@
 //
 // BLOCK TYPES & FORMATS:
 //
-//      SN48 (length = 40)
+//      SN48 (length = 36)
 //          Offset  Length  Description
 //          0       2       Contents of AF
 //          2       2       Contents of BC
 //          4       2       Contents of DE
-//          8       2       Contents of HL
-//          10      2       Contents of AF'
-//          12      2       Contents of BC'
-//          14      2       Contents of DE'
-//          18      2       Contents of HL'
-//          20      2       Contents of IX
-//          22      2       Contents of IY
-//          24      2       Contents of SP
-//          26      2       Contents of PC
-//          28      2       Contents of IR
-//          30      2       Contents of WZ
-//          32      1       Interrupt mode
-//          33      1       IFF1
-//          34      1       IFF2
-//          35      1       Border colour
-//          36      4       T-state
+//          6       2       Contents of HL
+//          8       2       Contents of AF'
+//          10      2       Contents of BC'
+//          12      2       Contents of DE'
+//          14      2       Contents of HL'
+//          16      2       Contents of IX
+//          18      2       Contents of IY
+//          20      2       Contents of SP
+//          22      2       Contents of PC
+//          24      2       Contents of IR
+//          26      2       Contents of WZ
+//          28      1       Interrupt mode
+//          29      1       IFF1
+//          30      1       IFF2
+//          31      1       Border colour
+//          32      4       T-state
 //
 //      RM48 (length = 49152)
 //          Offset  Length  Description
@@ -95,7 +95,7 @@ public:
     void poke8(u8 byte);
     void poke16(u16 word);
     void poke32(u32 dword);
-    void checkSize(u32 expectedSize);
+    void checkSize(u32 expectedSize) const;
 
     void write(vector<u8>& data) const;
 

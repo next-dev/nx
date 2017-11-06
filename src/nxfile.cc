@@ -48,9 +48,9 @@ void FourCC::write(vector<u8>& data)
 {
     u32 fcc =
         ((m_fcc & 0xff000000) >> 24) |
-        ((m_fcc & 0x00ff0000) >> 16) |
-        ((m_fcc & 0x0000ff00) >> 8) |
-        ((m_fcc & 0x000000ff));
+        ((m_fcc & 0x00ff0000) >> 8) |
+        ((m_fcc & 0x0000ff00) << 8) |
+        ((m_fcc & 0x000000ff) << 24);
     NxFile::write32(data, fcc);
 }
 
@@ -118,7 +118,7 @@ void BlockSection::poke32(u32 dword)
     poke16(dword >> 16);
 }
 
-void BlockSection::checkSize(u32 expectedSize)
+void BlockSection::checkSize(u32 expectedSize) const
 {
     NX_ASSERT(m_data.size() == (size_t)expectedSize);
 }
@@ -195,6 +195,7 @@ bool NxFile::load(string fileName)
                 if ((i + (int)blockSize) > f.size()) return false;
                 m_index[blockFcc] = (int)m_sections.size();
                 m_sections.emplace_back(blockFcc, f.data() + i, blockSize);
+                i += blockSize;
             }
 
             result = true;
@@ -222,6 +223,7 @@ bool NxFile::save(string fileName)
 
 void NxFile::addSection(const BlockSection& section, u32 expectedSize)
 {
+    section.checkSize(expectedSize);
     FourCC fcc = section.getFcc();
     m_index[fcc] = (int)m_sections.size();
     m_sections.push_back(section);

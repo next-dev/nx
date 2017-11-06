@@ -10,9 +10,12 @@
 #include "tape.h"
 
 #include <SFML/Graphics.hpp>
+#include <experimental/filesystem>
 #include <map>
 #include <mutex>
 #include <thread>
+
+namespace fs = experimental::filesystem::v1;
 
 enum class Joystick
 {
@@ -148,6 +151,9 @@ private:
 
     // Tape emulation
     TapeBrowser         m_tapeBrowser;
+
+    // Files
+    fs::path            m_tempPath;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
