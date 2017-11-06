@@ -90,6 +90,7 @@ public:
     void togglePause(bool breakpointHit);
     void stepOver();
     void stepIn();
+    void stepOut();
     RunMode getRunMode() const { return m_runMode; }
     void setRunMode(RunMode runMode) { m_runMode = m_runMode; }
 

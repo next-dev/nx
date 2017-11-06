@@ -860,6 +860,19 @@ void Nx::stepOver()
     }
 }
 
+void Nx::stepOut()
+{
+    if (m_runMode == RunMode::Normal) togglePause(false);
+    else
+    {
+        u16 sp = getSpeccy().getZ80().SP();
+        TState t = 0;
+        u16 address = m_machine->peek16(sp, t);
+        m_machine->addTemporaryBreakpoint(address);
+        m_runMode = RunMode::Normal;
+    }
+}
+
 u16 Nx::nextInstructionAt(u16 address)
 {
     return m_debugger.getDisassemblyWindow().disassemble(address);

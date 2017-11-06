@@ -68,6 +68,10 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             getEmulator().stepIn();
             break;
 
+        case K::F8:
+            getEmulator().stepOut();
+            break;
+
         case K::Tab:
             // #todo: put cycling logic into SelectableWindow
             if (getDisassemblyWindow().isSelected())

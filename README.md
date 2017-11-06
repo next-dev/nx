@@ -71,6 +71,7 @@ These controls are only valid when no other window is showing.
 | Ctrl+F5          | Run to.  Will stop the debugger at that point if running.        |
 | F6               | Step over.  Will pause when running.                             |
 | F7               | Step in.  Will pause when running.                               |
+| F8               | Step out.  Will pause when running.                              |
 | F9               | Toggle breakpoint.                                               |
 
 Currently *Step Over* acts like *Step In* right now.  When pausing from a running state, if interrupts are enabled,
