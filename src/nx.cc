@@ -173,6 +173,8 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
 
     if (down && ctrl && !shift && !alt)
     {
+        fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
+
         switch (key)
         {
         case K::K:
@@ -186,8 +188,11 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             break;
 
         case K::O:
-            fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
             openFile();
+            break;
+
+        case K::S:
+            saveFile();
             break;
 
         case K::T:
@@ -457,24 +462,17 @@ void Emulator::joystickKey(Joystick key, bool down)
 void Emulator::openFile()
 {
 #ifdef _WIN32
-    // Last path opened
-    static char path[2048] = { 0 };
-
     // Open file
     WindowFileOpenConfig cfg = {
         "Open file",
-        path,
+        0,
         "NX files",
-        "*.sna;*.tap"
+        "*.nx;*.sna;*.tap"
     };
     const char* fileName = windowFileOpen(&cfg);
 
     if (fileName)
     {
-        // Store the path for next time
-        const char* end = strrchr(fileName, '\\');
-        strncpy(path, (const char *)fileName, (size_t)(path - end));
-
         if (!getEmulator().openFile(fileName))
         {
             MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
@@ -483,25 +481,75 @@ void Emulator::openFile()
 #endif
 }
 
+void Emulator::saveFile()
+{
+#ifdef _WIN32
+    // Save file
+    WindowFileOpenConfig cfg = {
+        "Save snapshot",
+        0,
+        "Snapshot files",
+        "*.nx;*.sna"
+    };
+    const char* fileName = windowFileSaveAs(&cfg);
+
+    if (fileName)
+    {
+        if (!getEmulator().saveFile(fileName))
+        {
+            MessageBoxA(0, "Unable to save snapshot!", "ERROR", MB_ICONERROR | MB_OK);
+        }
+    }
+#endif
+}
+
 bool Nx::openFile(string fileName)
 {
     // Get extension
-    auto extIt = fileName.find_last_of('.');
-    if (extIt != string::npos)
+    fs::path path = fileName;
+
+    if (path.has_extension())
     {
-        string ext = fileName.substr(extIt + 1);
+        string ext = path.extension().string();
         transform(ext.begin(), ext.end(), ext.begin(), tolower);
-        
         if (ext == "sna")
         {
             return loadSnaSnapshot(fileName);
         }
-        else if (ext == "tap")
+        else if (ext == ".nx")
+        {
+            return loadNxSnapshot(fileName);
+        }
+        else if (ext == ".tap")
         {
             return loadTape(fileName);
         }
     }
     
+    return false;
+}
+
+bool Nx::saveFile(string fileName)
+{
+    // Get extension
+    fs::path path = fileName;
+    if (!path.has_extension())
+    {
+        path = (fileName += ".nx");
+    }
+
+    string ext = path.extension().string();
+    transform(ext.begin(), ext.end(), ext.begin(), tolower);
+
+    if (ext == ".sna")
+    {
+        return saveSnaSnapshot(fileName);
+    }
+    else if (ext == ".nx")
+    {
+        return saveNxSnapshot(fileName);
+    }
+
     return false;
 }
 
@@ -754,6 +802,40 @@ bool Nx::loadSnaSnapshot(string fileName)
     m_machine->resetTState();
     
     return true;
+}
+
+bool Nx::saveSnaSnapshot(string fileName)
+{
+    vector<u8> data;
+    Z80& z80 = m_machine->getZ80();
+
+    TState t = 0;
+    z80.push(z80.PC(), t);
+
+    NxFile::write8(data, z80.I());
+    NxFile::write16(data, z80.HL_());
+    NxFile::write16(data, z80.DE_());
+    NxFile::write16(data, z80.BC_());
+    NxFile::write16(data, z80.AF_());
+    NxFile::write16(data, z80.HL());
+    NxFile::write16(data, z80.DE());
+    NxFile::write16(data, z80.BC());
+    NxFile::write16(data, z80.IY());
+    NxFile::write16(data, z80.IX());
+    NxFile::write8(data, (z80.IFF1() ? 0x01 : 0) | (z80.IFF2() ? 0x04 : 0));
+    NxFile::write8(data, z80.R());
+    NxFile::write16(data, z80.AF());
+    NxFile::write16(data, z80.SP());
+    NxFile::write8(data, (u8)z80.IM());
+    NxFile::write8(data, m_machine->getBorderColour());
+    for (u16 a = 0x4000; a; ++a)
+    {
+        data.emplace_back(m_machine->peek(a));
+    }
+
+    z80.pop(t);
+
+    return NxFile::saveFile(fileName, data);
 }
 
 bool Nx::loadNxSnapshot(string fileName)

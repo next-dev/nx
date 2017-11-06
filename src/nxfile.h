@@ -128,6 +128,8 @@ public:
     // Static data builders
     static u32 read32(const vector<u8>& data, int index);
     static FourCC readFcc(const vector<u8>& data, int index);
+    static void write8(vector<u8>& data, u8 x);
+    static void write16(vector<u8>& data, u16 x);
     static void write32(vector<u8>& data, u32 x);
     static void writeFcc(vector<u8>& data, FourCC fcc);
 

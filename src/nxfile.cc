@@ -281,6 +281,17 @@ FourCC NxFile::readFcc(const vector<u8>& data, int index)
             (u32(data[index+3])));
 }
 
+void NxFile::write8(vector<u8>& data, u8 x)
+{
+    data.emplace_back(x);
+}
+
+void NxFile::write16(vector<u8>& data, u16 x)
+{
+    data.emplace_back((x >> 0) & 0xff);
+    data.emplace_back((x >> 8) & 0xff);
+}
+
 void NxFile::write32(vector<u8>& data, u32 x)
 {
     data.emplace_back((x >> 0) & 0xff);

@@ -91,7 +91,9 @@ public:
     static const u8 F_SIGN = 0x80;
 
     // Pop is public because it is needed for snapshot loading
-    u16 pop(i64& inOutTState);
+    u16 pop(TState& inOutTState);
+    void push(u16 x, TState& inOutTState);
+
 
 private:
     void setFlags(u8 flags, bool value);
@@ -126,8 +128,6 @@ private:
     void setReg8(u8& reg, int b);
     void daa();
     int displacement(u8 x);
-
-    void push(u16 x, i64& inOutTState);
 
     u8& getReg8(u8 y);
     u16& getReg16_1(u8 p);

@@ -44,6 +44,7 @@ public:
     void showStatus();
 
     void openFile();
+    void saveFile();
 
 private:
     void joystickKey(Joystick key, bool down);
@@ -82,6 +83,9 @@ public:
     
     // Open a file, detect it's type and try to open it
     bool openFile(string fileName);
+
+    // Save a file as a snapshot.
+    bool saveFile(string fileName);
     
     // Settings
     void setSetting(string key, string value);
@@ -116,6 +120,7 @@ private:
     bool loadNxSnapshot(string fileName);
 
     // Saving
+    bool saveSnaSnapshot(string fileName);
     bool saveNxSnapshot(string fileName);
     
     // Debugging helper functions
