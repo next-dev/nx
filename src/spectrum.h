@@ -124,6 +124,9 @@ public:
     // Reset the tState counter
     void            resetTState         () { m_tState = 0; }
 
+    // Set the tState counter
+    void            setTState           (TState t) { m_tState = t;}
+
     // Set the tape, it will be played if not stopped.
     void            setTape             (Tape* tape) { m_tape = tape;}
 

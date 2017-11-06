@@ -107,9 +107,13 @@ public:
     bool getZoom() const { return m_zoom; }
     
 private:
-    // Load a snapshot
-    bool loadSnapshot(string fileName);
+    // Loading
+    bool loadSnaSnapshot(string fileName);
     bool loadTape(string fileName);
+    bool loadNxSnapshot(string fileName);
+
+    // Saving
+    bool saveNxSnapshot(string fileName);
     
     // File routines
     vector<u8> loadFile(string fileName);
