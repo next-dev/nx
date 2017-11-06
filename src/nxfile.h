@@ -7,7 +7,6 @@
 //
 //      Offset  Length  Description
 //      0       4       'NX00'
-//      4       4       Number of blocks
 //      8       ?       Block 0+
 //
 // BLOCK FORMAT:
@@ -67,6 +66,10 @@ public:
     bool operator==(const FourCC& fcc);
     bool operator!=(const FourCC& fcc);
 
+    bool operator<(const FourCC& fcc) const { return m_fcc < fcc.m_fcc; }
+
+    void write(vector<u8>& data);
+
 private:
     u32 m_fcc;
 };
@@ -75,11 +78,13 @@ class BlockSection
 {
 public:
     BlockSection();
+    BlockSection(const BlockSection& block);
     BlockSection(FourCC fcc);
-    BlockSection(const u8* data, u32 size);
+    BlockSection(FourCC fcc, const u8* data, u32 size);
 
-    vector<u8>& data();
-    const vector<u8>& data() const;
+    vector<u8>& data()                  { return m_data; }
+    const vector<u8>& data() const      { return m_data; }
+    FourCC getFcc() const               { return m_fcc; }
 
     // Used for reading
     u8 peek8(int i) const;
@@ -92,6 +97,8 @@ public:
     void poke32(u32 dword);
     void checkSize(u32 expectedSize);
 
+    void write(vector<u8>& data) const;
+
 private:
     FourCC      m_fcc;
     vector<u8>  m_data;
@@ -102,6 +109,9 @@ class NxFile
 public:
     NxFile();
 
+    static vector<u8> loadFile(string fileName);
+    static bool saveFile(string fileName, const vector<u8>& data);
+
     bool load(string fileName);
     bool save(string fileName);
 
@@ -110,14 +120,20 @@ public:
 
     // Queries
     bool hasSection(FourCC fcc);
-    int sizeSection(FourCC fcc);
-    bool checkSection(FourCC fcc, int expectedSize);
+    u32 sizeSection(FourCC fcc);
+    bool checkSection(FourCC fcc, u32 expectedSize);
 
     const BlockSection& operator[] (FourCC fcc) const;
 
+    // Static data builders
+    static u32 read32(const vector<u8>& data, int index);
+    static FourCC readFcc(const vector<u8>& data, int index);
+    static void write32(vector<u8>& data, u32 x);
+    static void writeFcc(vector<u8>& data, FourCC fcc);
+
 private:
     vector<BlockSection> m_sections;
-    map<FourCC, BlockSection> m_index;
+    map<FourCC, int> m_index;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

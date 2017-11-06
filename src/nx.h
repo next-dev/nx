@@ -115,9 +115,6 @@ private:
     // Saving
     bool saveNxSnapshot(string fileName);
     
-    // File routines
-    vector<u8> loadFile(string fileName);
-
     // Debugging helper functions
     u16 nextInstructionAt(u16 address);
     bool isCallInstructionAt(u16 address);

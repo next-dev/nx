@@ -705,31 +705,12 @@ void Nx::frame()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// File loading
-//----------------------------------------------------------------------------------------------------------------------
-
-vector<u8> Nx::loadFile(string fileName)
-{
-    vector<u8> buffer;
-    sf::FileInputStream f;
-    
-    if (f.open(fileName))
-    {
-        i64 size = f.getSize();
-        buffer.resize(size);
-        f.read(buffer.data(), size);
-    }
-    
-    return buffer;
-}
-
-//----------------------------------------------------------------------------------------------------------------------
 // Snapshot loading & saving
 //----------------------------------------------------------------------------------------------------------------------
 
 bool Nx::loadSnaSnapshot(string fileName)
 {
-    vector<u8> buffer = loadFile(fileName);
+    vector<u8> buffer = NxFile::loadFile(fileName);
     u8* data = buffer.data();
     i64 size = (i64)buffer.size();
     Z80& z80 = m_machine->getZ80();
@@ -846,7 +827,7 @@ bool Nx::saveNxSnapshot(string fileName)
 
 bool Nx::loadTape(string fileName)
 {
-    vector<u8> file = loadFile(fileName);
+    vector<u8> file = NxFile::loadFile(fileName);
     if (file.size())
     {
         Tape* tape = m_tapeBrowser.loadTape(file);
