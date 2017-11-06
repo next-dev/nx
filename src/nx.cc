@@ -489,6 +489,7 @@ bool Nx::openFile(string fileName)
     if (extIt != string::npos)
     {
         string ext = fileName.substr(extIt + 1);
+        transform(ext.begin(), ext.end(), ext.begin(), tolower);
         
         if (ext == "sna")
         {
