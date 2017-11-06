@@ -816,7 +816,20 @@ bool Nx::loadZ80Snapshot(string fileName)
 
     // Only support version 1.0 Z80 files now
     if (buffer.size() < 30) return false;
-    if (WORD_OF(data, 6) == 0) return false;
+    int version = 1;
+    if (WORD_OF(data, 6) == 0)
+    {
+        if (WORD_OF(data, 30) == 23) version = 2;
+        else version = 3;
+    }
+
+    if (version > 1)
+    {
+        // Check to see if we're only 48K
+        u8 hardware = BYTE_OF(data, 34);
+        if (version == 2 && (hardware != 0 && hardware == 1)) return false;
+        if (version == 3 && (hardware != 0 || hardware == 1 || hardware == 3)) return false;
+    }
 
     z80.A() = BYTE_OF(data, 0);
     z80.F() = BYTE_OF(data, 1);
@@ -845,66 +858,116 @@ bool Nx::loadZ80Snapshot(string fileName)
 
 #define CHECK_BUFFER() do { if (size_t(mem - data) >= buffer.size()) { NX_BREAK(); return false; } } while(0)
 
-    if (compressed)
+    if (version == 1)
     {
-        u8* mem = data + 30;
-        u16 a = 0x4000;
-        while (1)
+        if (compressed)
         {
-            // Check we haven't run out of bytes.
-            CHECK_BUFFER();
-            u8 b = *mem++;
-            if (b == 0x00)
+            u8* mem = data + 30;
+            u16 a = 0x4000;
+            while (1)
             {
-                // Not enough room for 4 terminating bytes
-                if (size_t(mem + 3 - data) > buffer.size())
-                {
-                    NX_BREAK();
-                    return false;
-                }
-
-                if (mem[0] == 0xed && mem[1] == 0xed && mem[2] == 0x00)
-                {
-                    // Terminator.
-                    break;
-                }
-
-                m_machine->poke(a++, 0);
-            }
-            else if (b == 0xed)
-            {
+                // Check we haven't run out of bytes.
                 CHECK_BUFFER();
-                b = *mem++;
-                if (b != 0xed)
+                u8 b = *mem++;
+                if (b == 0x00)
                 {
-                    m_machine->poke(a++, 0xed);
-                    m_machine->poke(a++, b);
+                    // Not enough room for 4 terminating bytes
+                    if (size_t(mem + 3 - data) > buffer.size())
+                    {
+                        NX_BREAK();
+                        return false;
+                    }
+
+                    if (mem[0] == 0xed && mem[1] == 0xed && mem[2] == 0x00)
+                    {
+                        // Terminator.
+                        break;
+                    }
+
+                    m_machine->poke(a++, 0);
+                }
+                else if (b == 0xed)
+                {
+                    CHECK_BUFFER();
+                    b = *mem++;
+                    if (b != 0xed)
+                    {
+                        m_machine->poke(a++, 0xed);
+                        m_machine->poke(a++, b);
+                    }
+                    else
+                    {
+                        // Two EDs - compression.
+                        CHECK_BUFFER();
+                        u8 count = *mem++;
+                        CHECK_BUFFER();
+                        b = *mem++;
+
+                        for (u8 i = 0; i < count; ++i)
+                        {
+                            m_machine->poke(a++, b);
+                        }
+                    }
                 }
                 else
                 {
-                    // Two EDs - compression.
-                    CHECK_BUFFER();
-                    u8 count = *mem++;
-                    CHECK_BUFFER();
-                    b = *mem++;
-
-                    for (u8 i = 0; i < count; ++i)
-                    {
-                        m_machine->poke(a++, b);
-                    }
+                    m_machine->poke(a++, b);
                 }
             }
-            else
-            {
-                m_machine->poke(a++, b);
-            }
+        }
+        else
+        {
+            if (buffer.size() != (0xc000 + 30)) return false;
+
+            m_machine->load(0x4000, data + 30, 0xc000);
         }
     }
     else
     {
-        if (buffer.size() != (0xc000 + 30)) return false;
+        // Version 2 & 3 files
+        u8* mem = data + 32 + WORD_OF(data, 30);
+        z80.PC() = WORD_OF(data, 32);
+        if (version == 3)
+        {
+            m_machine->setTState(TState(WORD_OF(data, 55)) + (TState(BYTE_OF(data, 57)) << 16));
+        }
 
-        m_machine->load(0x4000, data + 30, 0xc000);
+        u32 a = 0x4000;
+        for (int i = 0; i < 3; ++i)
+        {
+            u16 len = WORD_OF(mem, 0);
+            mem += 3;
+            bool compressed = (len != 0xffff);
+            if (!compressed) len = 0x4000;
+
+            int idx = 0;
+            while (idx < 0x4000)
+            {
+                u8 b = mem[idx++];
+                if (b == 0xed)
+                {
+                    b = mem[idx++];
+                    if (b == 0xed)
+                    {
+                        u8 count = mem[idx++];
+                        b = mem[idx++];
+                        for (int ii = 0; ii < count; ++ii)
+                        {
+                            m_machine->poke(a++, b);
+                        }
+                    }
+                    else
+                    {
+                        m_machine->poke(a++, 0xed);
+                        m_machine->poke(a++, b);
+                    }
+                }
+                else
+                {
+                    m_machine->poke(a++, b);
+                }
+            }
+        }
     }
 
     return true;
