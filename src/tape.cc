@@ -80,24 +80,24 @@ Tape::Header Tape::getHeader(int i) const
     switch (tapeHdr[1])
     {
     case 0: // Program
-        hdr.p.autoStartLine = WORD_OF(tapeHdr, 14);
-        hdr.p.programLength = WORD_OF(tapeHdr, 16);
-        hdr.p.variableOffset = WORD_OF(tapeHdr, 12) - hdr.p.programLength;
+        hdr.u.p.autoStartLine = WORD_OF(tapeHdr, 14);
+        hdr.u.p.programLength = WORD_OF(tapeHdr, 16);
+        hdr.u.p.variableOffset = WORD_OF(tapeHdr, 12) - hdr.u.p.programLength;
         break;
 
     case 1: // Number array
-        hdr.a.variableName = BYTE_OF(tapeHdr, 15) - 129 + 'A';
-        hdr.a.arrayLength = (WORD_OF(tapeHdr, 12) - 3) / 5;
+        hdr.u.a.variableName = BYTE_OF(tapeHdr, 15) - 129 + 'A';
+        hdr.u.a.arrayLength = (WORD_OF(tapeHdr, 12) - 3) / 5;
         break;
 
     case 2: // String array
-        hdr.a.variableName = BYTE_OF(tapeHdr, 15) - 193 + 'A';
-        hdr.a.arrayLength = WORD_OF(tapeHdr, 12) - 3;
+        hdr.u.a.variableName = BYTE_OF(tapeHdr, 15) - 193 + 'A';
+        hdr.u.a.arrayLength = WORD_OF(tapeHdr, 12) - 3;
         break;
 
     case 3: // Bytes
-        hdr.b.startAddress = WORD_OF(tapeHdr, 14);
-        hdr.b.dataLength = WORD_OF(tapeHdr, 12);
+        hdr.u.b.startAddress = WORD_OF(tapeHdr, 14);
+        hdr.u.b.dataLength = WORD_OF(tapeHdr, 12);
         break;
 
     default:
@@ -347,7 +347,7 @@ void TapeWindow::onDraw(Draw& draw)
                     category = "     PROGRAM";
                     Tape::Header hdr = m_tape->getHeader(i);
                     desc1 = draw.format("\"%s\"", hdr.fileName.c_str());
-                    desc2 = draw.format("auto: %d, length: %d", hdr.p.autoStartLine, hdr.p.programLength);
+                    desc2 = draw.format("auto: %d, length: %d", hdr.u.p.autoStartLine, hdr.u.p.programLength);
                 }
                 break;
 
@@ -356,7 +356,7 @@ void TapeWindow::onDraw(Draw& draw)
                     category = "NUMBER ARRAY";
                     Tape::Header hdr = m_tape->getHeader(i);
                     desc1 = draw.format("\"%s\"", hdr.fileName.c_str());
-                    desc2 = draw.format("name: %c, length: %d", hdr.a.variableName, hdr.a.arrayLength);
+                    desc2 = draw.format("name: %c, length: %d", hdr.u.a.variableName, hdr.u.a.arrayLength);
                 }
                 break;
 
@@ -365,7 +365,7 @@ void TapeWindow::onDraw(Draw& draw)
                     category = "STRING ARRAY";
                     Tape::Header hdr = m_tape->getHeader(i);
                     desc1 = draw.format("\"%s\"", hdr.fileName.c_str());
-                    desc2 = draw.format("name: %c$, length: %d", hdr.a.variableName, hdr.a.arrayLength);
+                    desc2 = draw.format("name: %c$, length: %d", hdr.u.a.variableName, hdr.u.a.arrayLength);
                 }
                 break;
 
@@ -374,7 +374,7 @@ void TapeWindow::onDraw(Draw& draw)
                     category = "       BYTES";
                     Tape::Header hdr = m_tape->getHeader(i);
                     desc1 = draw.format("\"%s\"", hdr.fileName.c_str());
-                    desc2 = draw.format("start: $%04x, length: %d", hdr.b.startAddress, hdr.b.dataLength);
+                    desc2 = draw.format("start: $%04x, length: %d", hdr.u.b.startAddress, hdr.u.b.dataLength);
                 }
                 break;
 
@@ -438,6 +438,9 @@ void TapeWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
         case K::Return:
             m_tape->stop();
             m_tape->selectBlock(m_index);
+            break;
+                
+        default:
             break;
         }
     }
@@ -510,6 +513,9 @@ void TapeBrowser::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, b
 
         case K::T:
             getEmulator().hideAll();
+            break;
+                
+        default:
             break;
         }
     }

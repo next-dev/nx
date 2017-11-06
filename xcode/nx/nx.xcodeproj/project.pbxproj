@@ -14,6 +14,9 @@
 		C940923D1F8D8BB200D44114 /* nx.cc in Sources */ = {isa = PBXBuildFile; fileRef = C940923A1F8D8BB200D44114 /* nx.cc */; };
 		C965A3F91F8BCF0400C2B212 /* portaudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C965A3F81F8BCF0400C2B212 /* portaudio.framework */; };
 		C965A3FA1F8BCF0400C2B212 /* portaudio.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C965A3F81F8BCF0400C2B212 /* portaudio.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		C98595D41FB0105C00E7BEDC /* assembler.cc in Sources */ = {isa = PBXBuildFile; fileRef = C98595CF1FB0105B00E7BEDC /* assembler.cc */; };
+		C98595D51FB0105C00E7BEDC /* roms.cc in Sources */ = {isa = PBXBuildFile; fileRef = C98595D11FB0105C00E7BEDC /* roms.cc */; };
+		C98595D61FB0105C00E7BEDC /* tape.cc in Sources */ = {isa = PBXBuildFile; fileRef = C98595D31FB0105C00E7BEDC /* tape.cc */; };
 		C9A29B741F8715A500336E8E /* ResourcePath.mm in Sources */ = {isa = PBXBuildFile; fileRef = C9A29B731F8715A500336E8E /* ResourcePath.mm */; };
 		C9A29B801F8715A500336E8E /* icon.png in Resources */ = {isa = PBXBuildFile; fileRef = C9A29B7F1F8715A500336E8E /* icon.png */; };
 		C9A29B871F87162900336E8E /* main.cc in Sources */ = {isa = PBXBuildFile; fileRef = C9A29B861F87162900336E8E /* main.cc */; };
@@ -43,7 +46,6 @@
 		C9A29BAC1F87167000336E8E /* sfml-system.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C9A29B931F87167000336E8E /* sfml-system.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		C9A29BAD1F87167000336E8E /* freetype.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9A29B941F87167000336E8E /* freetype.framework */; };
 		C9A29BAE1F87167000336E8E /* freetype.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = C9A29B941F87167000336E8E /* freetype.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		C9A29BBD1F8721A600336E8E /* 48.rom in Resources */ = {isa = PBXBuildFile; fileRef = C9A29BBC1F8721A500336E8E /* 48.rom */; };
 		C9F9ECCF1F8E841600FB18EB /* memorydump.cc in Sources */ = {isa = PBXBuildFile; fileRef = C9F9ECC61F8E841400FB18EB /* memorydump.cc */; };
 		C9F9ECD01F8E841600FB18EB /* disassembly.cc in Sources */ = {isa = PBXBuildFile; fileRef = C9F9ECC71F8E841400FB18EB /* disassembly.cc */; };
 		C9F9ECD11F8E841600FB18EB /* ui.cc in Sources */ = {isa = PBXBuildFile; fileRef = C9F9ECC81F8E841500FB18EB /* ui.cc */; };
@@ -91,6 +93,11 @@
 		C94092391F8D8BB200D44114 /* z80.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = z80.cc; path = ../../../src/z80.cc; sourceTree = "<group>"; };
 		C940923A1F8D8BB200D44114 /* nx.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nx.cc; path = ../../../src/nx.cc; sourceTree = "<group>"; };
 		C965A3F81F8BCF0400C2B212 /* portaudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = portaudio.framework; path = frameworks/portaudio.framework; sourceTree = "<group>"; };
+		C98595CF1FB0105B00E7BEDC /* assembler.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = assembler.cc; path = ../../../src/assembler.cc; sourceTree = "<group>"; };
+		C98595D01FB0105C00E7BEDC /* tape.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tape.h; path = ../../../src/tape.h; sourceTree = "<group>"; };
+		C98595D11FB0105C00E7BEDC /* roms.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = roms.cc; path = ../../../src/roms.cc; sourceTree = "<group>"; };
+		C98595D21FB0105C00E7BEDC /* assembler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = assembler.h; path = ../../../src/assembler.h; sourceTree = "<group>"; };
+		C98595D31FB0105C00E7BEDC /* tape.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = tape.cc; path = ../../../src/tape.cc; sourceTree = "<group>"; };
 		C9A29B6E1F8715A500336E8E /* nx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C9A29B721F8715A500336E8E /* nx-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "nx-Info.plist"; sourceTree = "<group>"; };
 		C9A29B731F8715A500336E8E /* ResourcePath.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ResourcePath.mm; sourceTree = "<group>"; };
@@ -112,7 +119,6 @@
 		C9A29B941F87167000336E8E /* freetype.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = freetype.framework; path = frameworks/freetype.framework; sourceTree = "<group>"; };
 		C9A29BB11F871EA700336E8E /* z80.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = z80.h; path = ../../../src/z80.h; sourceTree = "<group>"; };
 		C9A29BB31F871EA700336E8E /* nx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = nx.h; path = ../../../src/nx.h; sourceTree = "<group>"; };
-		C9A29BBC1F8721A500336E8E /* 48.rom */ = {isa = PBXFileReference; lastKnownFileType = file; name = 48.rom; path = ../../../data/48.rom; sourceTree = "<group>"; };
 		C9F9ECC61F8E841400FB18EB /* memorydump.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = memorydump.cc; path = ../../../src/memorydump.cc; sourceTree = "<group>"; };
 		C9F9ECC71F8E841400FB18EB /* disassembly.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = disassembly.cc; path = ../../../src/disassembly.cc; sourceTree = "<group>"; };
 		C9F9ECC81F8E841500FB18EB /* ui.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ui.cc; path = ../../../src/ui.cc; sourceTree = "<group>"; };
@@ -182,6 +188,11 @@
 		C9A29B701F8715A500336E8E /* nx */ = {
 			isa = PBXGroup;
 			children = (
+				C98595CF1FB0105B00E7BEDC /* assembler.cc */,
+				C98595D21FB0105C00E7BEDC /* assembler.h */,
+				C98595D11FB0105C00E7BEDC /* roms.cc */,
+				C98595D31FB0105C00E7BEDC /* tape.cc */,
+				C98595D01FB0105C00E7BEDC /* tape.h */,
 				C93004581F9016A7001DE439 /* audio.h */,
 				C94092371F8D8BB100D44114 /* config.h */,
 				C9F9ECCA1F8E841500FB18EB /* debugger.h */,
@@ -223,7 +234,6 @@
 		C9A29B781F8715A500336E8E /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				C9A29BBC1F8721A500336E8E /* 48.rom */,
 				C9A29B7F1F8715A500336E8E /* icon.png */,
 			);
 			name = Resources;
@@ -288,7 +298,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C9A29BBD1F8721A600336E8E /* 48.rom in Resources */,
 				C9A29B801F8715A500336E8E /* icon.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -321,12 +330,15 @@
 				C9F9ECD41F8E841600FB18EB /* disasm.cc in Sources */,
 				C9A29B871F87162900336E8E /* main.cc in Sources */,
 				C9F9ECCF1F8E841600FB18EB /* memorydump.cc in Sources */,
+				C98595D61FB0105C00E7BEDC /* tape.cc in Sources */,
 				C9F9ECD31F8E841600FB18EB /* debugger.cc in Sources */,
 				C93004591F9016A7001DE439 /* audio.cc in Sources */,
 				C9F9ECD01F8E841600FB18EB /* disassembly.cc in Sources */,
+				C98595D41FB0105C00E7BEDC /* assembler.cc in Sources */,
 				C9041B4E1F994DB500BD8BF6 /* editor.cc in Sources */,
 				C940923B1F8D8BB200D44114 /* spectrum.cc in Sources */,
 				C940923D1F8D8BB200D44114 /* nx.cc in Sources */,
+				C98595D51FB0105C00E7BEDC /* roms.cc in Sources */,
 				C9A29B741F8715A500336E8E /* ResourcePath.mm in Sources */,
 				C9F9ECD11F8E841600FB18EB /* ui.cc in Sources */,
 			);
