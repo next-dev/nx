@@ -16,6 +16,8 @@ Debugger::Debugger(Nx& nx)
     , m_cpuStatusWindow(nx)
     , m_memoryDumpCommands({
         "G|oto",
+        "C|hecksums",
+        "E|dit",
         "Up|Scroll up",
         "Down|Scroll down",
         "PgUp|Page up",

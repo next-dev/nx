@@ -23,10 +23,19 @@ protected:
     void onText(char ch) override;
     void onUnselected() override;
 
+    void adjust();
+    void poke(u8 value);
+
 private:
     u16     m_address;
     Editor  m_gotoEditor;
     int     m_enableGoto;
+    bool    m_showChecksums;
+
+    // Edit mode
+    bool    m_editMode;
+    u16     m_editAddress;
+    int     m_editNibble;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

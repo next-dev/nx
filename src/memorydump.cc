@@ -17,6 +17,10 @@ MemoryDumpWindow::MemoryDumpWindow(Nx& nx)
     , m_address(0)
     , m_gotoEditor(6, 2, 43, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 4, 0)
     , m_enableGoto(0)
+    , m_showChecksums(0)
+    , m_editMode(false)
+    , m_editAddress(0)
+    , m_editNibble(0)
 {
     m_gotoEditor.onlyAllowHex();
 }
@@ -26,20 +30,42 @@ void MemoryDumpWindow::onDraw(Draw& draw)
     u16 a = m_address;
     for (int i = 1; i < m_height - 1; ++i, a += 8)
     {
+        int cx = 0, cy = 0;
         using namespace std;
         stringstream ss;
         ss << setfill('0') << setw(4) << hex << uppercase << a << " : ";
+        u16 t = 0;
         for (int b = 0; b < 8; ++b)
         {
-            ss << setfill('0') << setw(2) << hex << uppercase << (int)m_nx.getSpeccy().peek(a + b) << " ";
+            // Check for cursor position
+            if (!m_enableGoto && m_editMode && (a + b) == m_editAddress)
+            {
+                cx = m_x + 8 + (b * 3) + m_editNibble;
+                cy = m_y + i;
+            }
+            u8 x = m_nx.getSpeccy().peek(a + b);
+            t += x;
+            ss << setfill('0') << setw(2) << hex << uppercase << (int)x << " ";
         }
         ss << "  ";
-        for (int b = 0; b < 8; ++b)
+        if (m_showChecksums)
         {
-            char ch = m_nx.getSpeccy().peek(a + b);
-            ss << ((ch < 32 || ch > 127) ? '.' : ch);
+            ss << "= " << dec << (int)t;
+        }
+        else
+        {
+            for (int b = 0; b < 8; ++b)
+            {
+                char ch = m_nx.getSpeccy().peek(a + b);
+                ss << ((ch < 32 || ch > 127) ? '.' : ch);
+            }
         }
         draw.printString(m_x + 1, m_y + i, ss.str(), m_bkgColour);
+        if (cx != 0)
+        {
+            draw.pokeAttr(cx, cy, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
+
+        }
     }
 
     if (m_enableGoto)
@@ -57,35 +83,116 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool 
     {
         // An editor didn't handle the key so handle it here
         using K = sf::Keyboard::Key;
-        switch (key)
+        if (!shift && !ctrl && !alt)
         {
-        case K::Up:
-            m_address -= 8;
-            break;
+            if (m_editMode)
+            {
+                switch (key)
+                {
+                case K::Escape:
+                    m_editMode = false;
+                    break;
 
-        case K::Down:
-            m_address += 8;
-            break;
+                case K::Num0:   poke(0);    break;
+                case K::Num1:   poke(1);    break;
+                case K::Num2:   poke(2);    break;
+                case K::Num3:   poke(3);    break;
+                case K::Num4:   poke(4);    break;
+                case K::Num5:   poke(5);    break;
+                case K::Num6:   poke(6);    break;
+                case K::Num7:   poke(7);    break;
+                case K::Num8:   poke(8);    break;
+                case K::Num9:   poke(9);    break;
+                case K::A:      poke(10);   break;
+                case K::B:      poke(11);   break;
+                case K::C:      poke(12);   break;
+                case K::D:      poke(13);   break;
+                case K::E:      poke(14);   break;
+                case K::F:      poke(15);   break;
 
-        case K::PageUp:
-            m_address -= (m_height - 2) * 8;
-            break;
+                case K::Up:
+                    m_editAddress -= 8;
+                    adjust();
+                    break;
 
-        case K::PageDown:
-            m_address += (m_height - 2) * 8;
-            break;
+                case K::Down:
+                    m_editAddress += 8;
+                    adjust();
+                    break;
 
-        case K::Escape:
-            m_enableGoto = false;
-            break;
+                case K::Left:
+                    m_editAddress -= m_editNibble ? 0 : 1;
+                    m_editNibble = !m_editNibble;
+                    adjust();
+                    break;
 
-        case K::G:
-            m_gotoEditor.clear();
-            m_enableGoto = 1;
-            break;
+                case K::Right:
+                    m_editAddress += m_editNibble ? 1 : 0;
+                    m_editNibble = !m_editNibble;
+                    adjust();
+                    break;
 
-        default:
-            break;
+                case K::PageUp:
+                    m_address -= (m_height - 2) * 8;
+                    adjust();
+                    break;
+
+                case K::PageDown:
+                    m_address += (m_height - 2) * 8;
+                    adjust();
+                    break;
+
+                case K::G:
+                    m_gotoEditor.clear();
+                    m_enableGoto = 1;
+                    break;
+
+                default:
+                    break;
+                }
+            }
+            else
+            {
+                switch (key)
+                {
+                case K::Up:
+                    m_address -= 8;
+                    break;
+
+                case K::Down:
+                    m_address += 8;
+                    break;
+
+                case K::PageUp:
+                    m_address -= (m_height - 2) * 8;
+                    break;
+
+                case K::PageDown:
+                    m_address += (m_height - 2) * 8;
+                    break;
+
+                case K::Escape:
+                    m_enableGoto = false;
+                    break;
+
+                case K::G:
+                    m_gotoEditor.clear();
+                    m_enableGoto = 1;
+                    break;
+
+                case K::C:
+                    m_showChecksums = !m_showChecksums;
+                    break;
+
+                case K::E:
+                    m_editMode = true;
+                    adjust();
+                    break;
+
+                default:
+                    break;
+                }
+            }
         }
     }
 }
@@ -93,6 +200,7 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool 
 void MemoryDumpWindow::onUnselected()
 {
     m_enableGoto = 0;
+    m_editMode = 0;
 }
 
 void MemoryDumpWindow::onText(char ch)
@@ -112,32 +220,138 @@ void MemoryDumpWindow::onText(char ch)
         {
             case 10:
             case 13:
-            {
-                m_enableGoto = 0;
-                u16 t = 0;
-                auto view = m_gotoEditor.getText();
-                size_t len = view.size();
-                if (len == 0)
                 {
-                    t = m_nx.getSpeccy().getZ80().HL();
-                }
-                else
-                {
-                    for (size_t i = 0; i < len; ++i)
+                    m_enableGoto = 0;
+                    u16 t = 0;
+                    auto view = m_gotoEditor.getText();
+                    size_t len = view.size();
+                    if (len == 0)
                     {
-                        t *= 16;
-                        char c = view[i];
-                        if (c >= '0' && c <= '9') t += (c - '0');
-                        else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
-                        else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
+                        t = m_nx.getSpeccy().getZ80().HL();
                     }
+                    else
+                    {
+                        for (size_t i = 0; i < len; ++i)
+                        {
+                            t *= 16;
+                            char c = view[i];
+                            if (c >= '0' && c <= '9') t += (c - '0');
+                            else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
+                            else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
+                        }
+                    }
+
+                    m_editAddress = m_address = t;
+                    m_editNibble = 0;
                 }
-                
-                m_address = t;
-            }
+                break;
                 
             default:
                 m_gotoEditor.text(ch);
         }
+    }
+}
+
+void MemoryDumpWindow::adjust()
+{
+    // If the editing address is in the top half, do nothing.
+    // If the editing address is in the bottom half, adjust view to make in centred.
+    // If the editing address is not in the view, adjust the view to make it on the top line.
+
+    u16 top = m_address;
+    u16 end = m_address + (m_height - 2) * 8;
+    u16 mid = m_address + (m_height / 2 - 1) * 8;
+    u16 adj = u16(m_editAddress - m_address) % 8;
+
+    // 0 = address is outside view
+    // 1 = address is on top half
+    // 2 = address is on bottom half
+    int state = 0;
+
+    if (end < top)
+    {
+        // We have a wrap:
+        //
+        // ----------+--------------
+        //           |
+        // ----------+--------------
+        // top       0000           end
+        //
+        if (m_editAddress >= end && m_editAddress < top)
+        {
+            // Address is outside view
+            state = 0;
+        }
+        else
+        {
+            if (mid > top)
+            {
+                // Configuration 1:
+                //
+                //  ----------+-----+------
+                //            |     |
+                //  ----------+-----+------
+                //  top       M     0000   end
+                //
+                state = (m_editAddress < mid && m_editAddress >= top) ? 1 : 2;
+            }
+            else
+            {
+                // Configuration 2a:
+                //        
+                //  ----+-----+----------
+                //      |     |
+                //  ----+-----+----------
+                //  top 0000  M          end
+                //
+                state = (m_editAddress >= mid && m_editAddress < top) ? 2 : 1;
+            }
+        }
+    }
+    else
+    {
+        // Configuration 3:
+        //
+        //  +----------+----------+
+        //  |          |          |
+        //  +----------+----------+
+        //  top        M           end
+        //
+        if (m_editAddress < top || m_editAddress >= end) state = 0;
+        else
+        {
+            state = (m_editAddress < mid) ? 1 : 2;
+        }
+    }
+
+    switch (state)
+    {
+    case 0:
+        m_address = m_editAddress - adj;
+        break;
+
+    case 1:
+        break;
+
+    case 2:
+        m_address = (m_editAddress - ((m_height / 2 - 1) * 8)) - adj;
+        break;
+    }
+}
+
+void MemoryDumpWindow::poke(u8 value)
+{
+    u8 mask = m_editNibble ? 0xf0 : 0x0f;
+    if (!m_editNibble) value <<= 4;
+    Spectrum& speccy = m_nx.getSpeccy();
+
+    speccy.poke(m_editAddress, (speccy.peek(m_editAddress) & mask) | value);
+
+    ++m_editNibble;
+    if (m_editNibble == 2)
+    {
+        m_editNibble = 0;
+        ++m_editAddress;
+        adjust();
     }
 }
