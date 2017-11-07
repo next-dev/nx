@@ -461,6 +461,9 @@ void Emulator::joystickKey(Joystick key, bool down)
 
 void Emulator::openFile()
 {
+    bool mute = getSpeccy().getAudio().isMute();
+    getSpeccy().getAudio().mute(true);
+
 #ifdef _WIN32
     // Open file
     WindowFileOpenConfig cfg = {
@@ -479,10 +482,18 @@ void Emulator::openFile()
         }
     }
 #endif
+
+    getSpeccy().getAudio().mute(mute);
+
+    getSpeccy().renderVideo();
+    getEmulator().render();
 }
 
 void Emulator::saveFile()
 {
+    bool mute = getSpeccy().getAudio().isMute();
+    getSpeccy().getAudio().mute(true);
+
 #ifdef _WIN32
     // Save file
     WindowFileOpenConfig cfg = {
@@ -501,6 +512,8 @@ void Emulator::saveFile()
         }
     }
 #endif
+
+    getSpeccy().getAudio().mute(mute);
 }
 
 bool Nx::openFile(string fileName)
@@ -932,16 +945,17 @@ bool Nx::loadZ80Snapshot(string fileName)
             m_machine->setTState(TState(WORD_OF(data, 55)) + (TState(BYTE_OF(data, 57)) << 16));
         }
 
-        u32 a = 0x4000;
+        u16 pages[] = { 0x0000, 0x0000, 0x0000, 0x0000, 0x8000, 0xc000, 0x0000, 0x0000, 0x4000, 0x0000, 0x0000, 0x0000 };
         for (int i = 0; i < 3; ++i)
         {
+            u16 a = pages[BYTE_OF(mem,2)];
             u16 len = WORD_OF(mem, 0);
             mem += 3;
             bool compressed = (len != 0xffff);
             if (!compressed) len = 0x4000;
 
             int idx = 0;
-            while (idx < 0x4000)
+            while (idx < len)
             {
                 u8 b = mem[idx++];
                 if (b == 0xed)
@@ -967,6 +981,7 @@ bool Nx::loadZ80Snapshot(string fileName)
                     m_machine->poke(a++, b);
                 }
             }
+            mem += len;
         }
     }
 

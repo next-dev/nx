@@ -24,6 +24,7 @@ Debugger::Debugger(Nx& nx)
         "Tab|Switch window"})
     , m_disassemblyCommands({
         "G|oto",
+        "F1|Render video",
         "F5|Pause/Run",
         "Ctrl-F5|Run to",
         "F6|Step Over",
@@ -54,6 +55,10 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
         {
         case K::Tilde:
             getEmulator().toggleDebugger();
+            break;
+
+        case K::F1:
+            getSpeccy().renderVideo();
             break;
 
         case K::F5:

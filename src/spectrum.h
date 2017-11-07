@@ -130,6 +130,9 @@ public:
     // Set the tape, it will be played if not stopped.
     void            setTape             (Tape* tape) { m_tape = tape;}
 
+    // Render all video, irregardless of t-state.
+    void            renderVideo         ();
+
     //------------------------------------------------------------------------------------------------------------------
     // Memory interface
     //------------------------------------------------------------------------------------------------------------------

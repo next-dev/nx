@@ -513,6 +513,14 @@ void Spectrum::initVideo()
     }
 }
 
+void Spectrum::renderVideo()
+{
+    TState t = m_tState;
+    m_tState = 69888;
+    updateVideo();
+    m_tState = t;
+}
+
 void Spectrum::updateVideo()
 {
     bool flash = (m_frameCounter & 16) != 0;
