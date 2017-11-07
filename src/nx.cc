@@ -5,6 +5,7 @@
 #include "nx.h"
 #include "ui.h"
 #include "nxfile.h"
+#include "tinyfiledialogs.h"
 
 #include <algorithm>
 #include <cassert>
@@ -13,114 +14,6 @@
 
 #ifdef __APPLE__
 #   include "ResourcePath.hpp"
-#endif
-
-#ifdef _WIN32
-#   define WIN32_LEAN_AND_MEAN
-#   define NOMINMAX
-#   include <Windows.h>
-#endif
-
-//----------------------------------------------------------------------------------------------------------------------
-// File open dialog
-//----------------------------------------------------------------------------------------------------------------------
-
-#ifdef _WIN32
-
-typedef struct
-{
-    const char*   title;
-    const char*   path;
-    const char*   filterName;
-    const char*   filter;
-}
-WindowFileOpenConfig;
-
-const char* windowFileOpen(WindowFileOpenConfig* config);
-const char* windowFileSaveAs(WindowFileOpenConfig* config);
-
-#include <commdlg.h>
-#include <string.h>
-
-static int win32NextFilter(char* dst, const char** p)
-{
-    int len;
-
-    *p += strspn(*p, "|");
-    if (**p == '\0') {
-        return 0;
-    }
-
-    len = (int)strcspn(*p, "|");
-    memcpy(dst, *p, len);
-    dst[len] = '\0';
-    *p += len;
-
-    return 1;
-}
-
-static const char* win32MakeFilterString(WindowFileOpenConfig* config)
-{
-    static char buf[1024];
-    int n = 0;
-
-    buf[0] = 0;
-
-    if (config->filter)
-    {
-        const char* p;
-        char b[32];
-        const char* name = config->filterName ? config->filterName : config->filter;
-
-        n += sprintf(buf + n, "%s", name) + 1;
-
-        p = config->filter;
-        while (win32NextFilter(b, &p))
-        {
-            n += sprintf(buf + n, "%s;", b);
-        }
-
-        buf[++n] = 0;
-    }
-
-    n += sprintf(buf + n, "All Files") + 1;
-    n += sprintf(buf + n, "*.*");
-    buf[++n] = 0;
-
-    return buf;
-}
-
-static void win32InitOpenFileName(WindowFileOpenConfig* config, OPENFILENAMEA* ofn)
-{
-    static char fileName[2048];
-
-    fileName[0] = 0;
-    memset(ofn, 0, sizeof(*ofn));
-    ofn->lStructSize = sizeof(*ofn);
-    ofn->lpstrFilter = win32MakeFilterString(config);
-    ofn->nFilterIndex = 1;
-    ofn->lpstrFile = fileName;
-    ofn->Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-    ofn->nMaxFile = sizeof(fileName) - 1;
-    ofn->lpstrInitialDir = config->path;
-    ofn->lpstrTitle = config->title;
-    ofn->lpstrTitle = config->title;
-}
-
-const char* windowFileOpen(WindowFileOpenConfig* config)
-{
-    OPENFILENAMEA ofn;
-    win32InitOpenFileName(config, &ofn);
-    return GetOpenFileNameA(&ofn) ? ofn.lpstrFile : 0;
-}
-
-const char* windowFileSaveAs(WindowFileOpenConfig* config)
-{
-    OPENFILENAMEA ofn;
-    win32InitOpenFileName(config, &ofn);
-    return GetSaveFileNameA(&ofn) ? ofn.lpstrFile : 0;
-}
-
 #endif
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -464,15 +357,10 @@ void Emulator::openFile()
     bool mute = getSpeccy().getAudio().isMute();
     getSpeccy().getAudio().mute(true);
 
-#ifdef _WIN32
-    // Open file
-    WindowFileOpenConfig cfg = {
-        "Open file",
-        0,
-        "NX files",
-        "*.nx;*.sna;*.z80;*.tap"
-    };
-    const char* fileName = windowFileOpen(&cfg);
+    const char* filters[] = { "*.nx", "*.sna", "*.z80", "*.tap" };
+
+    const char* fileName = tinyfd_openFileDialog("Open file", 0,
+        sizeof(filters)/sizeof(filters[0]), filters, "NX Files", 0);
 
     if (fileName)
     {
@@ -481,7 +369,6 @@ void Emulator::openFile()
             MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
         }
     }
-#endif
 
     getSpeccy().getAudio().mute(mute);
 
@@ -494,15 +381,10 @@ void Emulator::saveFile()
     bool mute = getSpeccy().getAudio().isMute();
     getSpeccy().getAudio().mute(true);
 
-#ifdef _WIN32
-    // Save file
-    WindowFileOpenConfig cfg = {
-        "Save snapshot",
-        0,
-        "Snapshot files",
-        "*.nx;*.sna"
-    };
-    const char* fileName = windowFileSaveAs(&cfg);
+    const char* filters[] = { "*.nx", "*.sna" };
+
+    const char* fileName = tinyfd_saveFileDialog("Save snapshot", 0,
+        sizeof(filters) / sizeof(filters[0]), filters, "Snapshot files");
 
     if (fileName)
     {
@@ -511,7 +393,6 @@ void Emulator::saveFile()
             MessageBoxA(0, "Unable to save snapshot!", "ERROR", MB_ICONERROR | MB_OK);
         }
     }
-#endif
 
     getSpeccy().getAudio().mute(mute);
 }
@@ -525,7 +406,7 @@ bool Nx::openFile(string fileName)
     {
         string ext = path.extension().string();
         transform(ext.begin(), ext.end(), ext.begin(), tolower);
-        if (ext == "sna")
+        if (ext == ".sna")
         {
             return loadSnaSnapshot(fileName);
         }
