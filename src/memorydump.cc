@@ -238,25 +238,19 @@ void MemoryDumpWindow::onText(char ch)
                 {
                     for (int i = 0; i < len; ++i)
                     {
-                        t = m_nx.getSpeccy().getZ80().HL();
-                    }
-                    else
-                    {
-                        for (size_t i = 0; i < len; ++i)
-                        {
-                            t *= 16;
-                            char c = view[i];
-                            if (c >= '0' && c <= '9') t += (c - '0');
-                            else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
-                            else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
-                        }
+                        t *= 16;
+                        char c = view[i];
+                        if (c >= '0' && c <= '9') t += (c - '0');
+                        else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
+                        else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
                     }
 
                     m_editAddress = m_address = t;
                     m_editNibble = 0;
                 }
-                break;
-                
+            }
+            break;
+
             default:
                 m_gotoEditor.text(ch);
         }
