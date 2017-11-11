@@ -4,6 +4,8 @@
 
 #include "nx.h"
 #include "ui.h"
+#include "nxfile.h"
+#include "tinyfiledialogs.h"
 
 #include <algorithm>
 #include <cassert>
@@ -12,114 +14,6 @@
 
 #ifdef __APPLE__
 #   include "ResourcePath.hpp"
-#endif
-
-#ifdef _WIN32
-#   define WIN32_LEAN_AND_MEAN
-#   define NOMINMAX
-#   include <Windows.h>
-#endif
-
-//----------------------------------------------------------------------------------------------------------------------
-// File open dialog
-//----------------------------------------------------------------------------------------------------------------------
-
-#ifdef _WIN32
-
-typedef struct
-{
-    const char*   title;
-    const char*   path;
-    const char*   filterName;
-    const char*   filter;
-}
-WindowFileOpenConfig;
-
-const char* windowFileOpen(WindowFileOpenConfig* config);
-const char* windowFileSaveAs(WindowFileOpenConfig* config);
-
-#include <commdlg.h>
-#include <string.h>
-
-static int win32NextFilter(char* dst, const char** p)
-{
-    int len;
-
-    *p += strspn(*p, "|");
-    if (**p == '\0') {
-        return 0;
-    }
-
-    len = (int)strcspn(*p, "|");
-    memcpy(dst, *p, len);
-    dst[len] = '\0';
-    *p += len;
-
-    return 1;
-}
-
-static const char* win32MakeFilterString(WindowFileOpenConfig* config)
-{
-    static char buf[1024];
-    int n = 0;
-
-    buf[0] = 0;
-
-    if (config->filter)
-    {
-        const char* p;
-        char b[32];
-        const char* name = config->filterName ? config->filterName : config->filter;
-
-        n += sprintf(buf + n, "%s", name) + 1;
-
-        p = config->filter;
-        while (win32NextFilter(b, &p))
-        {
-            n += sprintf(buf + n, "%s;", b);
-        }
-
-        buf[++n] = 0;
-    }
-
-    n += sprintf(buf + n, "All Files") + 1;
-    n += sprintf(buf + n, "*.*");
-    buf[++n] = 0;
-
-    return buf;
-}
-
-static void win32InitOpenFileName(WindowFileOpenConfig* config, OPENFILENAMEA* ofn)
-{
-    static char fileName[2048];
-
-    fileName[0] = 0;
-    memset(ofn, 0, sizeof(*ofn));
-    ofn->lStructSize = sizeof(*ofn);
-    ofn->lpstrFilter = win32MakeFilterString(config);
-    ofn->nFilterIndex = 1;
-    ofn->lpstrFile = fileName;
-    ofn->Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
-    ofn->nMaxFile = sizeof(fileName) - 1;
-    ofn->lpstrInitialDir = config->path;
-    ofn->lpstrTitle = config->title;
-    ofn->lpstrTitle = config->title;
-}
-
-const char* windowFileOpen(WindowFileOpenConfig* config)
-{
-    OPENFILENAMEA ofn;
-    win32InitOpenFileName(config, &ofn);
-    return GetOpenFileNameA(&ofn) ? ofn.lpstrFile : 0;
-}
-
-const char* windowFileSaveAs(WindowFileOpenConfig* config)
-{
-    OPENFILENAMEA ofn;
-    win32InitOpenFileName(config, &ofn);
-    return GetSaveFileNameA(&ofn) ? ofn.lpstrFile : 0;
-}
-
 #endif
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -172,6 +66,8 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
 
     if (down && ctrl && !shift && !alt)
     {
+        fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
+
         switch (key)
         {
         case K::K:
@@ -185,8 +81,11 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             break;
 
         case K::O:
-            fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
             openFile();
+            break;
+
+        case K::S:
+            saveFile();
             break;
 
         case K::T:
@@ -459,51 +358,100 @@ void Emulator::joystickKey(Joystick key, bool down)
 
 void Emulator::openFile()
 {
-#ifdef _WIN32
-    // Last path opened
-    static char path[2048] = { 0 };
+    bool mute = getSpeccy().getAudio().isMute();
+    getSpeccy().getAudio().mute(true);
 
-    // Open file
-    WindowFileOpenConfig cfg = {
-        "Open file",
-        path,
-        "NX files",
-        "*.sna;*.tap"
-    };
-    const char* fileName = windowFileOpen(&cfg);
+    const char* filters[] = { "*.nx", "*.sna", "*.z80", "*.tap" };
+
+    const char* fileName = tinyfd_openFileDialog("Open file", 0,
+        sizeof(filters)/sizeof(filters[0]), filters, "NX Files", 0);
 
     if (fileName)
     {
-        // Store the path for next time
-        const char* end = strrchr(fileName, '\\');
-        strncpy(path, (const char *)fileName, (size_t)(path - end));
-
         if (!getEmulator().openFile(fileName))
         {
             MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
         }
     }
-#endif
+
+    getSpeccy().getAudio().mute(mute);
+
+    getSpeccy().renderVideo();
+    getEmulator().render();
+}
+
+void Emulator::saveFile()
+{
+    bool mute = getSpeccy().getAudio().isMute();
+    getSpeccy().getAudio().mute(true);
+
+    const char* filters[] = { "*.nx", "*.sna" };
+
+    const char* fileName = tinyfd_saveFileDialog("Save snapshot", 0,
+        sizeof(filters) / sizeof(filters[0]), filters, "Snapshot files");
+
+    if (fileName)
+    {
+        if (!getEmulator().saveFile(fileName))
+        {
+            MessageBoxA(0, "Unable to save snapshot!", "ERROR", MB_ICONERROR | MB_OK);
+        }
+    }
+
+    getSpeccy().getAudio().mute(mute);
 }
 
 bool Nx::openFile(string fileName)
 {
     // Get extension
-    auto extIt = fileName.find_last_of('.');
-    if (extIt != string::npos)
+    fs::path path = fileName;
+
+    if (path.has_extension())
     {
-        string ext = fileName.substr(extIt + 1);
-        
-        if (ext == "sna")
+        string ext = path.extension().string();
+        transform(ext.begin(), ext.end(), ext.begin(), tolower);
+        if (ext == ".sna")
         {
-            return loadSnapshot(fileName);
+            return loadSnaSnapshot(fileName);
         }
-        else if (ext == "tap")
+        else if (ext == ".nx")
+        {
+            return loadNxSnapshot(fileName);
+        }
+        else if (ext == ".z80")
+        {
+            return loadZ80Snapshot(fileName);
+        }
+        else if (ext == ".tap")
         {
             return loadTape(fileName);
         }
     }
     
+    return false;
+}
+
+bool Nx::saveFile(string fileName)
+{
+    // Get extension
+    fs::path path = fileName;
+    if (!path.has_extension())
+    {
+        path = (fileName += ".nx");
+    }
+
+    string ext = path.extension().string();
+    transform(ext.begin(), ext.end(), ext.begin(), tolower);
+
+    if (ext == ".sna")
+    {
+        return saveSnaSnapshot(fileName);
+    }
+    else if (ext == ".nx")
+    {
+        return saveNxSnapshot(fileName);
+    }
+
     return false;
 }
 
@@ -539,12 +487,15 @@ Nx::Nx(int argc, char** argv)
 
     //--- Tape Browser --------------------------------------------------------------
     , m_tapeBrowser(*this)
+
+    //--- Files ---------------------------------------------------------------------
+    , m_tempPath()
 {
     sf::FileInputStream f;
 #ifdef __APPLE__
-    string romFileName = resourcePath() + "48.rom";
+    m_tempPath = resourcePath();
 #else
-    string romFileName = "48.rom";
+    m_tempPath = fs::path(argv[0]).parent_path();
 #endif
     setScale(kDefaultScale);
     m_machine->getVideoSprite().setScale(float(kDefaultScale * 2), float(kDefaultScale * 2));
@@ -555,6 +506,7 @@ Nx::Nx(int argc, char** argv)
     m_machine->setRomWriteState(false);
     
     // Deal with the command line
+    bool loadedFiles = false;
     for (int i = 1; i < argc; ++i)
     {
         char* arg = argv[i];
@@ -578,10 +530,15 @@ Nx::Nx(int argc, char** argv)
         else
         {
             openFile(arg);
+            loadedFiles = true;
         }
     }
     
     updateSettings();
+    if (!loadedFiles)
+    {
+        loadNxSnapshot((m_tempPath / "cache.nx").string());
+    }
     m_emulator.select();
 }
 
@@ -691,6 +648,9 @@ void Nx::run()
             render();
         }
     }
+
+    // Shutdown
+    saveNxSnapshot((m_tempPath / "cache.nx").string());
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -710,31 +670,12 @@ void Nx::frame()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// File loading
+// Snapshot loading & saving
 //----------------------------------------------------------------------------------------------------------------------
 
-vector<u8> Nx::loadFile(string fileName)
+bool Nx::loadSnaSnapshot(string fileName)
 {
-    vector<u8> buffer;
-    sf::FileInputStream f;
-    
-    if (f.open(fileName))
-    {
-        i64 size = f.getSize();
-        buffer.resize(size);
-        f.read(buffer.data(), size);
-    }
-    
-    return buffer;
-}
-
-//----------------------------------------------------------------------------------------------------------------------
-// Snapshot loading
-//----------------------------------------------------------------------------------------------------------------------
-
-bool Nx::loadSnapshot(string fileName)
-{
-    vector<u8> buffer = loadFile(fileName);
+    vector<u8> buffer = NxFile::loadFile(fileName);
     u8* data = buffer.data();
     i64 size = (i64)buffer.size();
     Z80& z80 = m_machine->getZ80();
@@ -766,7 +707,284 @@ bool Nx::loadSnapshot(string fileName)
     m_machine->resetTState();
     
     return true;
+}
 
+bool Nx::loadZ80Snapshot(string fileName)
+{
+    vector<u8> buffer = NxFile::loadFile(fileName);
+    u8* data = buffer.data();
+    Z80& z80 = m_machine->getZ80();
+
+    // Only support version 1.0 Z80 files now
+    if (buffer.size() < 30) return false;
+    int version = 1;
+    if (WORD_OF(data, 6) == 0)
+    {
+        if (WORD_OF(data, 30) == 23) version = 2;
+        else version = 3;
+    }
+
+    if (version > 1)
+    {
+        // Check to see if we're only 48K
+        u8 hardware = BYTE_OF(data, 34);
+        if (version == 2 && (hardware != 0 && hardware == 1)) return false;
+        if (version == 3 && (hardware != 0 || hardware == 1 || hardware == 3)) return false;
+    }
+
+    z80.A() = BYTE_OF(data, 0);
+    z80.F() = BYTE_OF(data, 1);
+    z80.BC() = WORD_OF(data, 2);
+    z80.HL() = WORD_OF(data, 4);
+    z80.PC() = WORD_OF(data, 6);
+    z80.SP() = WORD_OF(data, 8);
+    z80.I() = BYTE_OF(data, 10);
+    z80.R() = (BYTE_OF(data, 11) & 0x7f) | ((BYTE_OF(data, 12) & 0x01) << 7);
+    u8 b12 = BYTE_OF(data, 12);
+    if (b12 == 255) b12 = 1;
+    m_machine->setBorderColour((b12 & 0x0e) >> 1);
+    bool compressed = (b12 & 0x20) != 0;
+    z80.DE() = WORD_OF(data, 13);
+    z80.BC_() = WORD_OF(data, 15);
+    z80.DE_() = WORD_OF(data, 17);
+    z80.HL_() = WORD_OF(data, 19);
+    u8 a_ = BYTE_OF(data, 21);
+    u8 f_ = BYTE_OF(data, 22);
+    z80.AF_() = (u16(a_) << 8) + u16(f_);
+    z80.IY() = WORD_OF(data, 23);
+    z80.IX() = WORD_OF(data, 25);
+    z80.IFF1() = BYTE_OF(data, 27) ? 1 : 0;
+    z80.IFF2() = BYTE_OF(data, 28) ? 1 : 0;
+    z80.IM() = int(BYTE_OF(data, 29) & 0x03);
+
+#define CHECK_BUFFER() do { if (size_t(mem - data) >= buffer.size()) { NX_BREAK(); return false; } } while(0)
+
+    if (version == 1)
+    {
+        if (compressed)
+        {
+            u8* mem = data + 30;
+            u16 a = 0x4000;
+            while (1)
+            {
+                // Check we haven't run out of bytes.
+                CHECK_BUFFER();
+                u8 b = *mem++;
+                if (b == 0x00)
+                {
+                    // Not enough room for 4 terminating bytes
+                    if (size_t(mem + 3 - data) > buffer.size())
+                    {
+                        NX_BREAK();
+                        return false;
+                    }
+
+                    if (mem[0] == 0xed && mem[1] == 0xed && mem[2] == 0x00)
+                    {
+                        // Terminator.
+                        break;
+                    }
+
+                    m_machine->poke(a++, 0);
+                }
+                else if (b == 0xed)
+                {
+                    CHECK_BUFFER();
+                    b = *mem++;
+                    if (b != 0xed)
+                    {
+                        m_machine->poke(a++, 0xed);
+                        m_machine->poke(a++, b);
+                    }
+                    else
+                    {
+                        // Two EDs - compression.
+                        CHECK_BUFFER();
+                        u8 count = *mem++;
+                        CHECK_BUFFER();
+                        b = *mem++;
+
+                        for (u8 i = 0; i < count; ++i)
+                        {
+                            m_machine->poke(a++, b);
+                        }
+                    }
+                }
+                else
+                {
+                    m_machine->poke(a++, b);
+                }
+            }
+        }
+        else
+        {
+            if (buffer.size() != (0xc000 + 30)) return false;
+
+            m_machine->load(0x4000, data + 30, 0xc000);
+        }
+    }
+    else
+    {
+        // Version 2 & 3 files
+        u8* mem = data + 32 + WORD_OF(data, 30);
+        z80.PC() = WORD_OF(data, 32);
+        if (version == 3)
+        {
+            m_machine->setTState(TState(WORD_OF(data, 55)) + (TState(BYTE_OF(data, 57)) << 16));
+        }
+
+        u16 pages[] = { 0x0000, 0x0000, 0x0000, 0x0000, 0x8000, 0xc000, 0x0000, 0x0000, 0x4000, 0x0000, 0x0000, 0x0000 };
+        for (int i = 0; i < 3; ++i)
+        {
+            u16 a = pages[BYTE_OF(mem,2)];
+            u16 len = WORD_OF(mem, 0);
+            mem += 3;
+            bool compressed = (len != 0xffff);
+            if (!compressed) len = 0x4000;
+
+            int idx = 0;
+            while (idx < len)
+            {
+                u8 b = mem[idx++];
+                if (b == 0xed)
+                {
+                    b = mem[idx++];
+                    if (b == 0xed)
+                    {
+                        u8 count = mem[idx++];
+                        b = mem[idx++];
+                        for (int ii = 0; ii < count; ++ii)
+                        {
+                            m_machine->poke(a++, b);
+                        }
+                    }
+                    else
+                    {
+                        m_machine->poke(a++, 0xed);
+                        m_machine->poke(a++, b);
+                    }
+                }
+                else
+                {
+                    m_machine->poke(a++, b);
+                }
+            }
+            mem += len;
+        }
+    }
+
+    return true;
+}
+
+bool Nx::saveSnaSnapshot(string fileName)
+{
+    vector<u8> data;
+    Z80& z80 = m_machine->getZ80();
+
+    TState t = 0;
+    z80.push(z80.PC(), t);
+
+    NxFile::write8(data, z80.I());
+    NxFile::write16(data, z80.HL_());
+    NxFile::write16(data, z80.DE_());
+    NxFile::write16(data, z80.BC_());
+    NxFile::write16(data, z80.AF_());
+    NxFile::write16(data, z80.HL());
+    NxFile::write16(data, z80.DE());
+    NxFile::write16(data, z80.BC());
+    NxFile::write16(data, z80.IY());
+    NxFile::write16(data, z80.IX());
+    NxFile::write8(data, (z80.IFF1() ? 0x01 : 0) | (z80.IFF2() ? 0x04 : 0));
+    NxFile::write8(data, z80.R());
+    NxFile::write16(data, z80.AF());
+    NxFile::write16(data, z80.SP());
+    NxFile::write8(data, (u8)z80.IM());
+    NxFile::write8(data, m_machine->getBorderColour());
+    for (u16 a = 0x4000; a; ++a)
+    {
+        data.emplace_back(m_machine->peek(a));
+    }
+
+    z80.pop(t);
+
+    return NxFile::saveFile(fileName, data);
+}
+
+bool Nx::loadNxSnapshot(string fileName)
+{
+    NxFile f;
+
+    if (f.load(fileName) &&
+        f.checkSection('SN48', 36) &&
+        f.checkSection('RM48', 49152))
+    {
+        const BlockSection& sn48 = f['SN48'];
+        const BlockSection& rm48 = f['RM48'];
+        Z80& z80 = m_machine->getZ80();
+
+        z80.AF() = sn48.peek16(0);
+        z80.BC() = sn48.peek16(2);
+        z80.DE() = sn48.peek16(4);
+        z80.HL() = sn48.peek16(6);
+        z80.AF_() = sn48.peek16(8);
+        z80.BC_() = sn48.peek16(10);
+        z80.DE_() = sn48.peek16(12);
+        z80.HL_() = sn48.peek16(14);
+        z80.IX() = sn48.peek16(16);
+        z80.IY() = sn48.peek16(18);
+        z80.SP() = sn48.peek16(20);
+        z80.PC() = sn48.peek16(22);
+        z80.IR() = sn48.peek16(24);
+        z80.MP() = sn48.peek16(26);
+        z80.IM() = (int)sn48.peek8(28);
+        z80.IFF1() = sn48.peek8(29) != 0;
+        z80.IFF2() = sn48.peek8(30) != 0;
+        m_machine->setBorderColour(sn48.peek8(31));
+        m_machine->setTState((TState)sn48.peek32(32));
+
+        m_machine->load(0x4000, rm48.data());
+
+        return true;
+    }
+
+    return false;
+}
+
+bool Nx::saveNxSnapshot(string fileName)
+{
+    NxFile f;
+    Z80& z80 = m_machine->getZ80();
+
+    BlockSection sn48('SN48');
+    sn48.poke16(z80.AF());
+    sn48.poke16(z80.BC());
+    sn48.poke16(z80.DE());
+    sn48.poke16(z80.HL());
+    sn48.poke16(z80.AF_());
+    sn48.poke16(z80.BC_());
+    sn48.poke16(z80.DE_());
+    sn48.poke16(z80.HL_());
+    sn48.poke16(z80.IX());
+    sn48.poke16(z80.IY());
+    sn48.poke16(z80.SP());
+    sn48.poke16(z80.PC());
+    sn48.poke16(z80.IR());
+    sn48.poke16(z80.MP());
+    sn48.poke8((u8)z80.IM());
+    sn48.poke8(z80.IFF1() ? 1 : 0);
+    sn48.poke8(z80.IFF2() ? 1 : 0);
+    sn48.poke8(m_machine->getBorderColour());
+    sn48.poke32((u32)m_machine->getTState());
+    f.addSection(sn48, 36);
+
+    BlockSection rm48('RM48');
+    for (u16 a = 0x4000; a != 0x0000; ++a)
+    {
+        rm48.poke8(m_machine->peek(a));
+    }
+    f.addSection(rm48, 49152);
+
+    return f.save(fileName);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -775,7 +993,7 @@ bool Nx::loadSnapshot(string fileName)
 
 bool Nx::loadTape(string fileName)
 {
-    vector<u8> file = loadFile(fileName);
+    vector<u8> file = NxFile::loadFile(fileName);
     if (file.size())
     {
         Tape* tape = m_tapeBrowser.loadTape(file);
@@ -863,6 +1081,19 @@ void Nx::stepOver()
     else
     {
         stepIn();
+    }
+}
+
+void Nx::stepOut()
+{
+    if (m_runMode == RunMode::Normal) togglePause(false);
+    else
+    {
+        u16 sp = getSpeccy().getZ80().SP();
+        TState t = 0;
+        u16 address = m_machine->peek16(sp, t);
+        m_machine->addTemporaryBreakpoint(address);
+        m_runMode = RunMode::Normal;
     }
 }
 

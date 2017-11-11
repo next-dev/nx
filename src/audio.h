@@ -62,6 +62,8 @@ public:
     void updateBeeper(i64 tState, u8 speaker);
     void mute(bool enabled) { m_mute = enabled; }
 
+    bool isMute() const { return m_mute; }
+
     Signal& getSignal() { return m_renderSignal; }
 
 private:

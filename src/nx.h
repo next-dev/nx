@@ -11,9 +11,12 @@
 #include "tape.h"
 
 #include <SFML/Graphics.hpp>
+#include <experimental/filesystem>
 #include <map>
 #include <mutex>
 #include <thread>
+
+namespace fs = experimental::filesystem::v1;
 
 enum class Joystick
 {
@@ -42,6 +45,7 @@ public:
     void showStatus();
 
     void openFile();
+    void saveFile();
 
 private:
     void joystickKey(Joystick key, bool down);
@@ -80,6 +84,9 @@ public:
     
     // Open a file, detect it's type and try to open it
     bool openFile(string fileName);
+
+    // Save a file as a snapshot.
+    bool saveFile(string fileName);
     
     // Settings
     void setSetting(string key, string value);
@@ -91,6 +98,7 @@ public:
     void togglePause(bool breakpointHit);
     void stepOver();
     void stepIn();
+    void stepOut();
     RunMode getRunMode() const { return m_runMode; }
     void setRunMode(RunMode runMode) { m_runMode = m_runMode; }
 
@@ -108,13 +116,16 @@ public:
     bool getZoom() const { return m_zoom; }
     
 private:
-    // Load a snapshot
-    bool loadSnapshot(string fileName);
+    // Loading
+    bool loadSnaSnapshot(string fileName);
+    bool loadZ80Snapshot(string fileName);
     bool loadTape(string fileName);
-    
-    // File routines
-    vector<u8> loadFile(string fileName);
+    bool loadNxSnapshot(string fileName);
 
+    // Saving
+    bool saveSnaSnapshot(string fileName);
+    bool saveNxSnapshot(string fileName);
+    
     // Debugging helper functions
     u16 nextInstructionAt(u16 address);
     bool isCallInstructionAt(u16 address);
@@ -151,6 +162,9 @@ private:
 
     // Tape emulation
     TapeBrowser         m_tapeBrowser;
+
+    // Files
+    fs::path            m_tempPath;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

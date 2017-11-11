@@ -512,14 +512,14 @@ int Z80::displacement(u8 x)
     return (128 ^ (int)x) - 128;
 }
 
-u16 Z80::pop(i64& inOutTState)
+u16 Z80::pop(TState& inOutTState)
 {
     u16 x = m_ext.peek16(SP(), inOutTState);
     SP() += 2;
     return x;
 }
 
-void Z80::push(u16 x, i64& inOutTState)
+void Z80::push(u16 x, TState& inOutTState)
 {
     Reg r(x);
     m_ext.poke(--SP(), r.h, inOutTState);
