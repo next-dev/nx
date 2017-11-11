@@ -43,6 +43,7 @@ solution "nx"
 		files {
             "../src/**.h",
 			"../src/**.cc",
+            "../src/**.c",
             "../README.md",
             "../etc/keys.txt"
 		}
