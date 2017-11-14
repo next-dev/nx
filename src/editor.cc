@@ -51,6 +51,7 @@ SplitView EditorData::getLine(int n) const
     int nextLinePos = (n + 1 >= (int)m_lines.size()) ? (int)m_buffer.size() : m_lines[n + 1];
     if (m_currentLine == n)
     {
+        // m_cursor is between m_lines[n] and nextLinePos.
         return (m_cursor == nextLinePos)
             ? SplitView(m_buffer, m_lines[n], m_cursor, 0, 0)
             : SplitView(m_buffer, m_lines[n], m_cursor, m_endBuffer, nextLinePos);
@@ -142,21 +143,12 @@ void EditorData::moveTo(int pos)
             //         pos      cursor         newPos   endBuffer
             //
 
-            // Adjust the line starts between pos and cursor
-            int l = m_cursor - pos;
-            for (int i = m_currentLine + 1; m_lines[i] < m_cursor; ++i)
-            {
-                m_lines[i] += l;
-            }
-
             // Move the X section to the Y section
+            int l = m_cursor - pos;
             int newEnd = m_endBuffer - l;
             move(m_buffer.begin() + pos, m_buffer.begin() + m_cursor, m_buffer.begin() + newEnd);
             m_endBuffer = newEnd;
             m_cursor = pos;
-
-            while (pos < m_lines[m_currentLine]) --m_currentLine;
-
         }
         else
         {
@@ -169,26 +161,20 @@ void EditorData::moveTo(int pos)
             //                ^      newCursor   ^      actualPos
             //                cursor             endBuffer
             //
-
-            // Adjust the line starts between endBuffer and actualPos
             int actualPos = m_endBuffer + (pos - m_cursor);
-            int ll = m_endBuffer - m_cursor;
-            if (m_lines[m_currentLine] >= m_endBuffer) m_lines[m_currentLine] -= ll;
-            for (int i = m_currentLine + 1; m_lines[i] < actualPos; ++i)
-            {
-                m_lines[i] -= ll;
-            }
-
-            // Move the X section to the Y section
             int l = actualPos - m_endBuffer;
             move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + actualPos, m_buffer.begin() + m_cursor);
             m_cursor += l;
             m_endBuffer = actualPos;
+        }
 
-            while ((m_currentLine < (m_lines.size()-1)) &&
-                (pos >= m_lines[m_currentLine + 1]))
+        // Update the line pointers and calculate the current line
+        for (int i = 0; i < m_lines.size(); ++i)
+        {
+            if (m_cursor >= m_lines[i]) m_currentLine = i;
+            if (m_lines[i] > m_cursor && m_lines[i] < m_endBuffer)
             {
-                ++m_currentLine;
+                m_lines[i] += (m_endBuffer - m_cursor);
             }
         }
     }
