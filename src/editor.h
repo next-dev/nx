@@ -83,6 +83,7 @@ public:
     void moveTo(int pos);
     void leftChar(int num);
     void rightChar(int num);
+    void newline();
 
     //
     // Queries

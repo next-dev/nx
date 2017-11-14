@@ -48,17 +48,30 @@ void EditorData::clear()
 
 SplitView EditorData::getLine(int n) const
 {
+    int nextLinePos = (n + 1 >= (int)m_lines.size()) ? (int)m_buffer.size() : m_lines[n + 1];
     if (m_currentLine == n)
     {
-        return SplitView(m_buffer,
-                         m_lines[n], m_cursor,
-                         m_endBuffer, (int)m_buffer.size());
+        return (m_cursor == nextLinePos)
+            ? SplitView(m_buffer, m_lines[n], m_cursor, 0, 0)
+            : SplitView(m_buffer, m_lines[n], m_cursor, m_endBuffer, nextLinePos);
     }
     else if (n < m_lines.size())
     {
         int i = m_lines[n];
-        for (; m_buffer.begin() + i < m_buffer.end() && m_buffer[i] != '\n'; ++i) ;
-        return SplitView(m_buffer, m_lines[n], i);
+        int start[2] = { 0 }, end[2] = { 0 };
+        start[0] = i;
+        int idx = 0;
+        for (; m_buffer.begin() + i < m_buffer.end() && (i != m_cursor && m_buffer[i] != '\n'); ++i)
+        {
+            if (i == m_cursor)
+            {
+                i = m_endBuffer - 1;
+                end[idx++] = m_cursor;
+                start[idx] = m_endBuffer;
+            }
+        }
+        end[idx] = i;
+        return SplitView(m_buffer, start[0], end[0], start[1], end[1]);
     }
     else
     {
@@ -93,6 +106,10 @@ int EditorData::dataLength() const
     return m_cursor + ((int)m_buffer.size() - m_endBuffer);
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+// Editor axioms
+//----------------------------------------------------------------------------------------------------------------------
+
 bool EditorData::insert(char ch)
 {
     if (lineLength(m_currentLine) == m_maxLineLength) return false;
@@ -100,6 +117,10 @@ bool EditorData::insert(char ch)
     if (result)
     {
         m_buffer[m_cursor++] = ch;
+        for (int i = m_currentLine + 1; i < m_lines.size(); ++i)
+        {
+            ++m_lines[i];
+        }
     }
     
     return result;
@@ -120,13 +141,22 @@ void EditorData::moveTo(int pos)
             // +-------+--------+--------------+--------+-----------+
             //         pos      cursor         newPos   endBuffer
             //
+
+            // Adjust the line starts between pos and cursor
             int l = m_cursor - pos;
+            for (int i = m_currentLine + 1; m_lines[i] < m_cursor; ++i)
+            {
+                m_lines[i] += l;
+            }
+
+            // Move the X section to the Y section
             int newEnd = m_endBuffer - l;
             move(m_buffer.begin() + pos, m_buffer.begin() + m_cursor, m_buffer.begin() + newEnd);
             m_endBuffer = newEnd;
             m_cursor = pos;
 
             while (pos < m_lines[m_currentLine]) --m_currentLine;
+
         }
         else
         {
@@ -136,10 +166,20 @@ void EditorData::moveTo(int pos)
             // +--------------+------+-----------+------+------------+
             // |              |YYYYYY|           |XXXXXX|            |
             // +--------------+------+-----------+------+------------+
-            //                ^      newCursor   ^      pos
+            //                ^      newCursor   ^      actualPos
             //                cursor             endBuffer
             //
+
+            // Adjust the line starts between endBuffer and actualPos
             int actualPos = m_endBuffer + (pos - m_cursor);
+            int ll = m_endBuffer - m_cursor;
+            if (m_lines[m_currentLine] >= m_endBuffer) m_lines[m_currentLine] -= ll;
+            for (int i = m_currentLine + 1; m_lines[i] < actualPos; ++i)
+            {
+                m_lines[i] -= ll;
+            }
+
+            // Move the X section to the Y section
             int l = actualPos - m_endBuffer;
             move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + actualPos, m_buffer.begin() + m_cursor);
             m_cursor += l;
@@ -171,11 +211,23 @@ bool EditorData::backspace()
     {
         // Delete newline
         if (m_currentLine == 0) return false;
+        m_lines.erase(m_lines.begin() + m_currentLine);
         --m_currentLine;
     }
     --m_cursor;
     return true;
 }
+
+void EditorData::newline()
+{
+    insert(0x0a);
+    m_lines.insert(m_lines.begin() + m_currentLine + 1, m_cursor);
+    ++m_currentLine;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Queries of state
+//----------------------------------------------------------------------------------------------------------------------
 
 int EditorData::getCurrentPosInLine() const
 {
@@ -316,10 +368,15 @@ bool Editor::text(char ch)
             }
         }
 
-        if (ch == 8)
+        switch (ch)
         {
-            // Backspace
+        case 8:     // backspace
             data.backspace();
+            break;
+
+        case 13:    // newline
+            data.newline();
+            break;
         }
     }
     return false;
