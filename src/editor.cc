@@ -51,6 +51,7 @@ void EditorData::clear()
     m_endBuffer = (int)m_buffer.size();
     m_lines.clear();
     m_lines.push_back(0);
+    m_currentLine = 0;
 }
 
 SplitView EditorData::getLine(int n) const
