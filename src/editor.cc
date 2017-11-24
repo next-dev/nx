@@ -40,6 +40,7 @@ EditorData::EditorData(int initialSize, int increaseSize, int maxLineLength)
     , m_endBuffer((int)m_buffer.size())
     , m_increaseSize(increaseSize)
     , m_maxLineLength(maxLineLength)
+    , m_lastOffset(-1)
 {
 
 }
@@ -133,22 +134,26 @@ void EditorData::dump() const
     }
 }
 
+int EditorData::toVirtualPos(int actualPos) const
+{
+    return actualPos > m_cursor ? actualPos - m_endBuffer + m_cursor : actualPos;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Editor axioms
 //----------------------------------------------------------------------------------------------------------------------
 
-bool EditorData::insert(char ch)
+void EditorData::insert(char ch)
 {
-    if (lineLength(m_currentLine) == m_maxLineLength) return false;
+    if (lineLength(m_currentLine) == m_maxLineLength) return;
     bool result = ensureSpace(1);
     if (result)
     {
         m_buffer[m_cursor++] = ch;
     }
 
+    m_lastOffset = -1;
     DUMP();
-    
-    return result;
 }
 
 void EditorData::moveTo(int pos)
@@ -224,29 +229,70 @@ void EditorData::moveTo(int pos)
     DUMP();
 }
 
+void EditorData::deleteChar(int num)
+{
+    num = min(num, int(m_buffer.size()) - m_endBuffer);
+    for (int i = m_endBuffer; i < m_endBuffer + num; ++i)
+    {
+        if (m_buffer[i] == '\n')
+        {
+            m_lines.erase(m_lines.begin() + m_currentLine + 1);
+        }
+    }
+    m_endBuffer += num;
+    moveTo(m_cursor);
+    m_lastOffset = -1;
+}
+
 void EditorData::leftChar(int num = 1)
 {
     moveTo(max(0, m_cursor - num));
+    m_lastOffset = -1;
 }
 
 void EditorData::rightChar(int num = 1)
 {
     moveTo(min(dataLength(), m_cursor + num));
+    m_lastOffset = -1;
 }
 
-bool EditorData::backspace()
+void EditorData::upChar(int num)
+{
+    num = min(num, m_currentLine);
+    if (!num) return;
+    int newLine = m_currentLine - num;
+
+    m_lastOffset = m_lastOffset == -1 ? getCurrentPosInLine() : m_lastOffset;
+    int len = lineLength(newLine);
+    int requiredOffset = m_lastOffset > len ? len : m_lastOffset;
+    moveTo(toVirtualPos(m_lines[newLine] + requiredOffset));
+}
+
+void EditorData::downChar(int num)
+{
+    num = min(num, int(m_lines.size() - m_currentLine - 1));
+    if (!num) return;
+    int newLine = m_currentLine + num;
+
+    m_lastOffset = m_lastOffset == -1 ? getCurrentPosInLine() : m_lastOffset;
+    int len = lineLength(newLine);
+    int requiredOffset = m_lastOffset > len ? len : m_lastOffset;
+    moveTo(toVirtualPos(m_lines[newLine] + requiredOffset));
+}
+
+void EditorData::backspace()
 {
     int lineStart = m_lines[m_currentLine];
     if (m_cursor == lineStart)
     {
         // Delete newline
-        if (m_currentLine == 0) return false;
+        if (m_currentLine == 0) return;
         m_lines.erase(m_lines.begin() + m_currentLine);
         --m_currentLine;
     }
     --m_cursor;
+    m_lastOffset = -1;
     DUMP();
-    return true;
 }
 
 void EditorData::newline()
@@ -367,7 +413,7 @@ void Editor::renderAll(Draw& draw)
 
 bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    if (down)
+    if (down && !shift && !ctrl && !alt)
     {
         using K = sf::Keyboard::Key;
 
@@ -379,6 +425,18 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::Right:
             m_data.rightChar(1);
+            break;
+
+        case K::Up:
+            m_data.upChar(1);
+            break;
+
+        case K::Down:
+            m_data.downChar(1);
+            break;
+
+        case K::Delete:
+            m_data.deleteChar(1);
             break;
 
         default:
@@ -397,7 +455,8 @@ bool Editor::text(char ch)
         {
             if (ch >= ' ' && ch < 127)
             {
-                return data.insert(ch);
+                data.insert(ch);
+                return true;
             }
         }
 

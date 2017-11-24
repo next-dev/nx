@@ -78,11 +78,14 @@ public:
     int lineLength(int n) const;
     int dataLength() const;
     
-    bool insert(char ch);
-    bool backspace();
+    void insert(char ch);
+    void backspace();
+    void deleteChar(int num);
     void moveTo(int pos);
     void leftChar(int num);
     void rightChar(int num);
+    void upChar(int num);
+    void downChar(int num);
     void newline();
 
     //
@@ -94,6 +97,7 @@ public:
 private:
     bool ensureSpace(int numChars);
     void dump() const;
+    int toVirtualPos(int actualPos) const;
 
 private:
     vector<char>    m_buffer;
@@ -103,6 +107,7 @@ private:
     int             m_endBuffer;
     int             m_increaseSize;
     int             m_maxLineLength;
+    int             m_lastOffset;       // Used for remembering the line offset when moving up and down
 };
 
 //----------------------------------------------------------------------------------------------------------------------
