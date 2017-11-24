@@ -8,6 +8,8 @@
 
 // Show a console on Win32 platform
 #define NX_DEBUG_CONSOLE        0
+// Debug the editor buffer
+#define NX_DEBUG_EDITOR         0
 
 //----------------------------------------------------------------------------------------------------------------------
 

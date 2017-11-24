@@ -93,6 +93,7 @@ public:
     
 private:
     bool ensureSpace(int numChars);
+    void dump() const;
 
 private:
     vector<char>    m_buffer;

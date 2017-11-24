@@ -4,6 +4,12 @@
 
 #include "editor.h"
 
+#if NX_DEBUG_EDITOR
+#   define DUMP() dump()
+#else
+#   define DUMP()
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // SplitView
 //----------------------------------------------------------------------------------------------------------------------
@@ -27,7 +33,7 @@ SplitView::SplitView(const vector<char>& v, int start, int end)
 //----------------------------------------------------------------------------------------------------------------------
 
 EditorData::EditorData(int initialSize, int increaseSize, int maxLineLength)
-    : m_buffer(initialSize)
+    : m_buffer(16)
     , m_lines(1, 0)
     , m_cursor(0)
     , m_currentLine(0)
@@ -107,6 +113,26 @@ int EditorData::dataLength() const
     return m_cursor + ((int)m_buffer.size() - m_endBuffer);
 }
 
+void EditorData::dump() const
+{
+    NX_LOG("----------------------------------------------------------\n");
+    for (int i = 0; i < m_cursor; ++i)
+    {
+        NX_LOG("%04d: %c\n", i, m_buffer[i]);
+    }
+    NX_LOG("----\n");
+    for (int i = m_endBuffer; i < (int)m_buffer.size(); ++i)
+    {
+        NX_LOG("%04d: %c\n", i, m_buffer[i]);
+    }
+    NX_LOG("\n");
+    for (int i = 0; i < m_lines.size(); ++i)
+    {
+        NX_LOG(m_currentLine == i ? "*" : " ");
+        NX_LOG("%04d: %d\n", i, m_lines[i]);
+    }
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Editor axioms
 //----------------------------------------------------------------------------------------------------------------------
@@ -118,11 +144,9 @@ bool EditorData::insert(char ch)
     if (result)
     {
         m_buffer[m_cursor++] = ch;
-        for (int i = m_currentLine + 1; i < m_lines.size(); ++i)
-        {
-            ++m_lines[i];
-        }
     }
+
+    DUMP();
     
     return result;
 }
@@ -134,6 +158,7 @@ void EditorData::moveTo(int pos)
     {
         if (pos < m_cursor)
         {
+            // Cursor moving left
             // Moving X->Y
             //
             //         <--- l -->
@@ -146,12 +171,26 @@ void EditorData::moveTo(int pos)
             // Move the X section to the Y section
             int l = m_cursor - pos;
             int newEnd = m_endBuffer - l;
+            int oldCursor = m_cursor;
             move(m_buffer.begin() + pos, m_buffer.begin() + m_cursor, m_buffer.begin() + newEnd);
             m_endBuffer = newEnd;
             m_cursor = pos;
+
+            // Any line references between [pos, cursor) need to be adjusted
+            int adjust = newEnd - pos;
+            for (int i = 0; i < m_lines.size() && m_lines[i] <= oldCursor; ++i)
+            {
+                if (m_lines[i] > pos)
+                {
+                    m_lines[i] += adjust;
+                }
+            }
+
+            while (m_lines[m_currentLine] > m_cursor) --m_currentLine;
         }
         else
         {
+            // Cursor moving right
             // Moving X->Y
             //
             //                                   <- l -->
@@ -162,22 +201,27 @@ void EditorData::moveTo(int pos)
             //                cursor             endBuffer
             //
             int actualPos = m_endBuffer + (pos - m_cursor);
+            int adjust = m_endBuffer - m_cursor;
+            int origEndBuffer = m_endBuffer;
             int l = actualPos - m_endBuffer;
             move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + actualPos, m_buffer.begin() + m_cursor);
             m_cursor += l;
             m_endBuffer = actualPos;
-        }
 
-        // Update the line pointers and calculate the current line
-        for (int i = 0; i < m_lines.size(); ++i)
-        {
-            if (m_cursor >= m_lines[i]) m_currentLine = i;
-            if (m_lines[i] > m_cursor && m_lines[i] < m_endBuffer)
+            // Any line references between [endBuffer, actualPos) need to be adjusted
+            for (int i = 0; i < m_lines.size() && m_lines[i] <= actualPos; ++i)
             {
-                m_lines[i] += (m_endBuffer - m_cursor);
+                if (m_lines[i] >= origEndBuffer)
+                {
+                    m_lines[i] -= adjust;
+                }
             }
+
+            while (m_currentLine < int(m_lines.size() - 1) && m_lines[m_currentLine+1] <= m_cursor) ++m_currentLine;
         }
     }
+
+    DUMP();
 }
 
 void EditorData::leftChar(int num = 1)
@@ -201,6 +245,7 @@ bool EditorData::backspace()
         --m_currentLine;
     }
     --m_cursor;
+    DUMP();
     return true;
 }
 
@@ -209,6 +254,7 @@ void EditorData::newline()
     insert(0x0a);
     m_lines.insert(m_lines.begin() + m_currentLine + 1, m_cursor);
     ++m_currentLine;
+    DUMP();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -235,6 +281,7 @@ bool EditorData::ensureSpace(int numChars)
         // Move text afterwards forward
         int len = (int)(m_buffer.end() - (m_buffer.begin() + m_endBuffer));
         move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + oldSize, m_buffer.end() - len);
+        m_endBuffer += m_increaseSize;
     }
     
     return result;
