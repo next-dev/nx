@@ -419,6 +419,7 @@ Editor::Editor(int xCell, int yCell, int width, int height, u8 bkgColour, bool f
     , m_topLine(0)
     , m_font6(font6)
     , m_bkgColour(bkgColour)
+    , m_commentColour(bkgColour)
     , m_allowedChars(128, true)
 {
     for (int i = 0; i < 32; ++i) m_allowedChars[i] = false;
@@ -442,6 +443,11 @@ void Editor::onlyAllowHex()
     for (int i = 'A'; i <= 'F'; ++i) m_allowedChars[i] = true;
 }
 
+void Editor::setCommentColour(u8 colour)
+{
+    m_commentColour = colour;
+}
+
 SplitView Editor::getText() const
 {
     return getData().getText();
@@ -450,6 +456,7 @@ SplitView Editor::getText() const
 void Editor::render(Draw& draw, int line)
 {
     EditorData& data = getData();
+    u8 colour = m_bkgColour;
     int y = line - m_topLine;
     if (y < m_height)
     {
@@ -460,7 +467,8 @@ void Editor::render(Draw& draw, int line)
         auto view = data.getLine((int)line);
         for (int i = 0; x < m_x + m_width; ++x, ++i)
         {
-            draw.printChar(x, y, view[i], m_bkgColour);
+            if (view[i] == ';') colour = m_commentColour;
+            draw.printChar(x, y, view[i], colour);
         }
 
         int currentX = m_data.getCurrentPosInLine();
@@ -639,10 +647,10 @@ void Editor::clear()
 //----------------------------------------------------------------------------------------------------------------------
 
 EditorWindow::EditorWindow(Nx& nx, string title)
-    : Window(nx, 1, 1, 78, 60, title, Colour::Black, Colour::White, false)
-    , m_editor(2, 2, 76, 58, Draw::attr(Colour::Black, Colour::White, false), false, 1024, 1024)
+    : Window(nx, 1, 1, 78, 60, title, Colour::Blue, Colour::Black, false)
+    , m_editor(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024)
 {
-
+    m_editor.setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
 }
 
 void EditorWindow::onDraw(Draw& draw)

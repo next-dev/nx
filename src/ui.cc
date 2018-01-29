@@ -352,26 +352,35 @@ void Draw::attrRect(int xCell, int yCell, int width, int height, u8 colour)
 
 void Draw::window(int xCell, int yCell, int width, int height, const string& title, bool bright, u8 backgroundAttr)
 {
+    Colour titleBkgColour = Colour::Black;
+    Colour titleFgColour = Colour::White;
+
+    if ((backgroundAttr & 0x38) == 0)
+    {
+        // Black background - change the colours
+        titleBkgColour = Colour::Blue;
+    }
+
     int titleMaxLen = width - 7;
     assert(titleMaxLen > 0);
     int titleLen = std::min(titleMaxLen, (int)title.size());
 
     // Render the title
-    printChar(xCell, yCell, ' ', attr(Colour::White, Colour::Black, bright));
-    titleLen = printSquashedString(xCell + 1, yCell, title, attr(Colour::White, Colour::Black, bright));
+    printChar(xCell, yCell, ' ', attr(titleFgColour, titleBkgColour, bright));
+    titleLen = printSquashedString(xCell + 1, yCell, title, attr(titleFgColour, titleBkgColour, bright));
     for (int i = titleLen + 1; i < titleMaxLen + 1; ++i)
     {
-        printChar(xCell + i, yCell, ' ', attr(Colour::White, Colour::Black, bright));
+        printChar(xCell + i, yCell, ' ', attr(titleFgColour, titleBkgColour, bright));
     }
 
     // Render the top-right corner of window
     int x = xCell + titleMaxLen + 1;
-    printChar(x++, yCell, '%', attr(Colour::Red, Colour::Black, bright), gGfxFont);
+    printChar(x++, yCell, '%', attr(Colour::Red, titleBkgColour, bright), gGfxFont);
     printChar(x++, yCell, '%', attr(Colour::Yellow, Colour::Red, bright), gGfxFont);
     printChar(x++, yCell, '%', attr(Colour::Green, Colour::Yellow, bright), gGfxFont);
     printChar(x++, yCell, '%', attr(Colour::Cyan, Colour::Green, bright), gGfxFont);
-    printChar(x++, yCell, '%', attr(Colour::Black, Colour::Cyan, bright), gGfxFont);
-    printChar(x, yCell, ' ', attr(Colour::White, Colour::Black, bright));
+    printChar(x++, yCell, '%', attr(titleBkgColour, Colour::Cyan, bright), gGfxFont);
+    printChar(x, yCell, ' ', attr(titleFgColour, titleBkgColour, bright));
 
     // Render the window
     ++yCell;

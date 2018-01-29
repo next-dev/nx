@@ -127,6 +127,7 @@ public:
     
     void onlyAllowDecimal();
     void onlyAllowHex();
+    void setCommentColour(u8 colour);
 
     SplitView getText() const;
 
@@ -149,6 +150,7 @@ private:
     int             m_topLine;
     bool            m_font6;
     u8              m_bkgColour;
+    u8              m_commentColour;
     vector<bool>    m_allowedChars;
 };
 
