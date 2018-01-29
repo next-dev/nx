@@ -440,6 +440,22 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             m_data.deleteChar(1);
             break;
 
+        case K::Home:
+            {
+                int x = m_data.getCurrentPosInLine();
+                m_data.leftChar(x);
+            }
+            break;
+
+        case K::End:
+            {
+                int x = m_data.getCurrentPosInLine();
+                int r = m_data.getCurrentLine();
+                int len = m_data.lineLength(r);
+                m_data.rightChar(len - x);
+            }
+            break;
+
         default:
             break;
         }
