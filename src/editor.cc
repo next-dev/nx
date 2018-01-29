@@ -13,6 +13,8 @@
 #   define DUMP()
 #endif
 
+#define K_LINE_SKIP 20
+
 //----------------------------------------------------------------------------------------------------------------------
 // SplitView
 //----------------------------------------------------------------------------------------------------------------------
@@ -116,6 +118,11 @@ int EditorData::lineLength(int n) const
 int EditorData::dataLength() const
 {
     return m_cursor + ((int)m_buffer.size() - m_endBuffer);
+}
+
+int EditorData::getNumLines() const
+{
+    return int(m_lines.size());
 }
 
 void EditorData::dump() const
@@ -324,14 +331,15 @@ bool EditorData::ensureSpace(int numChars)
     bool result = false;
     if (m_increaseSize)
     {
+        int delta = (numChars / m_increaseSize + 1) * m_increaseSize;
         int oldSize = (int)m_buffer.size();
-        m_buffer.resize(oldSize + m_increaseSize);
+        m_buffer.resize(oldSize + delta);
         result = true;
     
         // Move text afterwards forward
         int len = (int)(m_buffer.end() - (m_buffer.begin() + m_endBuffer));
         move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + oldSize, m_buffer.end() - len);
-        m_endBuffer += m_increaseSize;
+        m_endBuffer += delta;
     }
     
     return result;
@@ -493,10 +501,18 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::Up:
             m_data.upChar(1);
+            if (m_data.getCurrentLine() < m_topLine)
+            {
+                m_topLine = std::max(0, m_topLine - K_LINE_SKIP);
+            }
             break;
 
         case K::Down:
             m_data.downChar(1);
+            if (m_data.getCurrentLine() >= (m_topLine + m_height))
+            {
+                m_topLine = std::min(m_data.getNumLines(), m_topLine + K_LINE_SKIP);
+            }
             break;
 
         case K::Delete:
@@ -538,7 +554,7 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::S:
             {
-                const char* filters[] = { "*.asm" };
+                const char* filters[] = { "*.asm", "*.s" };
                 const char* fileName = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters)/sizeof(filters[0]),
                     filters, "Source code");
                 if (fileName)
@@ -565,7 +581,7 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::O:
             {
-                const char* filters[] = { "*.asm" };
+                const char* filters[] = { "*.asm", "*.s" };
                 const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters)/sizeof(filters[0]),
                     filters, "Source code", 0);
                 if (fileName)

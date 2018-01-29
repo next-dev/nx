@@ -77,6 +77,7 @@ public:
     SplitView getText() const;
     int lineLength(int n) const;
     int dataLength() const;
+    int getNumLines() const;
     
     void insert(char ch);
     void backspace();
