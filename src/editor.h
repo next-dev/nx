@@ -88,6 +88,9 @@ public:
     void downChar(int num);
     void newline();
 
+    bool load(const char* fileName);
+    bool save(const char* fileName) const;
+
     //
     // Queries
     //

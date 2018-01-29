@@ -4,6 +4,9 @@
 
 #include "editor.h"
 
+#include <fstream>
+#include "tinyfiledialogs.h"
+
 #if NX_DEBUG_EDITOR
 #   define DUMP() dump()
 #else
@@ -336,6 +339,66 @@ bool EditorData::ensureSpace(int numChars)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// File access
+//----------------------------------------------------------------------------------------------------------------------
+
+bool EditorData::load(const char* fileName)
+{
+    clear();
+
+    ifstream f;
+    f.open(fileName, ios::binary | ios::in);
+    if (f.is_open())
+    {
+        f.seekg(0, ios::end);
+        int size = (int)f.tellg();
+        f.seekg(0, ios::beg);
+        ensureSpace(size);
+        char* buffer = (char *)m_buffer.data();
+        f.read(buffer, size);
+        f.close();
+
+        // Update pointers
+        m_cursor = size;
+
+        // Update lines
+        for (int i = 0; i < m_cursor; ++i)
+        {
+            if (m_buffer[i] == 0x0a)
+            {
+                m_lines.emplace_back(i+1);
+            }
+        }
+
+        m_currentLine = (int)m_lines.size() - 1;
+        moveTo(0);
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool EditorData::save(const char* fileName) const
+{
+    ofstream f;
+    f.open(fileName, ios::binary | ios::trunc | ios::out);
+    if (f.is_open())
+    {
+        f.write(m_buffer.data(), (size_t)m_cursor);
+        f.write(m_buffer.data() + m_endBuffer, m_buffer.size() - m_endBuffer);
+        f.close();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Editor
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -414,10 +477,10 @@ void Editor::renderAll(Draw& draw)
 
 bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
+    using K = sf::Keyboard::Key;
+
     if (down && !shift && !ctrl && !alt)
     {
-        using K = sf::Keyboard::Key;
-
         switch (key)
         {
         case K::Left:
@@ -453,6 +516,57 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
                 int r = m_data.getCurrentLine();
                 int len = m_data.lineLength(r);
                 m_data.rightChar(len - x);
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    if (down && !shift && ctrl && !alt)
+    {
+        switch(key)
+        {
+        case K::S:
+            {
+                const char* filters[] = { "*.asm" };
+                const char* fileName = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters)/sizeof(filters[0]),
+                    filters, "Source code");
+                if (fileName)
+                {
+                    // If there is no '.' after the last '\', if there is no '.' and no '\\', we have no extension.
+                    // Add .asm in this case.
+                    std::string finalName = fileName;
+                    char* slashPos = strrchr((char *)fileName, '\\');
+                    char* dotPos = strrchr((char *)fileName, '.');
+                    if ((slashPos && !dotPos) ||
+                        (slashPos && (dotPos < slashPos)) ||
+                        (!slashPos && !dotPos))
+                    {
+                        finalName += ".asm";
+                    }
+                    
+                    if (!m_data.save(finalName.c_str()))
+                    {
+                        MessageBoxA(0, "Unable to save file!", "ERROR", MB_ICONERROR | MB_OK);
+                    }
+                }
+            }
+            break;
+
+        case K::O:
+            {
+                const char* filters[] = { "*.asm" };
+                const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters)/sizeof(filters[0]),
+                    filters, "Source code", 0);
+                if (fileName)
+                {
+                    if (!m_data.load(fileName))
+                    {
+                        MessageBoxA(0, "Unable to save file!", "ERROR", MB_ICONERROR | MB_OK);
+                    }
+                }
             }
             break;
 

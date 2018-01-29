@@ -14,6 +14,8 @@ Assembler::Assembler(Nx& nx)
     , m_window(nx, "Editor Assembler")
     , m_commands({
         "ESC|Exit",
+        "Ctrl-S|Save",
+        "Ctrl-O|Open",
         })
 {
 
