@@ -528,6 +528,14 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
     {
         switch(key)
         {
+        case K::Home:
+            m_data.moveTo(0);
+            break;
+
+        case K::End:
+            m_data.moveTo(m_data.dataLength());
+            break;
+
         case K::S:
             {
                 const char* filters[] = { "*.asm" };
