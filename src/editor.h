@@ -88,6 +88,8 @@ public:
     void upChar(int num);
     void downChar(int num);
     void newline();
+    void home();
+    void end();
 
     bool load(const char* fileName);
     bool save(const char* fileName) const;
@@ -97,6 +99,7 @@ public:
     //
     int getCurrentLine() const { return m_currentLine; }
     int getCurrentPosInLine() const;
+    int getPosAtLine(int l) const;
     
 private:
     bool ensureSpace(int numChars);

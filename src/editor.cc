@@ -314,6 +314,26 @@ void EditorData::newline()
     DUMP();
 }
 
+void EditorData::home()
+{
+    moveTo(toVirtualPos(m_lines[m_currentLine]));
+    m_lastOffset = -1;
+}
+
+void EditorData::end()
+{
+    if (m_currentLine == m_lines.size() - 1)
+    {
+        // Last line
+        moveTo(dataLength());
+    }
+    else
+    {
+        moveTo(toVirtualPos(m_lines[m_currentLine+1])-1);
+    }
+    m_lastOffset = -1;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Queries of state
 //----------------------------------------------------------------------------------------------------------------------
@@ -321,6 +341,11 @@ void EditorData::newline()
 int EditorData::getCurrentPosInLine() const
 {
     return m_cursor - m_lines[m_currentLine];
+}
+
+int EditorData::getPosAtLine(int line) const
+{
+    return m_lines[line];
 }
 
 bool EditorData::ensureSpace(int numChars)
@@ -578,18 +603,26 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             break;
 
         case K::Home:
-            {
-                int x = m_data.getCurrentPosInLine();
-                m_data.leftChar(x);
-            }
+            m_data.home();
             break;
 
         case K::End:
+            m_data.end();
+            break;
+
+        case K::PageUp:
             {
-                int x = m_data.getCurrentPosInLine();
-                int r = m_data.getCurrentLine();
-                int len = m_data.lineLength(r);
-                m_data.rightChar(len - x);
+                m_data.upChar(m_height);
+                m_data.home();
+                ensureVisibleCursor();
+            }
+            break;
+
+        case K::PageDown:
+            {
+                m_data.downChar(m_height);
+                m_data.home();
+                ensureVisibleCursor();
             }
             break;
 
