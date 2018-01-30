@@ -92,7 +92,9 @@ public:
     void end();
 
     bool load(const char* fileName);
-    bool save(const char* fileName) const;
+    bool save(const char* fileName);
+
+    void resetChanged() { m_changed = false; }
 
     //
     // Queries
@@ -100,11 +102,13 @@ public:
     int getCurrentLine() const { return m_currentLine; }
     int getCurrentPosInLine() const;
     int getPosAtLine(int l) const;
+    bool hasChanged() const { return m_changed; }
     
 private:
     bool ensureSpace(int numChars);
     void dump() const;
     int toVirtualPos(int actualPos) const;
+    void changed() { m_changed = true; }
 
 private:
     vector<char>    m_buffer;
@@ -115,6 +119,7 @@ private:
     int             m_increaseSize;
     int             m_maxLineLength;
     int             m_lastOffset;       // Used for remembering the line offset when moving up and down
+    bool            m_changed;          // True, if the data changed since last reset
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -133,6 +138,7 @@ public:
     void setCommentColour(u8 colour);
 
     SplitView getText() const;
+    string getTitle() const;
 
     void render(Draw& draw, int line);
     void renderAll(Draw& draw);

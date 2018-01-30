@@ -46,6 +46,7 @@ EditorData::EditorData(int initialSize, int increaseSize, int maxLineLength)
     , m_increaseSize(increaseSize)
     , m_maxLineLength(maxLineLength)
     , m_lastOffset(-1)
+    , m_changed(false)
 {
 
 }
@@ -57,6 +58,7 @@ void EditorData::clear()
     m_lines.clear();
     m_lines.push_back(0);
     m_currentLine = 0;
+    resetChanged();
 }
 
 SplitView EditorData::getLine(int n) const
@@ -164,6 +166,7 @@ void EditorData::insert(char ch)
     }
 
     m_lastOffset = -1;
+    changed();
     DUMP();
 }
 
@@ -253,6 +256,7 @@ void EditorData::deleteChar(int num)
     m_endBuffer += num;
     moveTo(m_cursor);
     m_lastOffset = -1;
+    changed();
 }
 
 void EditorData::leftChar(int num = 1)
@@ -304,6 +308,7 @@ void EditorData::backspace()
     --m_cursor;
     m_lastOffset = -1;
     DUMP();
+    changed();
 }
 
 void EditorData::newline()
@@ -312,6 +317,7 @@ void EditorData::newline()
     m_lines.insert(m_lines.begin() + m_currentLine + 1, m_cursor);
     ++m_currentLine;
     DUMP();
+    changed();
 }
 
 void EditorData::home()
@@ -414,7 +420,7 @@ bool EditorData::load(const char* fileName)
     }
 }
 
-bool EditorData::save(const char* fileName) const
+bool EditorData::save(const char* fileName)
 {
     ofstream f;
     f.open(fileName, ios::binary | ios::trunc | ios::out);
@@ -423,6 +429,7 @@ bool EditorData::save(const char* fileName) const
         f.write(m_buffer.data(), (size_t)m_cursor);
         f.write(m_buffer.data() + m_endBuffer, m_buffer.size() - m_endBuffer);
         f.close();
+        resetChanged();
         return true;
     }
     else
@@ -476,6 +483,14 @@ void Editor::setCommentColour(u8 colour)
 SplitView Editor::getText() const
 {
     return getData().getText();
+}
+
+string Editor::getTitle() const
+{
+    string title = getFileName();
+    title = title.empty() ? string("Editor/Assembler ") : string("Editor/Assembler [") + title + "]";
+    if (m_data.hasChanged()) title += "*";
+    return title;
 }
 
 void Editor::render(Draw& draw, int line)
@@ -651,6 +666,16 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::O:  // Open file...
             {
+                if (m_data.hasChanged())
+                {
+                    // Check to see if the user really wants to overwrite their changes.
+                    if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes.",
+                        "yesno", "question", 0))
+                    {
+                        break;
+                    }
+                }
+
                 const char* filters[] = { "*.asm", "*.s" };
                 const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters)/sizeof(filters[0]),
                     filters, "Source code", 0);
@@ -743,8 +768,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
     m_editor.key(key, true, shift, ctrl, alt);
 
     // Redo title as it could have changed from keyboard commands
-    string title = m_editor.getFileName();
-    setTitle(title.empty() ? string("Editor/Assembler") : string("Editor/Assembler [") + title + "]");
+    setTitle(m_editor.getTitle());
 }
 
 void EditorWindow::onText(char ch)
@@ -754,3 +778,4 @@ void EditorWindow::onText(char ch)
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
+
