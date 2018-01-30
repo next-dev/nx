@@ -164,6 +164,8 @@ public:
     virtual void keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt);
     virtual void text(char ch);
 
+    void setTitle(string title)     { m_title = title; }
+
 protected:
     //
     // Hooks

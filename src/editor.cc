@@ -491,6 +491,32 @@ void Editor::renderAll(Draw& draw)
     }
 }
 
+void Editor::ensureVisibleCursor()
+{
+    // Check for up scroll
+    if (m_data.getCurrentLine() < m_topLine)
+    {
+        m_topLine = std::max(0, m_topLine - K_LINE_SKIP);
+
+        // Check to see if visible yet.  If not, just jump.
+        if (m_data.getCurrentLine() < m_topLine)
+        {
+            m_topLine = std::max(0, m_data.getCurrentLine() - (m_height / 2));
+        }
+    }
+    // Check for down scroll
+    else if (m_data.getCurrentLine() >= (m_topLine + m_height))
+    {
+        m_topLine = std::min(m_data.getNumLines(), m_topLine + K_LINE_SKIP);
+
+        // Check to see if visible yet.  If not, just jump.
+        if (m_data.getCurrentLine() >= (m_topLine + m_height))
+        {
+            m_topLine = std::max(0, m_data.getCurrentLine() - (m_height / 2));
+        }
+    }
+}
+
 bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
@@ -509,18 +535,12 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::Up:
             m_data.upChar(1);
-            if (m_data.getCurrentLine() < m_topLine)
-            {
-                m_topLine = std::max(0, m_topLine - K_LINE_SKIP);
-            }
+            ensureVisibleCursor();
             break;
 
         case K::Down:
             m_data.downChar(1);
-            if (m_data.getCurrentLine() >= (m_topLine + m_height))
-            {
-                m_topLine = std::min(m_data.getNumLines(), m_topLine + K_LINE_SKIP);
-            }
+            ensureVisibleCursor();
             break;
 
         case K::Delete:
@@ -554,24 +574,31 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
         {
         case K::Home:
             m_data.moveTo(0);
+            ensureVisibleCursor();
             break;
 
         case K::End:
             m_data.moveTo(m_data.dataLength());
+            ensureVisibleCursor();
             break;
 
         case K::S:
             {
-                const char* filters[] = { "*.asm", "*.s" };
-                const char* fileName = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters)/sizeof(filters[0]),
-                    filters, "Source code");
-                if (fileName)
+                string fileName = getFileName();
+                if (fileName.empty())
+                {
+                    const char* filters[] = { "*.asm", "*.s" };
+                    const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
+                        filters, "Source code");
+                    fileName = fn ? fn : "";
+                }
+                if (!fileName.empty())
                 {
                     // If there is no '.' after the last '\', if there is no '.' and no '\\', we have no extension.
                     // Add .asm in this case.
                     std::string finalName = fileName;
-                    char* slashPos = strrchr((char *)fileName, '\\');
-                    char* dotPos = strrchr((char *)fileName, '.');
+                    char* slashPos = strrchr((char *)fileName.c_str(), '\\');
+                    char* dotPos = strrchr((char *)fileName.c_str(), '.');
                     if ((slashPos && !dotPos) ||
                         (slashPos && (dotPos < slashPos)) ||
                         (!slashPos && !dotPos))
@@ -581,7 +608,7 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
                     
                     if (!m_data.save(finalName.c_str()))
                     {
-                        MessageBoxA(0, "Unable to save file!", "ERROR", MB_ICONERROR | MB_OK);
+                        tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
                     }
                 }
             }
@@ -594,9 +621,13 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
                     filters, "Source code", 0);
                 if (fileName)
                 {
-                    if (!m_data.load(fileName))
+                    if (m_data.load(fileName))
                     {
-                        MessageBoxA(0, "Unable to save file!", "ERROR", MB_ICONERROR | MB_OK);
+                        setFileName(fileName);
+                    }
+                    else
+                    {
+                        tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
                     }
                 }
             }
@@ -661,6 +692,10 @@ void EditorWindow::onDraw(Draw& draw)
 void EditorWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
 {
     m_editor.key(key, true, shift, ctrl, alt);
+
+    // Redo title as it could have changed from keyboard commands
+    string title = m_editor.getFileName();
+    setTitle(title.empty() ? string("Editor/Assembler") : string("Editor/Assembler [") + title + "]");
 }
 
 void EditorWindow::onText(char ch)

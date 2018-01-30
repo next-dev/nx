@@ -140,6 +140,10 @@ public:
 
     EditorData& getData() { return m_data; }
     const EditorData& getData() const { return m_data; }
+    string getFileName() const { return m_fileName; }
+    void setFileName(string fileName) { m_fileName = fileName; }
+
+    void ensureVisibleCursor();
     
 private:
     EditorData      m_data;
@@ -152,6 +156,7 @@ private:
     u8              m_bkgColour;
     u8              m_commentColour;
     vector<bool>    m_allowedChars;
+    string          m_fileName;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
