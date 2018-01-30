@@ -517,6 +517,36 @@ void Editor::ensureVisibleCursor()
     }
 }
 
+void Editor::save(string fileName)
+{
+    if (fileName.empty())
+    {
+        const char* filters[] = { "*.asm", "*.s" };
+        const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
+            filters, "Source code");
+        fileName = fn ? fn : "";
+    }
+    if (!fileName.empty())
+    {
+        // If there is no '.' after the last '\', if there is no '.' and no '\\', we have no extension.
+        // Add .asm in this case.
+        std::string finalName = fileName;
+        char* slashPos = strrchr((char *)fileName.c_str(), '\\');
+        char* dotPos = strrchr((char *)fileName.c_str(), '.');
+        if ((slashPos && !dotPos) ||
+            (slashPos && (dotPos < slashPos)) ||
+            (!slashPos && !dotPos))
+        {
+            finalName += ".asm";
+        }
+
+        if (!m_data.save(finalName.c_str()))
+        {
+            tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
+        }
+    }
+}
+
 bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
@@ -582,39 +612,11 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             ensureVisibleCursor();
             break;
 
-        case K::S:
-            {
-                string fileName = getFileName();
-                if (fileName.empty())
-                {
-                    const char* filters[] = { "*.asm", "*.s" };
-                    const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
-                        filters, "Source code");
-                    fileName = fn ? fn : "";
-                }
-                if (!fileName.empty())
-                {
-                    // If there is no '.' after the last '\', if there is no '.' and no '\\', we have no extension.
-                    // Add .asm in this case.
-                    std::string finalName = fileName;
-                    char* slashPos = strrchr((char *)fileName.c_str(), '\\');
-                    char* dotPos = strrchr((char *)fileName.c_str(), '.');
-                    if ((slashPos && !dotPos) ||
-                        (slashPos && (dotPos < slashPos)) ||
-                        (!slashPos && !dotPos))
-                    {
-                        finalName += ".asm";
-                    }
-                    
-                    if (!m_data.save(finalName.c_str()))
-                    {
-                        tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
-                    }
-                }
-            }
+        case K::S:  // Save
+            save(getFileName());
             break;
 
-        case K::O:
+        case K::O:  // Open file...
             {
                 const char* filters[] = { "*.asm", "*.s" };
                 const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters)/sizeof(filters[0]),
@@ -637,6 +639,20 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             break;
         }
     }
+
+    if (down && ctrl && shift && !alt)
+    {
+        switch (key)
+        {
+        case K::S:  // Save As...
+            save(string());
+            break;
+
+        default:
+            break;
+        }
+    }
+
     return true;
 }
 

@@ -16,6 +16,7 @@ Assembler::Assembler(Nx& nx)
         "ESC|Exit",
         "Ctrl-S|Save",
         "Ctrl-O|Open",
+        "Shift-Ctrl-S|Save as",
         })
 {
 

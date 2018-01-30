@@ -143,7 +143,9 @@ public:
     string getFileName() const { return m_fileName; }
     void setFileName(string fileName) { m_fileName = fileName; }
 
+private:
     void ensureVisibleCursor();
+    void save(string fileName);
     
 private:
     EditorData      m_data;
