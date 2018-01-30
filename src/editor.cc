@@ -47,6 +47,8 @@ EditorData::EditorData(int initialSize, int increaseSize, int maxLineLength)
     , m_maxLineLength(maxLineLength)
     , m_lastOffset(-1)
     , m_changed(false)
+    , m_initialTabs()
+    , m_tabSize(1)
 {
 
 }
@@ -341,6 +343,48 @@ void EditorData::end()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Tabs
+//----------------------------------------------------------------------------------------------------------------------
+
+void EditorData::tab()
+{
+    int x = getCurrentPosInLine();
+    int tab = x;
+
+    for (int i = 0; i < m_initialTabs.size(); ++i)
+    {
+        if (x < m_initialTabs[i])
+        {
+            // Found the next tab
+            tab = m_initialTabs[i];
+            break;
+        }
+    }
+    if (tab == x)
+    {
+        // Couldn't find a tab.  Use normal tabs
+        tab = x + (m_tabSize - (x % m_tabSize));
+    }
+
+    while (x < tab)
+    {
+        insert(' ');
+        ++x;
+    }
+}
+
+void EditorData::untab()
+{
+
+}
+
+void EditorData::setTabs(vector<int> tabs, int tabSize)
+{
+    m_initialTabs = tabs;
+    m_tabSize = tabSize;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Queries of state
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -453,6 +497,7 @@ Editor::Editor(int xCell, int yCell, int width, int height, u8 bkgColour, bool f
     , m_bkgColour(bkgColour)
     , m_commentColour(bkgColour)
     , m_allowedChars(128, true)
+    , m_ioAllowed(increaseSize != 0)
 {
     for (int i = 0; i < 32; ++i) m_allowedChars[i] = false;
     m_allowedChars[127] = false;
@@ -641,6 +686,10 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             }
             break;
 
+        case K::Tab:
+            m_data.tab();
+            break;
+
         default:
             break;
         }
@@ -661,10 +710,14 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             break;
 
         case K::S:  // Save
-            save(getFileName());
+            if (m_ioAllowed)
+            {
+                save(getFileName());
+            }
             break;
 
         case K::O:  // Open file...
+            if (m_ioAllowed)
             {
                 if (m_data.hasChanged())
                 {
@@ -703,7 +756,10 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
         switch (key)
         {
         case K::S:  // Save As...
-            save(string());
+            if (m_ioAllowed)
+            {
+                save(string());
+            }
             break;
 
         default:

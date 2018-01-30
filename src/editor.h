@@ -90,11 +90,15 @@ public:
     void newline();
     void home();
     void end();
+    void tab();
+    void untab();
 
     bool load(const char* fileName);
     bool save(const char* fileName);
 
     void resetChanged() { m_changed = false; }
+
+    void setTabs(vector<int> tabs, int tabSize);
 
     //
     // Queries
@@ -120,6 +124,8 @@ private:
     int             m_maxLineLength;
     int             m_lastOffset;       // Used for remembering the line offset when moving up and down
     bool            m_changed;          // True, if the data changed since last reset
+    vector<int>     m_initialTabs;
+    int             m_tabSize;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -168,6 +174,7 @@ private:
     u8              m_commentColour;
     vector<bool>    m_allowedChars;
     string          m_fileName;
+    bool            m_ioAllowed;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -178,6 +185,8 @@ class EditorWindow final : public Window
 {
 public:
     EditorWindow(Nx& nx, string title);
+
+    Editor& getEditor() { return m_editor; }
 
 protected:
     void onDraw(Draw& draw) override;

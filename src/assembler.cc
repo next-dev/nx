@@ -19,7 +19,7 @@ Assembler::Assembler(Nx& nx)
         "Shift-Ctrl-S|Save as",
         })
 {
-
+    m_window.getEditor().getData().setTabs({ 8, 14, 32 }, 4);
 }
 
 void Assembler::render(Draw& draw)
