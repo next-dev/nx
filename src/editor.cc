@@ -561,7 +561,7 @@ SplitView Editor::getText() const
 string Editor::getTitle() const
 {
     string title = getFileName();
-    title = title.empty() ? string("Editor/Assembler ") : string("Editor/Assembler [") + title + "]";
+    if (title.empty()) title = "[new file]";
     if (m_data.hasChanged()) title += "*";
     return title;
 }
@@ -570,7 +570,7 @@ void Editor::render(Draw& draw, int line)
 {
     EditorData& data = getData();
     u8 colour = m_bkgColour;
-    int y = line - m_topLine;
+    int y = line - m_topLine + 1;
     if (y < m_height)
     {
         // This line is visible
@@ -595,8 +595,8 @@ void Editor::render(Draw& draw, int line)
 void Editor::renderAll(Draw& draw)
 {
     int line = m_topLine;
-    int y = m_y;
-    int endY = m_y + m_height;
+    int y = m_y + 1;
+    int endY = y + m_height;
 
     for (; y < endY; ++y)
     {
@@ -867,27 +867,41 @@ void Editor::clear()
 
 EditorWindow::EditorWindow(Nx& nx, string title)
     : Window(nx, 1, 1, 78, 60, title, Colour::Blue, Colour::Black, false)
-    , m_editor(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024)
+    , m_editors()
+    , m_index(0)
 {
-    m_editor.setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
+    m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
+    getEditor().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
 }
 
 void EditorWindow::onDraw(Draw& draw)
 {
-    m_editor.renderAll(draw);
+    getEditor().renderAll(draw);
+
+    // Draw tab bar
+    draw.attrRect(m_x, m_y+1, m_width, 1, Draw::attr(Colour::Blue, Colour::White, false));
+
+    // Draw tabs
+    int x = m_x + 1;
+    int y = m_y + 1;
+    string tabName = getEditor().getTitle();
+    if (tabName.length() > 16)
+    {
+        // Shorten it
+        tabName = tabName.substr(tabName.size() - 13, 13) + "...";
+    }
+    tabName = string(" ") + tabName + " ";
+    x = draw.printSquashedString(x, y, tabName, Draw::attr(Colour::White, Colour::Red, true)) + 1;
 }
 
 void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    m_editor.key(key, down, shift, ctrl, alt);
-
-    // Redo title as it could have changed from keyboard commands
-    setTitle(m_editor.getTitle());
+    getEditor().key(key, down, shift, ctrl, alt);
 }
 
 void EditorWindow::onText(char ch)
 {
-    m_editor.text(ch);
+    getEditor().text(ch);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

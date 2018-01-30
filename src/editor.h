@@ -166,18 +166,18 @@ private:
     void save(string fileName);
     
 private:
-    EditorData      m_data;
-    int             m_x;
-    int             m_y;
-    int             m_width;
-    int             m_height;
-    int             m_topLine;
-    bool            m_font6;
-    u8              m_bkgColour;
-    u8              m_commentColour;
-    vector<bool>    m_allowedChars;
-    string          m_fileName;
-    bool            m_ioAllowed;
+    EditorData          m_data;
+    int                 m_x;
+    int                 m_y;
+    int                 m_width;
+    int                 m_height;
+    int                 m_topLine;
+    bool                m_font6;
+    u8                  m_bkgColour;
+    u8                  m_commentColour;
+    vector<bool>        m_allowedChars;
+    string              m_fileName;
+    bool                m_ioAllowed;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -189,7 +189,7 @@ class EditorWindow final : public Window
 public:
     EditorWindow(Nx& nx, string title);
 
-    Editor& getEditor() { return m_editor; }
+    Editor& getEditor() { return m_editors[m_index]; }
 
 protected:
     void onDraw(Draw& draw) override;
@@ -197,7 +197,8 @@ protected:
     void onText(char ch) override;
 
 private:
-    Editor      m_editor;
+    vector<Editor>      m_editors;
+    int                 m_index;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
