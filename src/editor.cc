@@ -877,9 +877,9 @@ void EditorWindow::onDraw(Draw& draw)
     m_editor.renderAll(draw);
 }
 
-void EditorWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
+void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    m_editor.key(key, true, shift, ctrl, alt);
+    m_editor.key(key, down, shift, ctrl, alt);
 
     // Redo title as it could have changed from keyboard commands
     setTitle(m_editor.getTitle());

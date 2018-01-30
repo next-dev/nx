@@ -92,12 +92,12 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             break;
 
         default:
-            SelectableWindow::getSelected().keyPress(key, shift, ctrl, alt);
+            SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
         }
     }
     else
     {
-        SelectableWindow::getSelected().keyPress(key, shift, ctrl, alt);
+        SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
     }
 }
 

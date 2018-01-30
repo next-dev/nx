@@ -161,7 +161,7 @@ public:
     Window(Nx& nx, int x, int y, int width, int height, std::string title, Colour ink, Colour paper, bool bright);
 
     virtual void draw(Draw& draw);
-    virtual void keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt);
+    virtual void keyPress(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
     virtual void text(char ch);
 
     void setTitle(string title)     { m_title = title; }
@@ -171,7 +171,7 @@ protected:
     // Hooks
     //
     virtual void onDraw(Draw& draw) = 0;
-    virtual void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) = 0;
+    virtual void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) = 0;
     virtual void onText(char ch) = 0;
 
     //
@@ -201,7 +201,7 @@ public:
     bool isSelected() const { return ms_currentWindow == this; }
 
     void draw(Draw& draw) override;
-    void keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
+    void keyPress(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
 
     static SelectableWindow& getSelected() { return *ms_currentWindow; }
 

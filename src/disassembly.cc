@@ -190,11 +190,11 @@ void DisassemblyWindow::onDraw(Draw& draw)
     }
 }
 
-void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
+void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
 
-    if (!shift && !ctrl && !alt)
+    if (down && !shift && !ctrl && !alt)
     {
         switch (key)
         {
@@ -237,7 +237,7 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool
             break;
         }
     }
-    else if (!shift && ctrl && !alt)
+    else if (down && !shift && ctrl && !alt)
     {
         switch (key)
         {
@@ -255,7 +255,7 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool
 
     if (m_enableGoto)
     {
-        m_gotoEditor.key(key, true, shift, ctrl, alt);
+        m_gotoEditor.key(key, down, shift, ctrl, alt);
     }
 }
 

@@ -541,9 +541,9 @@ void Window::draw(Draw& draw)
     onDraw(draw);
 }
 
-void Window::keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
+void Window::keyPress(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    onKey(key, shift, ctrl, alt);
+    onKey(key, down, shift, ctrl, alt);
 }
 
 void Window::text(char ch)
@@ -578,11 +578,11 @@ void SelectableWindow::draw(Draw& draw)
     onDraw(draw);
 }
 
-void SelectableWindow::keyPress(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
+void SelectableWindow::keyPress(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     if (ms_currentWindow == this)
     {
-        onKey(key, shift, ctrl, alt);
+        onKey(key, down, shift, ctrl, alt);
     }
 }
 

@@ -31,7 +31,7 @@ void Assembler::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, boo
 {
     using K = sf::Keyboard::Key;
 
-    if (down) m_window.keyPress(key, shift, ctrl, alt);
+    if (down) m_window.keyPress(key, down, shift, ctrl, alt);
 
     if (down && !shift && !ctrl && !alt)
     {

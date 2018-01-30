@@ -399,11 +399,12 @@ void TapeWindow::onDraw(Draw& draw)
     }
 }
 
-void TapeWindow::onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt)
+void TapeWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
 
     if (!m_tape) return;
+    if (!down) return;
 
     int halfSize = (m_height - 2) / 4;
 
@@ -497,7 +498,7 @@ void TapeBrowser::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, b
             break;
 
         default:
-            if (down) m_window.keyPress(key, shift, ctrl, alt);
+            if (down) m_window.keyPress(key, down, shift, ctrl, alt);
         }
     }
     else if (down && !shift && ctrl && !alt)

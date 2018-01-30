@@ -130,7 +130,7 @@ public:
 
 protected:
     void onDraw(Draw& draw) override;
-    void onKey(sf::Keyboard::Key key, bool shift, bool ctrl, bool alt) override;
+    void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
     void onText(char ch) override;
 
 private:
