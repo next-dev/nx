@@ -11,7 +11,7 @@
 
 Assembler::Assembler(Nx& nx)
     : Overlay(nx)
-    , m_window(nx, "Editor Assembler")
+    , m_window(nx, "Editor/Assembler")
     , m_commands({
         "ESC|Exit",
         "Ctrl-S|Save",

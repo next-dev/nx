@@ -375,7 +375,35 @@ void EditorData::tab()
 
 void EditorData::untab()
 {
+    // Calculate last tab position
+    int x = getCurrentPosInLine();
+    int tab = 0;
 
+    if (!m_initialTabs.empty() && x > m_initialTabs.back())
+    {
+        // We're in normal tabs territory.
+        tab = m_initialTabs.back() +
+            (((x - m_initialTabs.back()) - 1) / m_tabSize);
+    }
+    else
+    {
+        for (int i = (int)m_initialTabs.size() - 1; i >= 0; --i)
+        {
+            if (x > m_initialTabs[i])
+            {
+                tab = m_initialTabs[i];
+                break;
+            }
+        }
+    }
+
+    // tab points to the place we should go.  Keep deleting spaces until we reach a non-space or the tab position
+    while (x > tab)
+    {
+        if (m_buffer[m_cursor - 1] != ' ') break;
+        backspace();
+        --x;
+    }
 }
 
 void EditorData::setTabs(vector<int> tabs, int tabSize)
@@ -635,8 +663,13 @@ void Editor::save(string fileName)
 bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
+    if (!down) return true;
 
-    if (down && !shift && !ctrl && !alt)
+    //------------------------------------------------------------------------------------------------------------------
+    // No shift keys
+    //------------------------------------------------------------------------------------------------------------------
+    
+    if (!shift && !ctrl && !alt)
     {
         switch (key)
         {
@@ -695,7 +728,28 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
         }
     }
 
-    if (down && !shift && ctrl && !alt)
+    //------------------------------------------------------------------------------------------------------------------
+    // Shift keys
+    //------------------------------------------------------------------------------------------------------------------
+
+    else if (shift && !ctrl && !alt)
+    {
+        switch (key)
+        {
+        case K::Tab:    // Back tab
+            m_data.untab();
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Ctrl-keys
+    //------------------------------------------------------------------------------------------------------------------
+
+    else if (!shift && ctrl && !alt)
     {
         switch(key)
         {
@@ -751,7 +805,11 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
         }
     }
 
-    if (down && ctrl && shift && !alt)
+    //------------------------------------------------------------------------------------------------------------------
+    // Shift-Ctrl keys
+    //------------------------------------------------------------------------------------------------------------------
+    
+    else if (ctrl && shift && !alt)
     {
         switch (key)
         {

@@ -90,14 +90,17 @@ public:
     void newline();
     void home();
     void end();
-    void tab();
-    void untab();
 
     bool load(const char* fileName);
     bool save(const char* fileName);
 
     void resetChanged() { m_changed = false; }
 
+    //
+    // Tabs
+    //
+    void tab();
+    void untab();
     void setTabs(vector<int> tabs, int tabSize);
 
     //
