@@ -191,6 +191,9 @@ public:
 
     Editor& getEditor() { return m_editors[m_index]; }
 
+private:
+    void newFile();
+
 protected:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;

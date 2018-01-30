@@ -870,7 +870,7 @@ EditorWindow::EditorWindow(Nx& nx, string title)
     , m_editors()
     , m_index(0)
 {
-    m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
+    newFile();
     getEditor().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
 }
 
@@ -884,18 +884,45 @@ void EditorWindow::onDraw(Draw& draw)
     // Draw tabs
     int x = m_x + 1;
     int y = m_y + 1;
-    string tabName = getEditor().getTitle();
-    if (tabName.length() > 16)
+    for (int i = 0; i < m_editors.size(); ++i)
     {
-        // Shorten it
-        tabName = tabName.substr(tabName.size() - 13, 13) + "...";
+        string tabName = m_editors[i].getTitle();
+        if (tabName.length() > 16)
+        {
+            // Shorten it
+            tabName = tabName.substr(tabName.size() - 13, 13) + "...";
+        }
+        tabName = string(" ") + tabName + " ";
+
+        int len = draw.squashedStringWidth(tabName);
+        if (x + len >= (m_x + m_width - 1))
+        {
+            break;
+        }
+
+        x += draw.printSquashedString(x, y, tabName, Draw::attr(Colour::White, Colour::Red, i == m_index)) + 1;
     }
-    tabName = string(" ") + tabName + " ";
-    x = draw.printSquashedString(x, y, tabName, Draw::attr(Colour::White, Colour::Red, true)) + 1;
+}
+
+void EditorWindow::newFile()
+{
+    m_index = int(m_editors.size());
+    m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
+    m_editors.back().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
 }
 
 void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
+    using K = sf::Keyboard::Key;
+    if (down && ctrl && !shift && !alt)
+    {
+        switch (key)
+        {
+        case K::N:  // New file
+            newFile();
+            break;
+        }
+    }
     getEditor().key(key, down, shift, ctrl, alt);
 }
 
