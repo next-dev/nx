@@ -297,22 +297,30 @@ void EditorData::downChar(int num)
     moveTo(toVirtualPos(m_lines[newLine] + requiredOffset));
 }
 
-void EditorData::backspace()
+void EditorData::backspace(int num)
 {
-    // Find out if it's all spaces to the previous tab position
-    int p1 = getPosAtLine(getCurrentLine()) + lastTabPos();
-    int p2 = m_cursor;
+    // Find out if it's all spaces to the previous tab position (but only if we delete 1 character)
     int count = 1;
-    while (p2 > p1)
+    if (num == 1)
     {
-        if (m_buffer[--p2] != ' ')
+        int p1 = getPosAtLine(getCurrentLine()) + lastTabPos();
+        int p2 = m_cursor - 1;
+        while (p2 > p1)
         {
-            // At least one of the characters after the previous tab is a non-space.
-            // So just delete one character.
-            break;
+            if (m_buffer[--p2] != ' ')
+            {
+                // At least one of the characters after the previous tab is a non-space.
+                // So just delete one character.
+                ++p2;   // So p1 != p2 at end of this loop
+                break;
+            }
         }
+        if (p2 == p1) count = m_cursor - p1;
     }
-    if (p2 == p1) count = m_cursor - p1;
+    else
+    {
+        count = num;
+    }
 
     for (int i = 0; i < count; ++i)
     {
@@ -409,7 +417,7 @@ int EditorData::lastTabPos() const
     {
         // We're in normal tabs territory.
         tab = m_initialTabs.back() +
-            (((x - m_initialTabs.back()) - 1) / m_tabSize);
+            ((((x - m_initialTabs.back()) - 1) / m_tabSize) * m_tabSize);
     }
     else
     {
@@ -435,7 +443,7 @@ void EditorData::untab()
     while (x > tab)
     {
         if (m_buffer[m_cursor - 1] != ' ') break;
-        backspace();
+        backspace(1);
         --x;
     }
 }
@@ -884,7 +892,7 @@ bool Editor::text(char ch)
         switch (ch)
         {
         case 8:     // backspace
-            data.backspace();
+            data.backspace(1);
             break;
 
         case 13:    // newline

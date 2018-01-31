@@ -80,7 +80,7 @@ public:
     int getNumLines() const;
     
     void insert(char ch);
-    void backspace();
+    void backspace(int num);
     void deleteChar(int num);
     void moveTo(int pos);
     void leftChar(int num);
