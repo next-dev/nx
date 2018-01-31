@@ -194,6 +194,7 @@ public:
 
 private:
     void newFile();
+    void closeFile();
 
 protected:
     void onDraw(Draw& draw) override;
@@ -202,6 +203,7 @@ protected:
 
 private:
     vector<Editor>      m_editors;
+    vector<int>         m_editorOrder;
     int                 m_index;
 };
 
