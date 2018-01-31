@@ -102,6 +102,7 @@ public:
     void tab();
     void untab();
     void setTabs(vector<int> tabs, int tabSize);
+    int lastTabPos() const;
 
     //
     // Queries

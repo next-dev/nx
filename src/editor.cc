@@ -299,15 +299,33 @@ void EditorData::downChar(int num)
 
 void EditorData::backspace()
 {
-    int lineStart = m_lines[m_currentLine];
-    if (m_cursor == lineStart)
+    // Find out if it's all spaces to the previous tab position
+    int p1 = getPosAtLine(getCurrentLine()) + lastTabPos();
+    int p2 = m_cursor;
+    int count = 1;
+    while (p2 > p1)
     {
-        // Delete newline
-        if (m_currentLine == 0) return;
-        m_lines.erase(m_lines.begin() + m_currentLine);
-        --m_currentLine;
+        if (m_buffer[--p2] != ' ')
+        {
+            // At least one of the characters after the previous tab is a non-space.
+            // So just delete one character.
+            break;
+        }
     }
-    --m_cursor;
+    if (p2 == p1) count = m_cursor - p1;
+
+    for (int i = 0; i < count; ++i)
+    {
+        int lineStart = m_lines[m_currentLine];
+        if (m_cursor == lineStart)
+        {
+            // Delete newline
+            if (m_currentLine == 0) return;
+            m_lines.erase(m_lines.begin() + m_currentLine);
+            --m_currentLine;
+        }
+        --m_cursor;
+    }
     m_lastOffset = -1;
     DUMP();
     changed();
@@ -320,6 +338,14 @@ void EditorData::newline()
     ++m_currentLine;
     DUMP();
     changed();
+
+    // Ident to the previous line's position
+    int line = getCurrentLine() - 1;
+    int p = getPosAtLine(line);
+    while (m_buffer[p++] == ' ')
+    {
+        insert(' ');
+    }
 }
 
 void EditorData::home()
@@ -373,7 +399,7 @@ void EditorData::tab()
     }
 }
 
-void EditorData::untab()
+int EditorData::lastTabPos() const
 {
     // Calculate last tab position
     int x = getCurrentPosInLine();
@@ -396,6 +422,14 @@ void EditorData::untab()
             }
         }
     }
+
+    return tab;
+}
+
+void EditorData::untab()
+{
+    int tab = lastTabPos();
+    int x = getCurrentPosInLine();
 
     // tab points to the place we should go.  Keep deleting spaces until we reach a non-space or the tab position
     while (x > tab)
@@ -657,7 +691,12 @@ void Editor::save(string fileName)
         {
             tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
         }
+        else
+        {
+            setFileName(fileName);
+        }
     }
+
 }
 
 bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
@@ -890,7 +929,7 @@ void EditorWindow::onDraw(Draw& draw)
         if (tabName.length() > 16)
         {
             // Shorten it
-            tabName = tabName.substr(tabName.size() - 13, 13) + "...";
+            tabName = string("...") + tabName.substr(tabName.size() - 13, 13);
         }
         tabName = string(" ") + tabName + " ";
 
