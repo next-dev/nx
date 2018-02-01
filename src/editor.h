@@ -205,6 +205,8 @@ private:
     vector<Editor>      m_editors;
     vector<int>         m_editorOrder;
     int                 m_index;
+
+    int                 m_selectedTab;      // Current tab index during selection window
 };
 
 //----------------------------------------------------------------------------------------------------------------------

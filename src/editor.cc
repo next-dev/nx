@@ -916,6 +916,7 @@ EditorWindow::EditorWindow(Nx& nx, string title)
     : Window(nx, 1, 1, 78, 60, title, Colour::Blue, Colour::Black, false)
     , m_editors()
     , m_index(0)
+    , m_selectedTab(-1)
 {
     newFile();
     getEditor().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
@@ -949,6 +950,15 @@ void EditorWindow::onDraw(Draw& draw)
         }
 
         x += draw.printSquashedString(x, y, tabName, Draw::attr(Colour::White, Colour::Red, i == m_index)) + 1;
+    }
+
+    if (m_selectedTab >= 0)
+    {
+        for (size_t i = 0; i < m_editorOrder.size(); ++i)
+        {
+            Editor& editor = m_editors[m_editorOrder[i]];
+            draw.printSquashedString(m_x, m_y + 2 + int(i), editor.getTitle(), Draw::attr(Colour::Black, Colour::White, true));
+        }
     }
 }
 
@@ -989,7 +999,30 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
             break;
         }
     }
-    getEditor().key(key, down, shift, ctrl, alt);
+    if (m_selectedTab == -1) getEditor().key(key, down, shift, ctrl, alt);
+
+    if (down && ctrl && !alt)
+    {
+        if (key == K::Tab)
+        {
+            if (m_selectedTab == -1)
+            {
+                // First time selecting tab
+                m_selectedTab = 1;
+            }
+            else
+            {
+                ++m_selectedTab;
+            }
+            if (m_selectedTab >= m_editors.size()) m_selectedTab = 0;
+        }
+    }
+
+    if (!down && !ctrl)
+    {
+        //TODO: Swap!
+        m_selectedTab = -1;
+    }
 }
 
 void EditorWindow::onText(char ch)
@@ -1000,3 +1033,9 @@ void EditorWindow::onText(char ch)
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 
+// TODO:
+//      - Fix output of buffer menu
+//      - Opening should not replace changed or previously opened file
+//      - Opening should add tab at end
+//      - Get rid of editor orders array
+//      - Get rid of tabs
