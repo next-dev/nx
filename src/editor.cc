@@ -980,6 +980,7 @@ EditorWindow::EditorWindow(Nx& nx, string title)
     : Window(nx, 1, 1, 78, 60, title, Colour::Blue, Colour::Black, false)
     , m_editors()
     , m_index(0)
+    , m_selectedTab(-1)
 {
     newFile();
     getEditor().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
@@ -995,9 +996,10 @@ void EditorWindow::onDraw(Draw& draw)
     // Draw tabs
     int x = m_x + 1;
     int y = m_y + 1;
-    for (int i = 0; i < m_editors.size(); ++i)
+    for (int i = 0; i < m_editorOrder.size(); ++i)
     {
-        string tabName = m_editors[i].getTitle();
+        Editor& editor = m_editors[m_editorOrder[i]];
+        string tabName = editor.getTitle();
         if (tabName.length() > 16)
         {
             // Shorten it
@@ -1013,6 +1015,15 @@ void EditorWindow::onDraw(Draw& draw)
 
         x += draw.printSquashedString(x, y, tabName, Draw::attr(Colour::White, Colour::Red, i == m_index)) + 1;
     }
+
+    if (m_selectedTab >= 0)
+    {
+        for (size_t i = 0; i < m_editorOrder.size(); ++i)
+        {
+            Editor& editor = m_editors[m_editorOrder[i]];
+            draw.printSquashedString(m_x, m_y + 2 + int(i), editor.getTitle(), Draw::attr(Colour::Black, Colour::White, true));
+        }
+    }
 }
 
 void EditorWindow::newFile()
@@ -1020,6 +1031,20 @@ void EditorWindow::newFile()
     m_index = int(m_editors.size());
     m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
     m_editors.back().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
+    m_editorOrder.insert(m_editorOrder.begin(), m_index);
+}
+
+void EditorWindow::closeFile()
+{
+    m_editors.erase(m_editors.begin() + m_index);
+    auto it = find_if(m_editorOrder.begin(), m_editorOrder.end(), [this](auto i){ return i == m_index; });
+    m_editorOrder.erase(it);
+    for (auto& order : m_editorOrder)
+    {
+        if (order > m_index) order -= 1;
+    }
+    m_index = 0;
+    if (m_editors.empty()) newFile();
 }
 
 void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
@@ -1032,9 +1057,36 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
         case K::N:  // New file
             newFile();
             break;
+
+        case K::W:  // Close file
+            closeFile();
+            break;
         }
     }
-    getEditor().key(key, down, shift, ctrl, alt);
+    if (m_selectedTab == -1) getEditor().key(key, down, shift, ctrl, alt);
+
+    if (down && ctrl && !alt)
+    {
+        if (key == K::Tab)
+        {
+            if (m_selectedTab == -1)
+            {
+                // First time selecting tab
+                m_selectedTab = 1;
+            }
+            else
+            {
+                ++m_selectedTab;
+            }
+            if (m_selectedTab >= m_editors.size()) m_selectedTab = 0;
+        }
+    }
+
+    if (!down && !ctrl)
+    {
+        //TODO: Swap!
+        m_selectedTab = -1;
+    }
 }
 
 void EditorWindow::onText(char ch)
@@ -1045,3 +1097,9 @@ void EditorWindow::onText(char ch)
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 
+// TODO:
+//      - Fix output of buffer menu
+//      - Opening should not replace changed or previously opened file
+//      - Opening should add tab at end
+//      - Get rid of editor orders array
+//      - Get rid of tabs
