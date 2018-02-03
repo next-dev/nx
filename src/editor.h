@@ -96,6 +96,9 @@ public:
 
     void resetChanged() { m_changed = false; }
 
+    int lastWordPos() const;
+    int nextWordPos() const;
+
     //
     // Tabs
     //
@@ -117,6 +120,7 @@ private:
     void dump() const;
     int toVirtualPos(int actualPos) const;
     void changed() { m_changed = true; }
+    static int getCharCategory(char ch);        // 0 = space, 1 = chars/numbers, 2 = punctuation
 
 private:
     vector<char>    m_buffer;

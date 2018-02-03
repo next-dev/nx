@@ -488,7 +488,63 @@ bool EditorData::ensureSpace(int numChars)
     }
     
     return result;
-    
+}
+
+int EditorData::getCharCategory(char ch)
+{
+    if (ch <= ' ' || ch > 127) return 0;
+    if (ch >= 'a' && ch <= 'z') return 1;
+    if (ch >= 'A' && ch <= 'Z') return 1;
+    if (ch >= '0' && ch <= '9') return 1;
+    if (ch == '_') return 1;
+    return 2;
+}
+
+int EditorData::lastWordPos() const
+{
+    if (m_cursor == 0) return 0;
+
+    int x = m_cursor - 1;
+
+    // Skip past any space (char category == 0)
+    while (x > 0 && getCharCategory(m_buffer[x]) == 0)
+    {
+        --x;
+        // Stop at the beginning of each line
+        if (m_buffer[x] == '\n') return x + 1;
+    }
+
+    // Find the beginning of the group of characters that share the same category
+    int origCat = getCharCategory(m_buffer[x]);
+    while (x > 0 && getCharCategory(m_buffer[x-1]) == origCat)
+    {
+        --x;
+    }
+
+    return x;
+}
+
+int EditorData::nextWordPos() const
+{
+    int x = m_endBuffer;
+    if (x == m_buffer.size()) return toVirtualPos(x);
+
+    // Skip past any characters of the same category
+    int origCat = getCharCategory(m_buffer[x]);
+    while (x < m_buffer.size() && getCharCategory(m_buffer[x]) == origCat)
+    {
+        ++x;
+    }
+    if (x == m_buffer.size() || m_buffer[x] == '\n') return toVirtualPos(x);
+
+    // Skip past any space (char catgory == 0)
+    while (x < m_buffer.size() && getCharCategory(m_buffer[x]) == 0)
+    {
+        ++x;
+        if (m_buffer[x] == '\n') return toVirtualPos(x);
+    }
+
+    return toVirtualPos(x);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -845,6 +901,14 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
                     }
                 }
             }
+            break;
+
+        case K::Left:   // Ctrl-Left
+            m_data.moveTo(m_data.lastWordPos());
+            break;
+
+        case K::Right:  // Ctrl-Right
+            m_data.moveTo(m_data.nextWordPos());
             break;
 
         default:
