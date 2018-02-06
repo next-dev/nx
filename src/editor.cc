@@ -978,12 +978,13 @@ void EditorWindow::onDraw(Draw& draw)
 
         for (size_t i = 0; i < m_editorOrder.size(); ++i)
         {
+            u8 colour = i == m_selectedTab ? Draw::attr(Colour::White, Colour::Red, true) : Draw::attr(Colour::Black, Colour::White, true);
             Editor& editor = m_editors[m_editorOrder[i]];
             for (int x = 0; x < maxWidth; ++x)
             {
-                draw.printChar(m_x + 2 + x, m_y + 2 + int(i), ' ', Draw::attr(Colour::Black, Colour::White, true));
+                draw.printChar(m_x + 2 + x, m_y + 2 + int(i), ' ', colour);
             }
-            draw.printSquashedString(m_x + 2, m_y + 2 + int(i), editor.getTitle(), Draw::attr(Colour::Black, Colour::White, true));
+            draw.printSquashedString(m_x + 2, m_y + 2 + int(i), editor.getTitle(), colour);
         }
     }
 }
@@ -1120,11 +1121,17 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
         }
     }
 
-    if (!down && !ctrl)
+    if ((m_selectedTab >= 0) && !down && !ctrl)
     {
-        //TODO: Swap!
+        int index = m_editorOrder[m_selectedTab];
+        m_editorOrder.erase(m_editorOrder.begin() + m_selectedTab);
+        m_editorOrder.insert(m_editorOrder.begin(), index);
         m_selectedTab = -1;
     }
+
+    // Set the title
+    string title = getEditor().getTitle();
+    setTitle(string("Editor/Assembler - ") + title);
 }
 
 void EditorWindow::onText(char ch)

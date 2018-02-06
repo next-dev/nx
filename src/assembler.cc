@@ -17,6 +17,7 @@ Assembler::Assembler(Nx& nx)
         "Ctrl-S|Save",
         "Ctrl-O|Open",
         "Shift-Ctrl-S|Save as",
+        "Ctrl-Tab|Switch buffers",
         })
 {
     m_window.getEditor().getData().setTabs({ 8, 14, 32 }, 4);

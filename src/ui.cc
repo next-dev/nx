@@ -367,11 +367,11 @@ void Draw::window(int xCell, int yCell, int width, int height, const string& tit
 
     // Render the title
     printChar(xCell, yCell, ' ', attr(titleFgColour, titleBkgColour, bright));
-    titleLen = printSquashedString(xCell + 1, yCell, title, attr(titleFgColour, titleBkgColour, bright));
-    for (int i = titleLen + 1; i < titleMaxLen + 1; ++i)
+    for (int i = 0; i < titleMaxLen + 1; ++i)
     {
         printChar(xCell + i, yCell, ' ', attr(titleFgColour, titleBkgColour, bright));
     }
+    titleLen = printSquashedString(xCell + 1, yCell, title, attr(titleFgColour, titleBkgColour, bright));
 
     // Render the top-right corner of window
     int x = xCell + titleMaxLen + 1;
