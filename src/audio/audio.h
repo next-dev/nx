@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "config.h"
-#include "types.h"
+#include <config.h>
+#include <types.h>
 
-#include <portaudio/portaudio.h>
-#include <mutex>
 #include <functional>
+#include <mutex>
+#include <portaudio/portaudio.h>
 
 #define NX_AUDIO_SAMPLERATE 44100
 #define NX_DISABLE_AUDIO    0

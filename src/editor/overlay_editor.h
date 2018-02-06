@@ -4,16 +4,16 @@
 
 #pragma once
 
-#include "ui.h"
-#include "editor.h"
+#include <editor/editor.h>
+#include <utils/ui.h>
 
-#include <vector>
 #include <string>
+#include <vector>
 
-class Assembler final : public Overlay
+class EditorOverlay final : public Overlay
 {
 public:
-    Assembler(Nx& nx);
+    EditorOverlay(Nx& nx);
 
     void render(Draw& draw) override;
     void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;

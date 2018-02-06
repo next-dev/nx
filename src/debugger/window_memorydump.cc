@@ -2,11 +2,11 @@
 // Memory dump window implementation
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "debugger.h"
-#include "nx.h"
+#include <debugger/overlay_debugger.h>
+#include <emulator/nx.h>
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Memory dump class

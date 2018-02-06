@@ -2,8 +2,9 @@
 // Disassembly Window
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "debugger.h"
-#include "nx.h"
+#include <asm/disasm.h>
+#include <debugger/overlay_debugger.h>
+#include <emulator/nx.h>
 
 #include <cassert>
 
@@ -11,7 +12,6 @@
 // Disassembler class
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "disasm.h"
 
 DisassemblyWindow::DisassemblyWindow(Nx& nx)
     : SelectableWindow(nx, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)

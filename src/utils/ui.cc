@@ -2,8 +2,8 @@
 // UI implementation
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "ui.h"
-#include "nx.h"
+#include <emulator/nx.h>
+#include <utils/ui.h>
 
 #include <cassert>
 #include <cstdarg>

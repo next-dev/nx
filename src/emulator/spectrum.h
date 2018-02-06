@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "types.h"
-#include "config.h"
-#include "z80.h"
-#include "audio.h"
+#include <audio/audio.h>
+#include <config.h>
+#include <emulator/z80.h>
+#include <types.h>
 
 #include <SFML/Graphics.hpp>
 

@@ -2,10 +2,10 @@
 // Nx class
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "nx.h"
-#include "ui.h"
-#include "nxfile.h"
-#include "tinyfiledialogs.h"
+#include <emulator/nx.h>
+#include <emulator/nxfile.h>
+#include <utils/tinyfiledialogs.h>
+#include <utils/ui.h>
 
 #include <algorithm>
 #include <cassert>

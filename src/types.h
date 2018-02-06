@@ -6,10 +6,10 @@
 
 #include <cassert>
 #include <cstdint>
-#include <string>
-#include <sstream>
-#include <vector>
 #include <iterator>
+#include <sstream>
+#include <string>
+#include <vector>
 
 using i8 = int8_t;
 using i16 = int16_t;

@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "config.h"
-#include "ui.h"
+#include <config.h>
+#include <utils/ui.h>
 
 #include <vector>
 

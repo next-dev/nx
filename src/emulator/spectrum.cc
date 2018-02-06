@@ -2,8 +2,8 @@
 // Spectrum base class implementation
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "spectrum.h"
-#include "tape.h"
+#include <emulator/spectrum.h>
+#include <tape/tape.h>
 
 #include <algorithm>
 #include <cassert>

@@ -49,6 +49,7 @@ solution "nx"
 		}
         includedirs {
             "../include",
+            "../src",
         }
         links {
             "flac.lib",

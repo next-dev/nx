@@ -2,10 +2,10 @@
 // Editor implementation
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "editor.h"
+#include <editor/editor.h>
+#include <utils/tinyfiledialogs.h>
 
 #include <fstream>
-#include "tinyfiledialogs.h"
 
 #if NX_DEBUG_EDITOR
 #   define DUMP() dump()

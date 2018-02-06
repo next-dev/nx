@@ -2,14 +2,14 @@
 // Editor/Assembler
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "assembler.h"
-#include "nx.h"
+#include <editor/overlay_editor.h>
+#include <emulator/nx.h>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Assembler
 //----------------------------------------------------------------------------------------------------------------------
 
-Assembler::Assembler(Nx& nx)
+EditorOverlay::EditorOverlay(Nx& nx)
     : Overlay(nx)
     , m_window(nx, "Editor/Assembler")
     , m_commands({
@@ -23,12 +23,12 @@ Assembler::Assembler(Nx& nx)
     m_window.getEditor().getData().setTabs({ 8, 14, 32 }, 4);
 }
 
-void Assembler::render(Draw& draw)
+void EditorOverlay::render(Draw& draw)
 {
     m_window.draw(draw);
 }
 
-void Assembler::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
+void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
 
@@ -43,12 +43,12 @@ void Assembler::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, boo
     }
 }
 
-void Assembler::text(char ch)
+void EditorOverlay::text(char ch)
 {
     m_window.text(ch);
 }
 
-const vector<string>& Assembler::commands() const
+const vector<string>& EditorOverlay::commands() const
 {
     return m_commands;
 }

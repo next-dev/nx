@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "config.h"
-#include "types.h"
-
-#include "ui.h"
+#include <config.h>
+#include <types.h>
+#include <utils/ui.h>
 
 #include <string>
 #include <vector>

@@ -5,12 +5,13 @@
 
 #pragma once
 
-#include "spectrum.h"
-#include "debugger.h"
-#include "assembler.h"
-#include "tape.h"
+#include <debugger/overlay_debugger.h>
+#include <editor/overlay_editor.h>
+#include <emulator/spectrum.h>
+#include <tape/tape.h>
 
 #include <SFML/Graphics.hpp>
+
 #include <experimental/filesystem>
 #include <map>
 #include <mutex>
@@ -149,7 +150,7 @@ private:
     RunMode             m_runMode;
 
     // Assembler state
-    Assembler           m_assembler;
+    EditorOverlay           m_assembler;
 
     // Settings
     map<string, string> m_settings;

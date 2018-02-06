@@ -4,9 +4,10 @@
 
 #pragma once
 
+#include <editor/editor.h>
+
 #include <string>
 
-#include "editor.h"
 
 //----------------------------------------------------------------------------------------------------------------------
 // Memory dump

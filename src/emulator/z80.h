@@ -2,8 +2,8 @@
 // Z80 emulation
 //----------------------------------------------------------------------------------------------------------------------
 
-#include "config.h"
-#include "types.h"
+#include <config.h>
+#include <types.h>
 
 #include <functional>
 
