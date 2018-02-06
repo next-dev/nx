@@ -194,11 +194,12 @@ class EditorWindow final : public Window
 public:
     EditorWindow(Nx& nx, string title);
 
-    Editor& getEditor() { return m_editors[m_index]; }
+    Editor& getEditor() { return m_editors[m_editorOrder[m_index]]; }
 
 private:
     void newFile();
     void closeFile();
+    void openFile();
 
 protected:
     void onDraw(Draw& draw) override;

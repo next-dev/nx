@@ -668,7 +668,7 @@ void Editor::render(Draw& draw, int line)
 {
     EditorData& data = getData();
     u8 colour = m_bkgColour;
-    int y = line - m_topLine + 1;
+    int y = line - m_topLine;
     if (y < m_height)
     {
         // This line is visible
@@ -693,7 +693,7 @@ void Editor::render(Draw& draw, int line)
 void Editor::renderAll(Draw& draw)
 {
     int line = m_topLine;
-    int y = m_y + 1;
+    int y = m_y;
     int endY = y + m_height;
 
     for (; y < endY; ++y)
@@ -873,36 +873,6 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             }
             break;
 
-        case K::O:  // Open file...
-            if (m_ioAllowed)
-            {
-                if (m_data.hasChanged())
-                {
-                    // Check to see if the user really wants to overwrite their changes.
-                    if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes.",
-                        "yesno", "question", 0))
-                    {
-                        break;
-                    }
-                }
-
-                const char* filters[] = { "*.asm", "*.s" };
-                const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters)/sizeof(filters[0]),
-                    filters, "Source code", 0);
-                if (fileName)
-                {
-                    if (m_data.load(fileName))
-                    {
-                        setFileName(fileName);
-                    }
-                    else
-                    {
-                        tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
-                    }
-                }
-            }
-            break;
-
         case K::Left:   // Ctrl-Left
             m_data.moveTo(m_data.lastWordPos());
             break;
@@ -990,48 +960,50 @@ void EditorWindow::onDraw(Draw& draw)
 {
     getEditor().renderAll(draw);
 
-    // Draw tab bar
-    draw.attrRect(m_x, m_y+1, m_width, 1, Draw::attr(Colour::Blue, Colour::White, false));
-
-    // Draw tabs
-    int x = m_x + 1;
-    int y = m_y + 1;
-    for (int i = 0; i < m_editorOrder.size(); ++i)
-    {
-        Editor& editor = m_editors[m_editorOrder[i]];
-        string tabName = editor.getTitle();
-        if (tabName.length() > 16)
-        {
-            // Shorten it
-            tabName = string("...") + tabName.substr(tabName.size() - 13, 13);
-        }
-        tabName = string(" ") + tabName + " ";
-
-        int len = draw.squashedStringWidth(tabName);
-        if (x + len >= (m_x + m_width - 1))
-        {
-            break;
-        }
-
-        x += draw.printSquashedString(x, y, tabName, Draw::attr(Colour::White, Colour::Red, i == m_index)) + 1;
-    }
-
+    //
+    // If Ctrl+Tab is pressed draw the menu
+    //
     if (m_selectedTab >= 0)
     {
+        int maxWidth = 0;
         for (size_t i = 0; i < m_editorOrder.size(); ++i)
         {
             Editor& editor = m_editors[m_editorOrder[i]];
-            draw.printSquashedString(m_x, m_y + 2 + int(i), editor.getTitle(), Draw::attr(Colour::Black, Colour::White, true));
+            int width = draw.squashedStringWidth(editor.getTitle());
+            maxWidth = std::max(width + 2, maxWidth);
+        }
+
+        maxWidth = std::max(20, maxWidth);
+        draw.window(m_x + 1, m_y + 1, maxWidth + 2, int(m_editorOrder.size() + 2), "Buffers", true);
+
+        for (size_t i = 0; i < m_editorOrder.size(); ++i)
+        {
+            Editor& editor = m_editors[m_editorOrder[i]];
+            for (int x = 0; x < maxWidth; ++x)
+            {
+                draw.printChar(m_x + 2 + x, m_y + 2 + int(i), ' ', Draw::attr(Colour::Black, Colour::White, true));
+            }
+            draw.printSquashedString(m_x + 2, m_y + 2 + int(i), editor.getTitle(), Draw::attr(Colour::Black, Colour::White, true));
         }
     }
 }
 
 void EditorWindow::newFile()
 {
-    m_index = int(m_editors.size());
+    int index = int(m_editors.size());
     m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
     m_editors.back().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
-    m_editorOrder.insert(m_editorOrder.begin(), m_index);
+    m_editorOrder.insert(m_editorOrder.begin(), index);
+    m_index = 0;
+
+#if NX_DEBUG_CONSOLE
+    cout << "NEW -------------------------------\n\n";
+    for (const auto& editor : m_editors)
+    {
+        cout << (editor.getFileName().empty() ? "[new file]" : editor.getFileName()) << endl;
+    }
+    cout << endl;
+#endif
 }
 
 void EditorWindow::closeFile()
@@ -1045,6 +1017,68 @@ void EditorWindow::closeFile()
     }
     m_index = 0;
     if (m_editors.empty()) newFile();
+
+#if NX_DEBUG_CONSOLE
+    cout << "NEW -------------------------------\n\n";
+    for (const auto& editor : m_editors)
+    {
+        cout << (editor.getFileName().empty() ? "[new file]" : editor.getFileName()) << endl;
+    }
+    cout << endl;
+#endif
+}
+
+void EditorWindow::openFile()
+{
+    int newIndex = -1;
+    Editor& currentEditor = getEditor();
+    if (currentEditor.getData().hasChanged())
+    {
+        // Check to see if the user really wants to overwrite their changes.
+        if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes.",
+            "yesno", "question", 0))
+        {
+            return;
+        }
+    }
+    else
+    {
+        if (currentEditor.getFileName().empty())
+        {
+            // It's a new file, so replace this one
+            newIndex = m_index;
+        }
+    }
+
+    if (newIndex == -1)
+    {
+        newFile();
+    }
+
+    const char* filters[] = { "*.asm", "*.s" };
+    const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters) / sizeof(filters[0]),
+        filters, "Source code", 0);
+    if (fileName)
+    {
+        Editor& thisEditor = getEditor();
+        if (thisEditor.getData().load(fileName))
+        {
+            thisEditor.setFileName(fileName);
+        }
+        else
+        {
+            tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
+        }
+    }
+
+#if NX_DEBUG_CONSOLE
+    cout << "NEW -------------------------------\n\n";
+    for (const auto& editor : m_editors)
+    {
+        cout << (editor.getFileName().empty() ? "[new file]" : editor.getFileName()) << endl;
+    }
+    cout << endl;
+#endif
 }
 
 void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
@@ -1060,6 +1094,10 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
 
         case K::W:  // Close file
             closeFile();
+            break;
+
+        case K::O:  // Open file
+            openFile();
             break;
         }
     }
@@ -1097,9 +1135,3 @@ void EditorWindow::onText(char ch)
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 
-// TODO:
-//      - Fix output of buffer menu
-//      - Opening should not replace changed or previously opened file
-//      - Opening should add tab at end
-//      - Get rid of editor orders array
-//      - Get rid of tabs

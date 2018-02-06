@@ -70,7 +70,7 @@ public:
     //
     // Level 2 - advanced objects
     //
-    void window(int xCell, int yCell, int width, int height, const string& title, bool bright, u8 backgroundAttr = 0xf8);
+    void window(int xCell, int yCell, int width, int height, const string& title, bool bright, u8 backgroundAttr = 0x78);
 
 private:
     void charInfo(const u8* font, char c, u8& outMask, int& lShift, int& width);

@@ -7,7 +7,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 // Show a console on Win32 platform
-#define NX_DEBUG_CONSOLE        1
+#define NX_DEBUG_CONSOLE        0
 // Debug the editor buffer
 #define NX_DEBUG_EDITOR         0
 
@@ -16,6 +16,11 @@
 namespace std {}
 
 using namespace std;
+
+// We usually want to output if the debug console is open
+#if NX_DEBUG_CONSOLE
+#   include <iostream>
+#endif
 
 //----------------------------------------------------------------------------------------------------------------------
 // Version information
