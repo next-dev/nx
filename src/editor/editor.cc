@@ -1007,6 +1007,16 @@ void EditorWindow::newFile()
 
 void EditorWindow::closeFile()
 {
+    if (getEditor().getData().hasChanged())
+    {
+        // Check to see if the user really wants to overwrite their changes.
+        if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes.",
+            "yesno", "question", 0))
+        {
+            return;
+        }
+    }
+
     int index = m_editorOrder[0];
     m_editors.erase(m_editors.begin() + index);
     m_editorOrder.erase(m_editorOrder.begin());
@@ -1028,30 +1038,7 @@ void EditorWindow::closeFile()
 
 void EditorWindow::openFile()
 {
-    int newIndex = -1;
-    Editor& currentEditor = getEditor();
-    if (currentEditor.getData().hasChanged())
-    {
-        // Check to see if the user really wants to overwrite their changes.
-        if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes.",
-            "yesno", "question", 0))
-        {
-            return;
-        }
-    }
-    else
-    {
-        if (currentEditor.getFileName().empty())
-        {
-            // It's a new file, so replace this one
-            newIndex = 0;
-        }
-    }
-
-    if (newIndex == -1)
-    {
-        newFile();
-    }
+    newFile();
 
     const char* filters[] = { "*.asm", "*.s" };
     const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters) / sizeof(filters[0]),
