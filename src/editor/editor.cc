@@ -949,7 +949,6 @@ void Editor::clear()
 EditorWindow::EditorWindow(Nx& nx, string title)
     : Window(nx, 1, 1, 78, 60, title, Colour::Blue, Colour::Black, false)
     , m_editors()
-    , m_index(0)
     , m_selectedTab(-1)
 {
     newFile();
@@ -995,7 +994,6 @@ void EditorWindow::newFile()
     m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
     m_editors.back().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
     m_editorOrder.insert(m_editorOrder.begin(), index);
-    m_index = 0;
 
 #if NX_DEBUG_CONSOLE
     cout << "NEW -------------------------------\n\n";
@@ -1009,14 +1007,13 @@ void EditorWindow::newFile()
 
 void EditorWindow::closeFile()
 {
-    m_editors.erase(m_editors.begin() + m_index);
-    auto it = find_if(m_editorOrder.begin(), m_editorOrder.end(), [this](auto i){ return i == m_index; });
-    m_editorOrder.erase(it);
+    int index = m_editorOrder[0];
+    m_editors.erase(m_editors.begin() + index);
+    m_editorOrder.erase(m_editorOrder.begin());
     for (auto& order : m_editorOrder)
     {
-        if (order > m_index) order -= 1;
+        if (order > index) order -= 1;
     }
-    m_index = 0;
     if (m_editors.empty()) newFile();
 
 #if NX_DEBUG_CONSOLE
@@ -1047,7 +1044,7 @@ void EditorWindow::openFile()
         if (currentEditor.getFileName().empty())
         {
             // It's a new file, so replace this one
-            newIndex = m_index;
+            newIndex = 0;
         }
     }
 

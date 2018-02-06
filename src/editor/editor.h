@@ -194,7 +194,7 @@ class EditorWindow final : public Window
 public:
     EditorWindow(Nx& nx, string title);
 
-    Editor& getEditor() { return m_editors[m_editorOrder[m_index]]; }
+    Editor& getEditor() { return m_editors[m_editorOrder[0]]; }
 
 private:
     void newFile();
@@ -209,7 +209,6 @@ protected:
 private:
     vector<Editor>      m_editors;
     vector<int>         m_editorOrder;
-    int                 m_index;
 
     int                 m_selectedTab;      // Current tab index during selection window
 };
