@@ -93,7 +93,7 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             break;
 
         case K::A:
-            getEmulator().showAssembler();
+            getEmulator().showEditor();
             break;
 
         case K::Space:
@@ -476,6 +476,7 @@ Nx::Nx(int argc, char** argv)
     , m_runMode(RunMode::Normal)
 
     //--- Assembler state -----------------------------------------------------------
+    , m_editor(*this)
     , m_assembler(*this)
 
     //--- Rendering -----------------------------------------------------------------
@@ -1158,10 +1159,15 @@ void Nx::toggleZoom()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// Assembler
+// Editor/Assembler
 //----------------------------------------------------------------------------------------------------------------------
 
-void Nx::showAssembler()
+void Nx::showEditor()
+{
+    m_editor.select();
+}
+
+void Nx::assemble(const string& fileName)
 {
     m_assembler.select();
 }

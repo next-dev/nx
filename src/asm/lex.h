@@ -190,6 +190,7 @@ private:
     private:
         char nextChar();
         void ungetChar();
+        Element::Type next();
 
         Element::Type error(const std::string& msg);
 
