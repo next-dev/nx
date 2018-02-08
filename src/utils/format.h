@@ -11,12 +11,12 @@
 // Character conversion routines
 //----------------------------------------------------------------------------------------------------------------------
 
-inline bool IsDigit(char c)
+inline bool isDigit(char c)
 {
     return ('0' <= c) && (c <= '9');
 }
 
-inline int ToDigit(char c)
+inline int toDigit(char c)
 {
     return c - '0';
 }
@@ -26,12 +26,6 @@ inline int ToDigit(char c)
 //----------------------------------------------------------------------------------------------------------------------
 
 namespace {
-
-    class FormatStringException : public std::runtime_error
-    {
-    public:
-        FormatStringException(const char* msg) : std::runtime_error(msg) {}
-    };
 
     template <int N>
     struct Counter
@@ -45,14 +39,14 @@ namespace {
             memset(m_count, 0, sizeof(int) * N);
         }
 
-        void OnMarker(int markerNumber)
+        void onMarker(int markerNumber)
         {
             ++m_count[markerNumber];
         }
 
-        void OnEscapeLeft() { ++m_braceEscapes; }
-        void OnEscapeRight() { ++m_braceEscapes; }
-        void OnChar(char c) { ++m_plainChars; }
+        void onEscapeLeft() { ++m_braceEscapes; }
+        void onEscapeRight() { ++m_braceEscapes; }
+        void onChar(char c) { ++m_plainChars; }
     };
 
     template <int N>
@@ -65,24 +59,24 @@ namespace {
             , m_values(values)
         {}
 
-        void OnMarker(int markerNumber)
+        void onMarker(int markerNumber)
         {
             size_t len = m_values[markerNumber].length();
             m_dest.replace(m_size, len, m_values[markerNumber]);
             m_size += len;
         }
 
-        void OnEscapeLeft()
+        void onEscapeLeft()
         {
             m_dest[m_size++] = '{';
         }
 
-        void OnEscapeRight()
+        void onEscapeRight()
         {
             m_dest[m_size++] = '}';
         }
 
-        void OnChar(char c)
+        void onChar(char c)
         {
             m_dest[m_size++] = c;
         }
@@ -94,7 +88,7 @@ namespace {
     };
 
     template <int N, typename Handler>
-    inline void Traverse(const char* format, Handler& callback)
+    inline void traverse(const char* format, Handler& callback)
     {
         const char* c = format;
         while (*c != 0)
@@ -103,7 +97,7 @@ namespace {
             {
                 if (c[1] == '{')
                 {
-                    callback.OnEscapeLeft();
+                    callback.onEscapeLeft();
                     c += 2;
                 }
                 else
@@ -111,23 +105,27 @@ namespace {
                     int number = 0;
                     ++c;
 
-                    if (*c == 0) { throw FormatStringException("Unexpected end of string"); }
+                    // Unexpected end of string
+                    assert(*c != 0);
 
-                    if (!IsDigit(*c)) { throw FormatStringException("Invalid brace contents: must be a positive integer"); }
+                    // Invalid brace contents: must be a positive integer
+                    assert(isDigit(*c));
 
-                    number = ToDigit(*c++);
-                    while (IsDigit(*c))
+                    number = toDigit(*c++);
+                    while (isDigit(*c))
                     {
                         number *= 10;
-                        number += ToDigit(*c++);
+                        number += toDigit(*c++);
                     }
 
-                    if (*c == 0) { throw FormatStringException("Unexpected end of string"); }
-                    if (*c != '}') { throw FormatStringException("Invalid brace contents: must be a positive integer"); }
+                    // Unexpected end of string
+                    assert(*c != 0);
+                    // Invalid brace contents: must be a positive integer
+                    assert(*c == '}');
+                    // Format value index is out of range
+                    assert(number <= N);
 
-                    if (number > N) { throw FormatStringException("Format value index is out of range"); }
-
-                    callback.OnMarker(number);
+                    callback.onMarker(number);
                     ++c;
                 } // if (c[1] == '{')
             }
@@ -135,24 +133,25 @@ namespace {
             {
                 if (c[1] == '}')
                 {
-                    callback.OnEscapeRight();
+                    callback.onEscapeRight();
                     c += 2;
                 }
                 else
                 {
-                    throw FormatStringException("Un-escaped right brace");
+                    // Unescaped right brace
+                    assert(0);
                 }
             }
             else
             {
-                callback.OnChar(*c);
+                callback.onChar(*c);
                 ++c;
             }
         }
     } // traverse
 
     template <int N>
-    inline size_t FormattedTotal(string values[N], int counts[N])
+    inline size_t formattedTotal(string values[N], int counts[N])
     {
         size_t total = 0;
         for (int i = 0; i < N; ++i)
@@ -163,58 +162,58 @@ namespace {
     }
 
     template <int N>
-    inline string FormatArray(const char* format, string values[N])
+    inline string formatArray(const char* format, string values[N])
     {
         Counter<N> counter;
-        Traverse<N>(format, counter);
+        traverse<N>(format, counter);
 
-        size_t formatsSize = FormattedTotal<N>(values, counter.m_count);
+        size_t formatsSize = formattedTotal<N>(values, counter.m_count);
         size_t outputTotal = formatsSize + counter.m_braceEscapes + counter.m_plainChars;
 
         string output(outputTotal, 0);
         Formatter<N> formatter(output, values);
-        Traverse<N>(format, formatter);
+        traverse<N>(format, formatter);
 
         return output;
     }
 
     template <int N, typename T, typename ...Args>
-    inline void InternalStringFormat(int index, string values[N], T t, Args... args)
+    inline void internalStringFormat(int index, string values[N], T t, Args... args)
     {
         std::ostringstream ss;
         ss << t;
         values[index] = ss.str();
-        InternalStringFormat<N>(index + 1, values, args...);
+        internalStringFormat<N>(index + 1, values, args...);
     }
 
     template <int N>
-    inline void InternalStringFormat(int index, string values[N])
+    inline void internalStringFormat(int index, string values[N])
     {
     }
 
 } // namespace
 
-inline string StringFormat(const char* format)
+inline string stringFormat(const char* format)
 {
     return string(format);
 }
 
 template <typename ...Args>
-inline string StringFormat(const char* format, Args... args)
+inline string stringFormat(const char* format, Args... args)
 {
     string values[sizeof...(args)];
-    InternalStringFormat<sizeof...(args), Args...>(0, values, args...);
-    return FormatArray<sizeof...(args)>(format, values);
+    internalStringFormat<sizeof...(args), Args...>(0, values, args...);
+    return formatArray<sizeof...(args)>(format, values);
 }
 
 template <typename... Args>
-inline void DebugOutput(Args... args)
+inline void debugOutput(Args... args)
 {
     string s = StringFormat(args...);
     OutputDebugStringA(s.c_str());
 }
 
-inline std::string FromWString(const std::wstring& ws)
+inline std::string fromWString(const std::wstring& ws)
 {
     using conv_t = std::codecvt_utf8<wchar_t>;
     std::wstring_convert<conv_t, wchar_t> conv;
@@ -222,7 +221,7 @@ inline std::string FromWString(const std::wstring& ws)
     return conv.to_bytes(ws);
 }
 
-inline std::wstring ToWString(const std::string& str)
+inline std::wstring toWString(const std::string& str)
 {
     using conv_t = std::codecvt_utf8<wchar_t>;
     std::wstring_convert<conv_t, wchar_t> conv;

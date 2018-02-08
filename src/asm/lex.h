@@ -175,6 +175,8 @@ private:
     public:
         Context(const char* startFileName);
 
+        void error(const std::string& errorString);
+
     private:
         vector<Element>     m_elements;
         vector<string>      m_errors;
@@ -187,8 +189,12 @@ private:
 
     private:
         char nextChar();
+        void ungetChar();
+
+        Element::Type error(const std::string& msg);
 
     private:
+        Context&            m_ctx;
         vector<u8>          m_file;
         string              m_fileName;
         const u8*           m_start;
