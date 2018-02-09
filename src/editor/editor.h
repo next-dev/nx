@@ -165,10 +165,10 @@ public:
     const EditorData& getData() const { return m_data; }
     string getFileName() const { return m_fileName; }
     void setFileName(string fileName) { m_fileName = fileName; }
+    void save(string fileName = string());
 
 private:
     void ensureVisibleCursor();
-    void save(string fileName);
     
 private:
     EditorData          m_data;
@@ -194,12 +194,14 @@ class EditorWindow final : public Window
 public:
     EditorWindow(Nx& nx, string title);
 
-    Editor& getEditor() { return m_editors[m_editorOrder[0]]; }
+    Editor& getEditor() { assert(!m_editors.empty()); return m_editors[m_editorOrder[0]]; }
+    bool saveAll();
 
 private:
     void newFile();
     void closeFile();
     void openFile();
+    void switchTo(const Editor& editor);
 
 protected:
     void onDraw(Draw& draw) override;

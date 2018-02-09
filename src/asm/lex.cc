@@ -242,7 +242,7 @@ Lex::Lex()
 
 }
 
-bool Lex::parse(const char* startFileName)
+bool Lex::parse(string startFileName)
 {
     return false;
 }

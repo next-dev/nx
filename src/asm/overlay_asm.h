@@ -43,6 +43,8 @@ public:
     void text(char ch) override;
     const vector<string>& commands() const override;
 
+    AssemblerWindow& getWindow() { return m_window; }
+
 private:
     AssemblerWindow     m_window;
     vector<string>      m_commands;

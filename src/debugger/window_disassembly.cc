@@ -165,9 +165,9 @@ void DisassemblyWindow::onDraw(Draw& draw)
                         : bkg2;
 
         draw.attrRect(m_x, m_y + row, m_width, 1, colour);
-        draw.printString(m_x + 2, m_y + row, d.addressAndBytes(a).c_str(), colour);
-        draw.printString(m_x + 21, m_y + row, d.opCode().c_str(), colour);
-        draw.printString(m_x + 26, m_y + row, d.operands().c_str(), colour);
+        draw.printString(m_x + 2, m_y + row, d.addressAndBytes(a).c_str(), false, colour);
+        draw.printString(m_x + 21, m_y + row, d.opCode().c_str(), false, colour);
+        draw.printString(m_x + 26, m_y + row, d.operands().c_str(), false, colour);
 
         if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(a))
         {
@@ -184,7 +184,7 @@ void DisassemblyWindow::onDraw(Draw& draw)
     if (m_enableGoto)
     {
         draw.attrRect(m_x, m_y + 1, m_width, 1, draw.attr(Colour::Black, Colour::Magenta, true));
-        draw.printString(m_x + 1, m_y + 1, "    ", draw.attr(Colour::White, Colour::Magenta, true));
+        draw.printString(m_x + 1, m_y + 1, "    ", false, draw.attr(Colour::White, Colour::Magenta, true));
         draw.printSquashedString(m_x + 1, m_y + 1, "Goto:", draw.attr(Colour::Yellow, Colour::Magenta, true));
         m_gotoEditor.render(draw, 0);
     }

@@ -14,7 +14,7 @@ class Lex
 public:
     Lex();
 
-    bool parse(const char* startFileName);
+    bool parse(string startFileName);
 
 public:
     // Lexical analysis data structures

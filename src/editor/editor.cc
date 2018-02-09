@@ -732,10 +732,17 @@ void Editor::save(string fileName)
 {
     if (fileName.empty())
     {
-        const char* filters[] = { "*.asm", "*.s" };
-        const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
-            filters, "Source code");
-        fileName = fn ? fn : "";
+        if (getFileName().empty())
+        {
+            const char* filters[] = { "*.asm", "*.s" };
+            const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
+                filters, "Source code");
+            fileName = fn ? fn : "";
+        }
+        else
+        {
+            fileName = getFileName();
+        }
     }
     if (!fileName.empty())
     {
@@ -951,39 +958,51 @@ EditorWindow::EditorWindow(Nx& nx, string title)
     , m_editors()
     , m_selectedTab(-1)
 {
-    newFile();
-    getEditor().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
 }
 
 void EditorWindow::onDraw(Draw& draw)
 {
-    getEditor().renderAll(draw);
-
-    //
-    // If Ctrl+Tab is pressed draw the menu
-    //
-    if (m_selectedTab >= 0)
+    if (m_editors.empty())
     {
-        int maxWidth = 0;
-        for (size_t i = 0; i < m_editorOrder.size(); ++i)
-        {
-            Editor& editor = m_editors[m_editorOrder[i]];
-            int width = draw.squashedStringWidth(editor.getTitle());
-            maxWidth = std::max(width + 2, maxWidth);
-        }
+        string line1 = "Press {Ctrl-O} to open a file for editing";
+        string line2 = "Press {Ctrl-N} to create a new file";
+        u8 colour = draw.attr(Colour::White, Colour::Black, false);
 
-        maxWidth = std::max(20, maxWidth);
-        draw.window(m_x + 1, m_y + 1, maxWidth + 2, int(m_editorOrder.size() + 2), "Buffers", true);
+        int y = m_y + (m_height / 2);
 
-        for (size_t i = 0; i < m_editorOrder.size(); ++i)
+        draw.printString(m_x + (m_width - int(line1.size())) / 2, y - 1, line1, true, colour);
+        draw.printString(m_x + (m_width - int(line2.size())) / 2, y + 1, line2, true, colour);
+    }
+    else
+    {
+        getEditor().renderAll(draw);
+
+        //
+        // If Ctrl+Tab is pressed draw the menu
+        //
+        if (m_selectedTab >= 0)
         {
-            u8 colour = i == m_selectedTab ? Draw::attr(Colour::White, Colour::Red, true) : Draw::attr(Colour::Black, Colour::White, true);
-            Editor& editor = m_editors[m_editorOrder[i]];
-            for (int x = 0; x < maxWidth; ++x)
+            int maxWidth = 0;
+            for (size_t i = 0; i < m_editorOrder.size(); ++i)
             {
-                draw.printChar(m_x + 2 + x, m_y + 2 + int(i), ' ', colour);
+                Editor& editor = m_editors[m_editorOrder[i]];
+                int width = draw.squashedStringWidth(editor.getTitle());
+                maxWidth = std::max(width + 2, maxWidth);
             }
-            draw.printSquashedString(m_x + 2, m_y + 2 + int(i), editor.getTitle(), colour);
+
+            maxWidth = std::max(20, maxWidth);
+            draw.window(m_x + 1, m_y + 1, maxWidth + 2, int(m_editorOrder.size() + 2), "Buffers", true);
+
+            for (size_t i = 0; i < m_editorOrder.size(); ++i)
+            {
+                u8 colour = i == m_selectedTab ? Draw::attr(Colour::White, Colour::Red, true) : Draw::attr(Colour::Black, Colour::White, true);
+                Editor& editor = m_editors[m_editorOrder[i]];
+                for (int x = 0; x < maxWidth; ++x)
+                {
+                    draw.printChar(m_x + 2 + x, m_y + 2 + int(i), ' ', colour);
+                }
+                draw.printSquashedString(m_x + 2, m_y + 2 + int(i), editor.getTitle(), colour);
+            }
         }
     }
 }
@@ -993,6 +1012,7 @@ void EditorWindow::newFile()
     int index = int(m_editors.size());
     m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
     m_editors.back().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
+    m_editors.back().getData().setTabs({ 8, 14, 32 }, 4);
     m_editorOrder.insert(m_editorOrder.begin(), index);
 
 #if NX_DEBUG_CONSOLE
@@ -1024,7 +1044,6 @@ void EditorWindow::closeFile()
     {
         if (order > index) order -= 1;
     }
-    if (m_editors.empty()) newFile();
 
 #if NX_DEBUG_CONSOLE
     cout << "NEW -------------------------------\n\n";
@@ -1078,7 +1097,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
             break;
 
         case K::W:  // Close file
-            closeFile();
+            if (!m_editors.empty()) closeFile();
             break;
 
         case K::O:  // Open file
@@ -1086,41 +1105,95 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
             break;
         }
     }
-    if (m_selectedTab == -1) getEditor().key(key, down, shift, ctrl, alt);
 
-    if (down && ctrl && !alt)
+    if (!m_editors.empty())
     {
-        if (key == K::Tab)
+        if (m_selectedTab == -1) getEditor().key(key, down, shift, ctrl, alt);
+
+        if (down && ctrl && !alt)
         {
-            if (m_selectedTab == -1)
+            if (key == K::Tab)
             {
-                // First time selecting tab
-                m_selectedTab = 1;
+                if (m_selectedTab == -1)
+                {
+                    // First time selecting tab
+                    m_selectedTab = 1;
+                }
+                else
+                {
+                    ++m_selectedTab;
+                }
+                if (m_selectedTab >= m_editors.size()) m_selectedTab = 0;
             }
-            else
-            {
-                ++m_selectedTab;
-            }
-            if (m_selectedTab >= m_editors.size()) m_selectedTab = 0;
         }
-    }
 
-    if ((m_selectedTab >= 0) && !down && !ctrl)
+        if ((m_selectedTab >= 0) && !down && !ctrl)
+        {
+            int index = m_editorOrder[m_selectedTab];
+            m_editorOrder.erase(m_editorOrder.begin() + m_selectedTab);
+            m_editorOrder.insert(m_editorOrder.begin(), index);
+            m_selectedTab = -1;
+        }
+
+        // Set the title
+        string title = getEditor().getTitle();
+        setTitle(string("Editor/Assembler - ") + title);
+    }
+    else
     {
-        int index = m_editorOrder[m_selectedTab];
-        m_editorOrder.erase(m_editorOrder.begin() + m_selectedTab);
-        m_editorOrder.insert(m_editorOrder.begin(), index);
-        m_selectedTab = -1;
+        setTitle(string("Editor/Assembler"));
     }
-
-    // Set the title
-    string title = getEditor().getTitle();
-    setTitle(string("Editor/Assembler - ") + title);
 }
 
 void EditorWindow::onText(char ch)
 {
-    getEditor().text(ch);
+    if (!m_editors.empty())
+    {
+        getEditor().text(ch);
+    }
+}
+
+bool EditorWindow::saveAll()
+{
+    bool asked = false;
+    bool saveUnnamedFiles = false;
+
+    if (m_editors.empty()) return false;
+
+    for (auto& editor : m_editors)
+    {
+        const string& fileName = editor.getFileName();
+
+        if (!asked && fileName.empty())
+        {
+            int result = tinyfd_messageBox(
+                "Unsaved files detected",
+                "There are some new files open in the editor that are unsaved.  Do you still wish to save "
+                "these files before continuing?",
+                "yesnocancel", "question", 0);
+            bool skipThisFile = false;
+            switch (result)
+            {
+            case 0:     // Cancel - stop everything!
+                return false;
+            case 1:     // Yes - trigger save of unnamed/unsaved files
+                asked = true;
+                saveUnnamedFiles = true;
+                break;
+            case 2:     // No - do not save
+                asked = true;
+                saveUnnamedFiles = false;
+                break;
+            }
+        }
+
+        if (!fileName.empty() || saveUnnamedFiles)
+        {
+            editor.save(editor.getFileName());
+        }
+    }
+
+    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

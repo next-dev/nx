@@ -2,6 +2,7 @@
 // Nx class
 //----------------------------------------------------------------------------------------------------------------------
 
+#include <asm/asm.h>
 #include <emulator/nx.h>
 #include <emulator/nxfile.h>
 #include <utils/tinyfiledialogs.h>
@@ -1170,6 +1171,8 @@ void Nx::showEditor()
 void Nx::assemble(const string& fileName)
 {
     m_assembler.select();
+
+    Assembler asm_(m_assembler.getWindow(), fileName);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -387,7 +387,7 @@ void TapeWindow::onDraw(Draw& draw)
                 break;
             }
 
-            draw.printString(m_x + 2, y, category.c_str(), colour);
+            draw.printString(m_x + 2, y, category.c_str(), false, colour);
             draw.printSquashedString(m_x + 16, y, desc1.c_str(), colour);
             draw.printSquashedString(m_x + 16, y + 1, desc2.c_str(), colour);
 

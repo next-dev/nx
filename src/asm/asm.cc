@@ -2,25 +2,19 @@
 // Assembler
 //----------------------------------------------------------------------------------------------------------------------
 
-#pragma once
-
-#include <asm/lex.h>
+#include <asm/asm.h>
 
 //----------------------------------------------------------------------------------------------------------------------
-// Assembler
+// Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-class AssemblerWindow;
-
-class Assembler
+Assembler::Assembler(AssemblerWindow& window, std::string initialFile)
+    : m_lexer()
+    , m_assemblerWindow(window)
 {
-public:
-    Assembler(AssemblerWindow& window, std::string initialFile);
-
-private:
-    Lex m_lexer;
-    AssemblerWindow& m_assemblerWindow;
-};
+    // First part: do lexical analysis
+    m_lexer.parse(initialFile);
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

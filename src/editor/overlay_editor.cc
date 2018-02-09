@@ -22,7 +22,6 @@ EditorOverlay::EditorOverlay(Nx& nx)
         "Ctrl-B|Build",
         })
 {
-    m_window.getEditor().getData().setTabs({ 8, 14, 32 }, 4);
 }
 
 void EditorOverlay::render(Draw& draw)
@@ -47,7 +46,11 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
     {
         if (key == K::B)
         {
-            getEmulator().assemble(m_window.getEditor().getFileName());
+            // Ensure that all files are saved
+            if (m_window.saveAll())
+            {
+                getEmulator().assemble(m_window.getEditor().getFileName());
+            }
         }
     }
 }
