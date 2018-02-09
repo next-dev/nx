@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <asm/overlay_asm.h>
 #include <debugger/overlay_debugger.h>
 #include <editor/overlay_editor.h>
 #include <emulator/spectrum.h>
@@ -109,8 +110,9 @@ public:
     // Mode selection
     void showTapeBrowser();
     void toggleDebugger();
-    void showAssembler();
+    void showEditor();
     void hideAll();
+    void assemble(const string& fileName);
 
     // Zoom
     void toggleZoom();
@@ -150,7 +152,8 @@ private:
     RunMode             m_runMode;
 
     // Assembler state
-    EditorOverlay           m_assembler;
+    EditorOverlay       m_editor;
+    AssemblerOverlay    m_assembler;
 
     // Settings
     map<string, string> m_settings;

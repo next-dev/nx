@@ -30,6 +30,8 @@ using TState = i64;
 #   define NOMINMAX
 #   include <Windows.h>
 #   define NX_BREAK() DebugBreak();
+#   undef IN
+#   undef OUT
 #else
 #   define NX_BREAK()
 #endif

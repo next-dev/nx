@@ -2,6 +2,7 @@
 // Nx class
 //----------------------------------------------------------------------------------------------------------------------
 
+#include <asm/asm.h>
 #include <emulator/nx.h>
 #include <emulator/nxfile.h>
 #include <utils/tinyfiledialogs.h>
@@ -93,7 +94,7 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             break;
 
         case K::A:
-            getEmulator().showAssembler();
+            getEmulator().showEditor();
             break;
 
         case K::Space:
@@ -476,6 +477,7 @@ Nx::Nx(int argc, char** argv)
     , m_runMode(RunMode::Normal)
 
     //--- Assembler state -----------------------------------------------------------
+    , m_editor(*this)
     , m_assembler(*this)
 
     //--- Rendering -----------------------------------------------------------------
@@ -1158,12 +1160,26 @@ void Nx::toggleZoom()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// Assembler
+// Editor/Assembler
 //----------------------------------------------------------------------------------------------------------------------
 
-void Nx::showAssembler()
+void Nx::showEditor()
+{
+    m_editor.select();
+}
+
+void Nx::assemble(const string& fileName)
 {
     m_assembler.select();
+    if (fileName.empty())
+    {
+        m_assembler.getWindow().output("!Error: Cannot assembler unless the file has been saved.");
+    }
+    else
+    {
+        Assembler assembler(m_assembler.getWindow(), fileName);
+    }
+
 }
 
 //----------------------------------------------------------------------------------------------------------------------

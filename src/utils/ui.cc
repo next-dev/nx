@@ -282,16 +282,30 @@ int Draw::printChar(int xPixel, int yCell, char c, const u8* font)
     return width;
 }
 
-int Draw::printString(int xCell, int yCell, const string& str, u8 attr, const u8* font)
+int Draw::printString(int xCell, int yCell, const string& str, bool supportHighlight, u8 attr, const u8* font)
 {
+    u8 highlight = (attr & 0xf8) | 4;
+    u8 colour = attr;
+
     for (char c : str)
     {
-        printChar(xCell++, yCell, c, attr, font);
-        if (xCell >= (kUiWidth / 8))
+        if (supportHighlight && c == '{')
         {
-            ++yCell;
-            xCell = 0;
-            if (yCell >= (kUiHeight / 8)) return 0;
+            colour = highlight;
+        }
+        else if (supportHighlight && c == '}')
+        {
+            colour = attr;
+        }
+        else
+        {
+            printChar(xCell++, yCell, c, colour, font);
+            if (xCell >= (kUiWidth / 8))
+            {
+                ++yCell;
+                xCell = 0;
+                if (yCell >= (kUiHeight / 8)) return 0;
+            }
         }
     }
     return xCell;
@@ -459,7 +473,7 @@ void Ui::render(bool flash)
                 --y;
                 x = 0;
             }
-            x = draw.printString(x, y, ss[0], hi);
+            x = draw.printString(x, y, ss[0], false, hi);
             x += draw.printSquashedString(x, y, ss[1], bkg);
             draw.printChar(x++, y, ' ', bkg);
         }

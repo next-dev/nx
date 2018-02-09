@@ -33,6 +33,7 @@ solution "nx"
 
 	configuration "Release"
 		defines { "NDEBUG" }
+        flags { "FatalWarnings" }
 		optimize "full"
 
 	-- Projects

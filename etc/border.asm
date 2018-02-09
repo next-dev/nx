@@ -1,4 +1,4 @@
-; Test file
+; Test file!
 
         opt   start:Start
         opt   zx48

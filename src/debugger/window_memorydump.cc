@@ -60,7 +60,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
                 ss << ((ch < 32 || ch > 127) ? '.' : ch);
             }
         }
-        draw.printString(m_x + 1, m_y + i, ss.str(), m_bkgColour);
+        draw.printString(m_x + 1, m_y + i, ss.str(), false, m_bkgColour);
         if (cx != 0)
         {
             draw.pokeAttr(cx, cy, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
@@ -71,7 +71,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
     if (m_enableGoto)
     {
         draw.attrRect(m_x, m_y + 1, m_width, 1, draw.attr(Colour::Black, Colour::Magenta, true));
-        draw.printString(m_x + 1, m_y + 1, "    ", draw.attr(Colour::White, Colour::Magenta, true));
+        draw.printString(m_x + 1, m_y + 1, "    ", false, draw.attr(Colour::White, Colour::Magenta, true));
         draw.printSquashedString(m_x + 1, m_y + 1, "Goto:", draw.attr(Colour::Yellow, Colour::Magenta, true));
         m_gotoEditor.render(draw, 0);
     }

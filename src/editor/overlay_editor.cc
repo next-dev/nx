@@ -1,12 +1,13 @@
 //----------------------------------------------------------------------------------------------------------------------
-// Editor/Assembler
+// Editor
 //----------------------------------------------------------------------------------------------------------------------
 
+#include <asm/overlay_asm.h>
 #include <editor/overlay_editor.h>
 #include <emulator/nx.h>
 
 //----------------------------------------------------------------------------------------------------------------------
-// Assembler
+// EditorOverlay
 //----------------------------------------------------------------------------------------------------------------------
 
 EditorOverlay::EditorOverlay(Nx& nx)
@@ -18,9 +19,9 @@ EditorOverlay::EditorOverlay(Nx& nx)
         "Ctrl-O|Open",
         "Shift-Ctrl-S|Save as",
         "Ctrl-Tab|Switch buffers",
+        "Ctrl-B|Build",
         })
 {
-    m_window.getEditor().getData().setTabs({ 8, 14, 32 }, 4);
 }
 
 void EditorOverlay::render(Draw& draw)
@@ -39,6 +40,17 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
         if (key == K::Escape)
         {
             getEmulator().hideAll();
+        }
+    }
+    else if (down && !shift && ctrl && !alt)
+    {
+        if (key == K::B)
+        {
+            // Ensure that all files are saved
+            if (m_window.saveAll())
+            {
+                getEmulator().assemble(m_window.getEditor().getFileName());
+            }
         }
     }
 }
