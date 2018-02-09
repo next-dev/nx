@@ -17,9 +17,18 @@ class Assembler
 public:
     Assembler(AssemblerWindow& window, std::string initialFile);
 
+    void output(const std::string& msg);
+    void addError();
+    int numErrors() const { return m_numErrors; }
+
 private:
-    Lex m_lexer;
+    void parse(std::string initialFile);
+    void summarise();
+
+private:
+    map<string, Lex> m_sessions;
     AssemblerWindow& m_assemblerWindow;
+    int m_numErrors;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

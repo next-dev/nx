@@ -10,12 +10,14 @@
 #include <map>
 #include <vector>
 
+class Assembler;
+
 class Lex
 {
 public:
     Lex();
 
-    void parse(string fileName);
+    void parse(Assembler& assembler, string fileName);
 
 public:
     // Lexical analysis data structures
@@ -170,54 +172,22 @@ public:
         };
     };
 
-    const vector<string>& getErrors() const         { return m_ctx.getErrors(); }
-
 private:
-    class Context;
+    char nextChar();
+    void ungetChar();
+    Element::Type next(Assembler& assembler);
+    Element::Type error(Assembler& assembler, const std::string& msg);
 
-    class Session
-    {
-    public:
-        Session();
 
-        void parse(Context& ctx, string fileName);
-
-    private:
-        char nextChar();
-        void ungetChar();
-        Element::Type next(Context& ctx);
-
-        Element::Type error(Context& ctx, const std::string& msg);
-
-    private:
-        vector<Element>     m_elements;
-        vector<u8>          m_file;
-        string              m_fileName;
-        const u8*           m_start;
-        const u8*           m_end;
-        const u8*           m_cursor;
-        const u8*           m_lastCursor;
-        Element::Pos        m_position;
-        Element::Pos        m_lastPosition;
-
-    };
-
-    class Context
-    {
-    public:
-        Context();
-
-        void parse(string fileName);
-
-        void error(const std::string& errorString);
-        const vector<string>& getErrors() const { return m_errors; }
-
-    private:
-        map<string, Session>    m_sessions;
-        vector<string>          m_errors;
-    };
-
-    Context     m_ctx;
+    vector<Element>     m_elements;
+    vector<u8>          m_file;
+    string              m_fileName;
+    const u8*           m_start;
+    const u8*           m_end;
+    const u8*           m_cursor;
+    const u8*           m_lastCursor;
+    Element::Pos        m_position;
+    Element::Pos        m_lastPosition;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

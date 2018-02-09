@@ -11,21 +11,49 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 Assembler::Assembler(AssemblerWindow& window, std::string initialFile)
-    : m_lexer()
-    , m_assemblerWindow(window)
+    : m_assemblerWindow(window)
+    , m_numErrors(0)
 {
-    m_lexer.parse(initialFile);
-    if (m_lexer.getErrors().empty())
+    parse(initialFile);
+}
+
+void Assembler::parse(std::string initialFile)
+{
+    // 
+    if (initialFile.empty())
     {
-        m_assemblerWindow.output(stringFormat("\"{0}\" assembled ok!", initialFile));
+        output("!Error: Cannot assemble a file if it has not been saved.");
+        addError();
     }
     else
     {
-        for (const auto& error : m_lexer.getErrors())
+        auto it = m_sessions.find(initialFile);
+        if (it == m_sessions.end())
         {
-            m_assemblerWindow.output(error);
+            m_sessions[initialFile] = Lex();
+            m_sessions[initialFile].parse(*this, initialFile);
         }
     }
+
+    m_assemblerWindow.output("");
+    if (numErrors())
+    {
+        m_assemblerWindow.output(stringFormat("!Assembler error(s): {0}", numErrors()));
+    }
+    else
+    {
+        m_assemblerWindow.output(stringFormat("*\"{0}\" assembled ok!", initialFile));
+    }
+}
+
+void Assembler::output(const std::string& msg)
+{
+    m_assemblerWindow.output(msg);
+}
+
+void Assembler::addError()
+{
+    ++m_numErrors;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

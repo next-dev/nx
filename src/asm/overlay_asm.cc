@@ -37,6 +37,7 @@ void AssemblerWindow::onDraw(Draw& draw)
     u8 colour = draw.attr(Colour::White, Colour::Black, false);
     u8 normal = colour;
     u8 error = draw.attr(Colour::Red, Colour::Black, false);
+    u8 ok = draw.attr(Colour::Green, Colour::Black, false);
 
     enum class LineType
     {
@@ -53,11 +54,17 @@ void AssemblerWindow::onDraw(Draw& draw)
         int endX = min(int(x + msg.size()), m_x + m_width - 1);
         LineType lineType = LineType::Normal;
 
-        assert(!msg.empty());
-        if (msg[0] == '!')
+        if (!msg.empty())
         {
-            lineType = LineType::Error;
-            ++i;
+            if (msg[0] == '!')
+            {
+                lineType = LineType::Error;
+                ++i;
+            }
+            else if (msg[0] == '*')
+            {
+                colour = ok;
+            }
         }
 
         while (x < endX)
