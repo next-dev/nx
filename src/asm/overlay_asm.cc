@@ -64,6 +64,7 @@ void AssemblerWindow::onDraw(Draw& draw)
             else if (msg[0] == '*')
             {
                 colour = ok;
+                ++i;
             }
         }
 

@@ -14,6 +14,7 @@ Assembler::Assembler(AssemblerWindow& window, std::string initialFile)
     : m_assemblerWindow(window)
     , m_numErrors(0)
 {
+    window.clear();
     parse(initialFile);
 }
 
