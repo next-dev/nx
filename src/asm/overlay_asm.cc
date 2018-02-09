@@ -3,6 +3,8 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include <asm/overlay_asm.h>
+#include <emulator/nx.h>
+#include <utils/format.h>
 
 #include <algorithm>
 
@@ -14,7 +16,7 @@ AssemblerWindow::AssemblerWindow(Nx& nx)
     : Window(nx, 1, 1, 78, 60, "Assembler Results", Colour::Blue, Colour::Black, false)
     , m_topLine(0)
 {
-    for (int i = 0; i < 16; ++i) output("Hello World!\n");
+    for (int i = 0; i < 100; ++i) output(stringFormat("Hello World! {0}\n", i));
 }
 
 void AssemblerWindow::clear()
@@ -62,7 +64,40 @@ void AssemblerWindow::onDraw(Draw& draw)
 
 void AssemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
+    if (down && !shift && !ctrl && !alt)
+    {
+        using K = sf::Keyboard::Key;
+        switch (key)
+        {
+        case K::Up:
+            m_topLine = max(0, m_topLine - 1);
+            break;
 
+        case K::Down:
+            m_topLine = max(0, min(m_topLine + 1, int(m_lines.size() - 1)));
+            break;
+
+        case K::PageUp:
+            m_topLine = max(0, m_topLine - (m_height - 2));
+            break;
+
+        case K::PageDown:
+            m_topLine = max(0, min(m_topLine + (m_height - 2), int(m_lines.size() - 1)));
+            break;
+
+        case K::Home:
+            m_topLine = 0;
+            break;
+
+        case K::End:
+            m_topLine = max(0, int(m_lines.size()) - (m_height/2 - 1));
+            break;
+
+        case K::Escape:
+            m_nx.showEditor();
+            break;
+        }
+    }
 }
 
 void AssemblerWindow::onText(char ch)
@@ -78,7 +113,11 @@ AssemblerOverlay::AssemblerOverlay(Nx& nx)
     : Overlay(nx)
     , m_window(nx)
     , m_commands({
-            "Any Key|Exit results",
+            "ESC|Exits",
+            "Up/Down|Scroll",
+            "PgUp/PgDn|Page",
+            "Home|Top",
+            "End|Bottom",
         })
 {
 }
