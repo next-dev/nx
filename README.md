@@ -2,7 +2,8 @@
 
 This project is my attempt to emulate the Next for development purposes.  This project will happen in several phases.
 
-Currently no phases are complete.
+Phase 1 is complete.  Phase 2 shortly behind it (floating bus not implemented yet).  Some of phase 3 has been implemented
+too (tape browser, .tap files, kempston joysticks).
 
 ## Phase 1 - ZX Spectrum 48K uncontended.
 
@@ -56,7 +57,7 @@ These controls are only valid when no other window is showing.
 | Ctrl+R           | Restart the machine                                   |
 | Ctrl+T           | Toggle tape browser                                   |
 | Ctrl+Z           | Zoom mode (maximum clock speed)                       |
-| F4               | Tape browser                                          |
+| Ctrl+Space       | Start/Stop tape                                       |
 | F5               | Pause the machine and enter debugger mode             |
 | ~                | Enter debugger mode                                   |
 
@@ -75,7 +76,7 @@ These controls are only valid when no other window is showing.
 | F8               | Step out.  Will pause when running.                              |
 | F9               | Toggle breakpoint.                                               |
 
-Currently *Step Over* acts like *Step In* right now.  When pausing from a running state, if interrupts are enabled,
+When pausing from a running state, if interrupts are enabled,
 the debugger will always stop inside the interrupt handler since emulator keys are polled after a frame interrupt
 is triggered.  Later, breakpoints will be implemented to allow more control about where you stop.
 
@@ -90,6 +91,7 @@ While in the editor these controls are available:
 | Ctrl+S           | Save a file.  Will ask for filename if file has not been saved before. |
 | Ctrl+Shift+S     | Save as.  Will ask for filename every time.                            |
 | Ctrl+Tab         | Switch buffers.                                                        |
+| Ctrl+B           | Build current file.                                                    |
 
 Some of the usual controls via cursor keys, page up/down, home & end work.  Currently the
 assembler does not exist.

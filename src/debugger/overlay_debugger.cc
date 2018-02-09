@@ -31,6 +31,7 @@ Debugger::Debugger(Nx& nx)
         "Ctrl-F5|Run to",
         "F6|Step Over",
         "F7|Step In",
+        "F8|Step Out",
         "F9|Breakpoint",
         "Up|Scroll up",
         "Down|Scroll down",
