@@ -16,10 +16,17 @@ class AssemblerWindow final : public Window
 public:
     AssemblerWindow(Nx& nx);
 
+    void clear();
+    void output(const std::string& msg);
+
 protected:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
     void onText(char ch) override;
+
+private:
+    vector<string>      m_lines;
+    int                 m_topLine;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
