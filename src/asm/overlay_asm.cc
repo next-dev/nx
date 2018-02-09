@@ -14,7 +14,7 @@ AssemblerWindow::AssemblerWindow(Nx& nx)
     : Window(nx, 1, 1, 78, 60, "Assembler Results", Colour::Blue, Colour::Black, false)
     , m_topLine(0)
 {
-    output("Hello World!\n");
+    for (int i = 0; i < 16; ++i) output("Hello World!\n");
 }
 
 void AssemblerWindow::clear()
@@ -52,10 +52,11 @@ void AssemblerWindow::onDraw(Draw& draw)
     }
     while (y < endY)
     {
-        for (int x = m_x; x < (m_x + m_height - 1); ++x)
+        for (int x = m_x; x < (m_x + m_width - 1); ++x)
         {
-            draw.printChar(x, y++, ' ', colour);
+            draw.printChar(x, y, ' ', colour);
         }
+        ++y;
     }
 }
 
