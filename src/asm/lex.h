@@ -7,6 +7,7 @@
 #include <config.h>
 #include <asm/stringtable.h>
 
+#include <map>
 #include <vector>
 
 class Lex
@@ -14,7 +15,7 @@ class Lex
 public:
     Lex();
 
-    bool parse(string startFileName);
+    void parse(string fileName);
 
 public:
     // Lexical analysis data structures
@@ -169,33 +170,27 @@ public:
         };
     };
 
+    const vector<string>& getErrors() const         { return m_ctx.getErrors(); }
+
 private:
-    class Context
-    {
-    public:
-        Context(const char* startFileName);
-
-        void error(const std::string& errorString);
-
-    private:
-        vector<Element>     m_elements;
-        vector<string>      m_errors;
-    };
+    class Context;
 
     class Session
     {
     public:
-        Session(Context& ctx, const char* fileName);
+        Session();
+
+        void parse(Context& ctx, string fileName);
 
     private:
         char nextChar();
         void ungetChar();
-        Element::Type next();
+        Element::Type next(Context& ctx);
 
-        Element::Type error(const std::string& msg);
+        Element::Type error(Context& ctx, const std::string& msg);
 
     private:
-        Context&            m_ctx;
+        vector<Element>     m_elements;
         vector<u8>          m_file;
         string              m_fileName;
         const u8*           m_start;
@@ -206,6 +201,23 @@ private:
         Element::Pos        m_lastPosition;
 
     };
+
+    class Context
+    {
+    public:
+        Context();
+
+        void parse(string fileName);
+
+        void error(const std::string& errorString);
+        const vector<string>& getErrors() const { return m_errors; }
+
+    private:
+        map<string, Session>    m_sessions;
+        vector<string>          m_errors;
+    };
+
+    Context     m_ctx;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

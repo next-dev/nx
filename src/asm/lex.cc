@@ -133,17 +133,22 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
 // Represents a lexical analysis of a single file
 //----------------------------------------------------------------------------------------------------------------------
 
-Lex::Session::Session(Context& ctx, const char* fileName)
-    : m_ctx(ctx)
-    , m_file(NxFile::loadFile(fileName))
-    , m_fileName(fileName)
-    , m_start(&*m_file.begin())
-    , m_end(&*m_file.end())
-    , m_cursor(&*m_file.begin())
-    , m_position(Element::Pos{ 0, 1, 1 })
-    , m_lastPosition(Element::Pos{ 0, 1, 1 })
+Lex::Session::Session()
 {
 
+}
+
+void Lex::Session::parse(Context& ctx, string fileName)
+{
+    m_file = NxFile::loadFile(fileName);
+    m_fileName = fileName;
+    m_start = m_file.data();
+    m_end = m_file.data() + m_file.size();
+    m_cursor = m_file.data();
+    m_position = Element::Pos{ 0, 1, 1 };
+    m_lastPosition = Element::Pos{ 0, 1, 1 };
+
+    while (next(ctx) != Element::Type::EndOfFile) ;
 }
 
 char Lex::Session::nextChar()
@@ -188,9 +193,9 @@ void Lex::Session::ungetChar()
     m_cursor = m_lastCursor;
 }
 
-Lex::Element::Type Lex::Session::error(const std::string& msg)
+Lex::Element::Type Lex::Session::error(Context& ctx, const std::string& msg)
 {
-    m_ctx.error(stringFormat("{0}({1}): Lexical Error: {2}", m_fileName, m_lastPosition.m_line, msg));
+    ctx.error(stringFormat("!{0}({1}): Lexical Error: {2}", m_fileName, m_lastPosition.m_line, msg));
 
     i32 x = m_lastPosition.m_col - 1;
     const u8* lineStart = m_file.data() + m_lastPosition.m_lineOffset;
@@ -200,20 +205,21 @@ Lex::Element::Type Lex::Session::error(const std::string& msg)
     const u8* p = lineStart;
     while ((p < fileEnd) && (*p != '\r') && (*p != '\n')) ++p;
     string line(lineStart, p);
-    m_ctx.error(line);
+    ctx.error(line);
 
     // Print the cursor point where the error is
     line.clear();
     for (int j = 0; j < x; ++j) line += ' ';
     line += '^';
-    m_ctx.error(line);
+    ctx.error(line);
 
     return Element::Type::Error;
 }
 
-Lex::Element::Type Lex::Session::next()
+Lex::Element::Type Lex::Session::next(Context& ctx)
 {
-    return error("Assembler not implemented yet!");
+    error(ctx, "Assembler not implemented yet!");
+    return Element::Type::EndOfFile;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -222,9 +228,20 @@ Lex::Element::Type Lex::Session::next()
 // of multiple sessions.
 //----------------------------------------------------------------------------------------------------------------------
 
-Lex::Context::Context(const char* startFileName)
+Lex::Context::Context()
 {
 
+}
+
+void Lex::Context::parse(string fileName)
+{
+    auto it = m_sessions.find(fileName);
+    if (it == m_sessions.end())
+    {
+        // We haven't parsed this file yet.
+        m_sessions[fileName] = Session();
+        m_sessions[fileName].parse(*this, fileName);
+    }
 }
 
 void Lex::Context::error(const std::string& errorString)
@@ -239,10 +256,9 @@ void Lex::Context::error(const std::string& errorString)
 
 Lex::Lex()
 {
-
 }
 
-bool Lex::parse(string startFileName)
+void Lex::parse(string fileName)
 {
-    return false;
+    m_ctx.parse(fileName);
 }

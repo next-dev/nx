@@ -1171,8 +1171,15 @@ void Nx::showEditor()
 void Nx::assemble(const string& fileName)
 {
     m_assembler.select();
+    if (fileName.empty())
+    {
+        m_assembler.getWindow().output("!Error: Cannot assembler unless the file has been saved.");
+    }
+    else
+    {
+        Assembler assembler(m_assembler.getWindow(), fileName);
+    }
 
-    Assembler asm_(m_assembler.getWindow(), fileName);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

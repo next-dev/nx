@@ -16,7 +16,6 @@ AssemblerWindow::AssemblerWindow(Nx& nx)
     : Window(nx, 1, 1, 78, 60, "Assembler Results", Colour::Blue, Colour::Black, false)
     , m_topLine(0)
 {
-    for (int i = 0; i < 100; ++i) output(stringFormat("Hello World! {0}\n", i));
 }
 
 void AssemblerWindow::clear()
@@ -36,16 +35,39 @@ void AssemblerWindow::onDraw(Draw& draw)
     int y = m_y + 1;
     int endY = m_y + m_height - 1;
     u8 colour = draw.attr(Colour::White, Colour::Black, false);
+    u8 normal = colour;
+    u8 error = draw.attr(Colour::Red, Colour::Black, false);
+
+    enum class LineType
+    {
+        Normal,
+        Error
+    };
 
     for (; (y < endY) && (line < m_lines.size()); ++y, ++line)
     {
+        colour = normal;
         const string& msg = m_lines[line];
         int i = 0;
         int x = m_x + 1;
         int endX = min(int(x + msg.size()), m_x + m_width - 1);
+        LineType lineType = LineType::Normal;
+
+        assert(!msg.empty());
+        if (msg[0] == '!')
+        {
+            lineType = LineType::Error;
+            ++i;
+        }
+
         while (x < endX)
         {
-            draw.printChar(x++, y, msg[i++], colour);
+            draw.printChar(x++, y, msg[i], colour);
+            if (lineType == LineType::Error)
+            {
+                if (msg[i] == ':' && msg[i-1] == ')') colour = error;
+            }
+            ++i;
         }
         while (x < (m_x + m_height - 1))
         {

@@ -3,6 +3,8 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include <asm/asm.h>
+#include <asm/overlay_asm.h>
+#include <utils/format.h>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
@@ -12,8 +14,18 @@ Assembler::Assembler(AssemblerWindow& window, std::string initialFile)
     : m_lexer()
     , m_assemblerWindow(window)
 {
-    // First part: do lexical analysis
     m_lexer.parse(initialFile);
+    if (m_lexer.getErrors().empty())
+    {
+        m_assemblerWindow.output(stringFormat("\"{0}\" assembled ok!", initialFile));
+    }
+    else
+    {
+        for (const auto& error : m_lexer.getErrors())
+        {
+            m_assemblerWindow.output(error);
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
