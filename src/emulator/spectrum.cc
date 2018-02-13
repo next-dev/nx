@@ -170,6 +170,8 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
 extern const u8 gRom48[16384];
 extern const u8 gRom128_0[16384];
 extern const u8 gRom128_1[16384];
+extern const u8 gRomPlus2_0[16384];
+extern const u8 gRomPlus2_1[16384];
 
 void Spectrum::initMemory()
 {
@@ -189,6 +191,7 @@ void Spectrum::initMemory()
         break;
 
     case Model::ZX128:
+    case Model::ZXPlus2:
         m_ram.resize(KB(16) * 10);      // 8*16K RAM, 2*16K ROM
         m_pageNames = {
             "Bank 0",
@@ -199,8 +202,8 @@ void Spectrum::initMemory()
             "Bank 5",
             "Bank 6",
             "Bank 7",
-            "ROM 0 (128K)",
-            "ROM 1 (48K)",
+            "ROM 0 (Editor)",
+            "ROM 1 (Basic)",
         };
         m_pages = { 9, 5, 2, 0 };
         break;
@@ -251,6 +254,12 @@ void Spectrum::initMemory()
         load(0, gRom128_1, KB(16));
         page(0, 8);
         load(0, gRom128_0, KB(16));
+        break;
+
+    case Model::ZXPlus2:
+        load(0, gRomPlus2_1, KB(16));
+        page(0, 8);
+        load(0, gRomPlus2_0, KB(16));
         break;
     }
     setRomWriteState(false);
@@ -477,7 +486,8 @@ void Spectrum::out(u16 port, u8 x, TState& t)
     //
     // 128K ports
     //
-    if (m_model == Model::ZX128)
+    if (m_model == Model::ZX128 ||
+        m_model == Model::ZXPlus2)
     {
         if (!m_pagingDisabled && (port & 0x8002) == 0)
         {

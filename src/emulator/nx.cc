@@ -22,8 +22,8 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 ModelWindow::ModelWindow(Nx& nx)
-    : Window(nx, 1, 1, 20, 4, "Select model", Colour::Black, Colour::White, true)
-    , m_models({ Model::ZX48, Model::ZX128 })
+    : Window(nx, 1, 1, 20, 2 + (int)Model::COUNT, "Select model", Colour::Black, Colour::White, true)
+    , m_models({ Model::ZX48, Model::ZX128, Model::ZXPlus2 })
     , m_selectedModel(-1)
 {
 
@@ -34,6 +34,7 @@ void ModelWindow::onDraw(Draw& draw)
     static const char* modelNames[(int)Model::COUNT] = {
         "ZX Spectrum 48K",
         "ZX Spectrum 128K",
+        "ZX Spectrum +2",
     };
 
     assert(m_models.size() == (int)Model::COUNT);

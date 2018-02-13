@@ -22,10 +22,10 @@ enum class Model
 {
     ZX48,
     ZX128,
-    //     ZXPlus2,
-    //     ZXPlus2A,
-    //     ZXPlus3,
-    //     ZXNext,
+    ZXPlus2,
+    //ZXPlus2A,
+    //ZXPlus3,
+    //ZXNext,
 
     COUNT
 };
@@ -108,6 +108,7 @@ public:
     TState          getTState           () { return m_tState;}
     Audio&          getAudio            () { return m_audio; }
     Tape*           getTape             () { return m_tape; }
+    bool            isShadowScreen      () const { return m_shadowScreen; }
 
     //------------------------------------------------------------------------------------------------------------------
     // IExternals interface

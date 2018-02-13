@@ -87,6 +87,10 @@ void CpuStatusWindow::onDraw(Draw &draw)
     {
         draw.printSquashedString(m_x + 16, m_y + 11 + i, m_nx.getSpeccy().pageName(i), colour);
     }
+    if (m_nx.getSpeccy().isShadowScreen())
+    {
+        draw.printSquashedString(m_x + 12, m_y + 16, "Screen shadowed", colour);
+    }
 }
 
 void CpuStatusWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
