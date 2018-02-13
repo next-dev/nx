@@ -109,6 +109,7 @@ public:
     Audio&          getAudio            () { return m_audio; }
     Tape*           getTape             () { return m_tape; }
     bool            isShadowScreen      () const { return m_shadowScreen; }
+    bool            isPagingDisabled    () const { return m_pagingDisabled; }
 
     //------------------------------------------------------------------------------------------------------------------
     // IExternals interface
@@ -157,6 +158,7 @@ public:
     //------------------------------------------------------------------------------------------------------------------
 
     void            page                (int slot, int page);
+    int             getPage             (int slot) const;
     string&         pageName            (int slot);
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);

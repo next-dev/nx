@@ -74,13 +74,18 @@ void ModelWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
         // CTRL-TAB has been released while selecting model.
         if (m_selectedModel != 0)
         {
-            int index = (int)m_models[m_selectedModel];
-            m_models.erase(m_models.begin() + m_selectedModel);
-            m_models.insert(m_models.begin(), (Model)index);
-            m_nx.getSpeccy().reset((Model)index);
+            Model newModel = m_models[m_selectedModel];
+            m_nx.switchModel(newModel);
         }
         m_selectedModel = -1;
     }
+}
+
+void ModelWindow::switchModel(Model model)
+{
+    auto it = find(m_models.begin(), m_models.end(), model);
+    m_models.erase(it);
+    m_models.insert(m_models.begin(), model);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -531,6 +536,11 @@ bool Nx::saveFile(string fileName)
     }
 
     return false;
+}
+
+void Emulator::switchModel(Model model)
+{
+    m_modelWindow.switchModel(model);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1000,7 +1010,7 @@ bool Nx::loadNxSnapshot(string fileName)
             if (model < 0 || model >= (int)Model::COUNT) return false;
             m = (Model)model;
         }
-        m_machine->reset(m);
+        switchModel(m);
 
         switch (m)
         {
@@ -1081,7 +1091,14 @@ bool Nx::saveNxSnapshot(string fileName)
 {
     NxFile f;
     Z80& z80 = m_machine->getZ80();
+    Model model = m_machine->getModel();
 
+    // Write out the 'MODL' section
+    BlockSection modl('MODL');
+    modl.poke8((u8)model);
+    f.addSection(modl, 1);
+
+    // Write out the 'SN48' section
     BlockSection sn48('SN48');
     sn48.poke16(z80.AF());
     sn48.poke16(z80.BC());
@@ -1104,12 +1121,49 @@ bool Nx::saveNxSnapshot(string fileName)
     sn48.poke32((u32)m_machine->getTState());
     f.addSection(sn48, 36);
 
-    BlockSection rm48('RM48');
-    for (u16 a = 0x4000; a != 0x0000; ++a)
+    // Write out the 'S128' section if 128K
+    if (model == Model::ZX128 ||
+        model == Model::ZXPlus2)
     {
-        rm48.poke8(m_machine->peek(a));
+        BlockSection s128('S128');
+
+        // Build the last value in $7ffd
+        u8 io = 0;
+        assert(m_machine->getPage(1) == 5);
+        assert(m_machine->getPage(2) == 2);
+        assert(m_machine->getPage(3) >= 0 && m_machine->getPage(3) < 8);
+        io = u8(m_machine->getPage(3));
+        if (m_machine->isShadowScreen()) io |= 0x08;
+        if (m_machine->getPage(0) == 9) io |= 0x10;
+        if (m_machine->isPagingDisabled()) io |= 0x20;
+
+        s128.poke8(io);
+        f.addSection(s128, 1);
+
+        // Save out the memory
+        BlockSection r128('R128');
+        TState t = 0;
+        int oldSlot3 = m_machine->getPage(3);
+        for (int i = 0; i < 8; ++i)
+        {
+            m_machine->page(3, i);
+            for (u16 byte = 0xc000; byte != 0x0000; ++byte)
+            {
+                r128.poke8(m_machine->peek(byte, t));
+            }
+        }
+        m_machine->page(3, oldSlot3);
+        f.addSection(r128, 131072);
     }
-    f.addSection(rm48, 49152);
+    else if (model == Model::ZX48)
+    {
+        BlockSection rm48('RM48');
+        for (u16 a = 0x4000; a != 0x0000; ++a)
+        {
+            rm48.poke8(m_machine->peek(a));
+        }
+        f.addSection(rm48, 49152);
+    }
 
     return f.save(fileName);
 }
@@ -1151,6 +1205,12 @@ string Nx::getSetting(string key, string defaultSetting)
 void Nx::updateSettings()
 {
     m_kempstonJoystick = getSetting("kempston") == "yes";
+}
+
+void Nx::switchModel(Model model)
+{
+    m_emulator.switchModel(model);
+    getSpeccy().reset(model);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

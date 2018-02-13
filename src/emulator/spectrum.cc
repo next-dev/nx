@@ -347,6 +347,12 @@ void Spectrum::page(int slot, int page)
     m_pages[slot] = page;
 }
 
+int Spectrum::getPage(int slot) const
+{
+    assert(slot >= 0 && slot < 4);
+    return m_pages[slot];
+}
+
 string& Spectrum::pageName(int slot)
 {
     assert(slot >= 0 && slot < 4);

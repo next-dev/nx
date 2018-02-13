@@ -39,6 +39,7 @@ public:
     ModelWindow(Nx& nx);
 
     bool visible() const { return m_selectedModel >= 0; }
+    void switchModel(Model model);
 
 private:
     void onDraw(Draw& draw) override;
@@ -70,6 +71,8 @@ public:
 
     void openFile();
     void saveFile();
+
+    void switchModel(Model model);
 
 private:
     void joystickKey(Joystick key, bool down);
@@ -137,6 +140,7 @@ public:
     void showEditor();
     void hideAll();
     void assemble(const string& fileName);
+    void switchModel(Model model);
 
     // Zoom
     void toggleZoom();
