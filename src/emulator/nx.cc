@@ -40,7 +40,8 @@ void ModelWindow::onDraw(Draw& draw)
 
     for (int i = 0; i < (int)Model::COUNT; ++i)
     {
-        draw.printSquashedString(m_x + 1, m_y + 1+i, string(modelNames[(int)m_models[i]]), draw.attr(Colour::Black, Colour::White, true));
+        draw.printSquashedString(m_x + 2, m_y + 1+i, string(modelNames[(int)m_models[i]]), draw.attr(Colour::Black, Colour::White, true));
+        if (i == 0) draw.printChar(m_x + 1, m_y + 1, '*', draw.attr(Colour::Black, Colour::White, true));
         if (i == m_selectedModel)
         {
             draw.attrRect(m_x + 1, m_y + 1 + i, m_width - 2, 1, draw.attr(Colour::White, Colour::Red, true));
@@ -70,9 +71,13 @@ void ModelWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
     if ((m_selectedModel >= 0) && !down && !ctrl && !shift && !alt)
     {
         // CTRL-TAB has been released while selecting model.
-        int index = (int)m_models[m_selectedModel];
-        m_models.erase(m_models.begin() + m_selectedModel);
-        m_models.insert(m_models.begin(), (Model)index);
+        if (m_selectedModel != 0)
+        {
+            int index = (int)m_models[m_selectedModel];
+            m_models.erase(m_models.begin() + m_selectedModel);
+            m_models.insert(m_models.begin(), (Model)index);
+            m_nx.getSpeccy().reset(true);
+        }
         m_selectedModel = -1;
     }
 }
@@ -531,8 +536,6 @@ bool Nx::saveFile(string fileName)
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-extern const u8 gRom48[16384];
-
 Nx::Nx(int argc, char** argv)
     : m_machine(new Spectrum(std::bind(&Nx::frame, this)))   // #todo: Allow the debugger to switch Spectrums, via proxy
     , m_quit(false)
@@ -575,8 +578,6 @@ Nx::Nx(int argc, char** argv)
     m_ui.getSprite().setScale(float(kDefaultScale), float(kDefaultScale));
 
     //m_machine->load(0, loadFile(romFileName));
-    m_machine->load(0, gRom48, 16384);
-    m_machine->setRomWriteState(false);
     
     // Deal with the command line
     bool loadedFiles = false;

@@ -28,7 +28,15 @@ Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
     , m_stream(nullptr)
     , m_frameFunc(frameFunc)
     , m_mute(false)
+    , m_started(false)
 {
+    start();
+}
+
+void Audio::start()
+{
+    if (m_started) return;
+
     Pa_Initialize();
     m_audioHost = Pa_GetDefaultHostApi();
     m_audioDevice = Pa_GetDefaultOutputDevice();
@@ -42,7 +50,7 @@ Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
     //m_numSamplesPerFrame = numTStatesPerFrame / m_numTStatesPerSample;
 
     m_numSamplesPerFrame = m_sampleRate / 50;
-    m_numTStatesPerSample = numTStatesPerFrame / m_numSamplesPerFrame;
+    m_numTStatesPerSample = m_numTStatesPerFrame / m_numSamplesPerFrame;
 
     printf("Audio host: %s\n", hostInfo->name);
     printf("Audio device: %s\n", deviceInfo->name);
@@ -73,13 +81,24 @@ Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
 #if !NX_DISABLE_AUDIO
     Pa_StartStream(m_stream);
 #endif
+
+    m_started = true;
+}
+
+void Audio::stop()
+{
+    if (!m_started) return;
+
+    Pa_StopStream(m_stream);
+    Pa_Terminate();
+    delete[] m_soundBuffer;
+    m_soundBuffer = nullptr;
+    m_started = false;
 }
 
 Audio::~Audio()
 {
-    Pa_StopStream(m_stream);
-    Pa_Terminate();
-    delete[] m_soundBuffer;
+    stop();
 }
 
 void Audio::initialiseBuffers()

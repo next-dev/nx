@@ -87,6 +87,7 @@ void Spectrum::setRomWriteState(bool writable)
 
 void Spectrum::reset(bool hard /* = true */)
 {
+    m_audio.stop();
     if (hard)
     {
         initMemory();
@@ -94,6 +95,7 @@ void Spectrum::reset(bool hard /* = true */)
     }
     m_z80.restart();
     m_tState = 0;
+    m_audio.start();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -161,6 +163,8 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
 // Memory
 //----------------------------------------------------------------------------------------------------------------------
 
+extern const u8 gRom48[16384];
+
 void Spectrum::initMemory()
 {
     m_ram.resize(65536);
@@ -198,6 +202,10 @@ void Spectrum::initMemory()
     {
         m_ram[a] = (u8)dist(rng);
     }
+
+    setRomWriteState(false);
+    load(0, gRom48, 16384);
+    setRomWriteState(false);
 }
 
 u8 Spectrum::peek(u16 address)

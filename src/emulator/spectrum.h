@@ -178,6 +178,11 @@ private:
     void            updateVideo         ();
 
     //
+    // Audio
+    //
+    void            initAudio           ();
+
+    //
     // Tape
     //
     void            updateTape          (TState numTStates);

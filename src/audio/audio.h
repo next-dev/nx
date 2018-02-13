@@ -59,6 +59,9 @@ public:
     Audio(int numTStatesPerFrame, function<void()> frameFunc);
     ~Audio();
 
+    void start();
+    void stop();
+
     void updateBeeper(i64 tState, u8 speaker);
     void mute(bool enabled) { m_mute = enabled; }
 
@@ -97,6 +100,7 @@ private:
     function<void()>    m_frameFunc;
 
     bool                m_mute;
+    bool                m_started;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

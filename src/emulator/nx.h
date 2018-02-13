@@ -60,6 +60,7 @@ private:
 private:
     vector<Model>   m_models;
     int             m_selectedModel;
+    int             m_originalModel;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
