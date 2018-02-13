@@ -156,8 +156,8 @@ public:
     // Memory interface
     //------------------------------------------------------------------------------------------------------------------
 
-    void            page                (int bank, int page);
-    string&         pageName            (int bank);
+    void            page                (int slot, int page);
+    string&         pageName            (int slot);
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);

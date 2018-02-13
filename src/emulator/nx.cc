@@ -989,35 +989,87 @@ bool Nx::loadNxSnapshot(string fileName)
 {
     NxFile f;
 
-    if (f.load(fileName) &&
-        f.checkSection('SN48', 36) &&
-        f.checkSection('RM48', 49152))
+    if (f.load(fileName))
     {
-        const BlockSection& sn48 = f['SN48'];
-        const BlockSection& rm48 = f['RM48'];
-        Z80& z80 = m_machine->getZ80();
+        // Find which model we should be in.  No MODL section, then assume 48K
+        Model m = Model::ZX48;
+        if (f.checkSection('MODL', 1))
+        {
+            const BlockSection& modl = f['MODL'];
+            int model = modl.peek8(0);
+            if (model < 0 || model >= (int)Model::COUNT) return false;
+            m = (Model)model;
+        }
+        m_machine->reset(m);
 
-        z80.AF() = sn48.peek16(0);
-        z80.BC() = sn48.peek16(2);
-        z80.DE() = sn48.peek16(4);
-        z80.HL() = sn48.peek16(6);
-        z80.AF_() = sn48.peek16(8);
-        z80.BC_() = sn48.peek16(10);
-        z80.DE_() = sn48.peek16(12);
-        z80.HL_() = sn48.peek16(14);
-        z80.IX() = sn48.peek16(16);
-        z80.IY() = sn48.peek16(18);
-        z80.SP() = sn48.peek16(20);
-        z80.PC() = sn48.peek16(22);
-        z80.IR() = sn48.peek16(24);
-        z80.MP() = sn48.peek16(26);
-        z80.IM() = (int)sn48.peek8(28);
-        z80.IFF1() = sn48.peek8(29) != 0;
-        z80.IFF2() = sn48.peek8(30) != 0;
-        m_machine->setBorderColour(sn48.peek8(31));
-        m_machine->setTState((TState)sn48.peek32(32));
+        switch (m)
+        {
+        case Model::ZXPlus2:
+        case Model::ZX128:
+            if (f.checkSection('S128', 1))
+            {
+                const BlockSection& s128 = f['S128'];
+                TState t = 0;
+                m_machine->out(0x7ffd, s128.peek8(0), t);
+            }
+            else
+            {
+                return false;
+            }
+            // Continue to 48K data
 
-        m_machine->load(0x4000, rm48.data());
+        case Model::ZX48:
+            if (f.checkSection('SN48', 36))
+            {
+                const BlockSection& sn48 = f['SN48'];
+                Z80& z80 = m_machine->getZ80();
+
+                z80.AF() = sn48.peek16(0);
+                z80.BC() = sn48.peek16(2);
+                z80.DE() = sn48.peek16(4);
+                z80.HL() = sn48.peek16(6);
+                z80.AF_() = sn48.peek16(8);
+                z80.BC_() = sn48.peek16(10);
+                z80.DE_() = sn48.peek16(12);
+                z80.HL_() = sn48.peek16(14);
+                z80.IX() = sn48.peek16(16);
+                z80.IY() = sn48.peek16(18);
+                z80.SP() = sn48.peek16(20);
+                z80.PC() = sn48.peek16(22);
+                z80.IR() = sn48.peek16(24);
+                z80.MP() = sn48.peek16(26);
+                z80.IM() = (int)sn48.peek8(28);
+                z80.IFF1() = sn48.peek8(29) != 0;
+                z80.IFF2() = sn48.peek8(30) != 0;
+                m_machine->setBorderColour(sn48.peek8(31));
+                m_machine->setTState((TState)sn48.peek32(32));
+            }
+            else
+            {
+                return false;
+            }
+
+            if (m == Model::ZX48 && f.checkSection('RM48', 49152))
+            {
+                const BlockSection& rm48 = f['RM48'];
+                m_machine->load(0x4000, rm48.data());
+            }
+            else if ((m == Model::ZX128 || m == Model::ZX128 || m == Model::ZXPlus2) &&
+                f.checkSection('R128', 131072))
+            {
+                const BlockSection& r128 = f['R128'];
+                for (int i = 0; i < 8; ++i)
+                {
+                    m_machine->page(3, i);
+                    m_machine->load(0xc000, r128.data().data() + (i * KB(16)), KB(16));
+                }
+            }
+            else
+            {
+                return false;
+            }
+            break;
+        }
 
         return true;
     }

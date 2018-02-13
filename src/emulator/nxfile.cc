@@ -253,7 +253,6 @@ u32 NxFile::sizeSection(FourCC fcc)
 bool NxFile::checkSection(FourCC fcc, u32 expectedSize)
 {
     bool check = sizeSection(fcc) == expectedSize;
-    NX_ASSERT(check);
     return check;
 }
 

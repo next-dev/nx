@@ -339,18 +339,18 @@ TState Spectrum::contention(TState tStates)
     return m_contention[tStates];
 }
 
-void Spectrum::page(int bank, int page)
+void Spectrum::page(int slot, int page)
 {
-    assert(bank >= 0 && bank < 4);
+    assert(slot >= 0 && slot < 4);
     assert(page >= 0 && page < (m_ram.size() / KB(16)));
 
-    m_pages[bank] = page;
+    m_pages[slot] = page;
 }
 
-string& Spectrum::pageName(int bank)
+string& Spectrum::pageName(int slot)
 {
-    assert(bank >= 0 && bank < 4);
-    return m_pageNames[m_pages[bank]];
+    assert(slot >= 0 && slot < 4);
+    return m_pageNames[m_pages[slot]];
 }
 
 //----------------------------------------------------------------------------------------------------------------------

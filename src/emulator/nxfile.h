@@ -18,6 +18,18 @@
 //
 // BLOCK TYPES & FORMATS:
 //
+//      MODL (length = 1)
+//          Offset  Length  Description
+//          0       1       Model (0=48K, 1=128K, 2=+2, 3=+2A, 4=+3, 5=Next)
+//
+//          NOTE: The following blocks are expected with regard to the model selection:
+//              0   48K     Expects: SN48, RM48
+//              1   128K    Expects: SN48, S128, R128
+//              2   +2      "        "     "     "
+//              3   +2A     Expects: SN48, S128, SPL3, R128
+//              4   +3      "        "     "     "     "
+//              5   Next    TBD
+//
 //      SN48 (length = 36)
 //          Offset  Length  Description
 //          0       2       Contents of AF
@@ -40,9 +52,23 @@
 //          31      1       Border colour
 //          32      4       T-state
 //
+//      S128 (length = 16)
+//          Offset  Length  Description
+//          0       1       Last write to I/O port $7ffd
+//          1       15      15 register values of the AY-3-8912
+//
+//      SPL3 (length = 1)
+//          Offset  Length  Description
+//          0       1       Last write to I/O port $1ffd
+//          
+//
 //      RM48 (length = 49152)
 //          Offset  Length  Description
 //          0       49152   Contents of addresses 16384-65535
+//
+//      R128 (length = 131072)
+//          Offset  Length  Description
+//          0       131072  Contents of all banks (0-7)
 //          
 //----------------------------------------------------------------------------------------------------------------------
 
