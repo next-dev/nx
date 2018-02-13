@@ -175,11 +175,29 @@ void Spectrum::initMemory()
     {
     case Model::ZX48:
         m_ram.resize(KB(64));
+        m_pageNames = {
+            "ROM",
+            "$4000",
+            "$8000",
+            "$C000",
+        };
         m_pages = { 0, 1, 2, 3 };
         break;
 
     case Model::ZX128:
         m_ram.resize(KB(16) * 10);      // 8*16K RAM, 2*16K ROM
+        m_pageNames = {
+            "Bank 0",
+            "Bank 1",
+            "Bank 2",
+            "Bank 3",
+            "Bank 4",
+            "Bank 5",
+            "Bank 6",
+            "Bank 7",
+            "ROM 0 (128K)",
+            "ROM 1 (48K)",
+        };
         m_pages = { 9, 5, 2, 0 };
         break;
     }
@@ -274,7 +292,8 @@ void Spectrum::poke16(u16 address, u16 w, TState& t)
 void Spectrum::load(u16 address, const void* buffer, i64 size)
 {
     i64 clampedSize = min((i64)address + size, (i64)65536) - address;
-    copy((u8*)buffer, (u8*)buffer + size, m_ram.begin() + address);
+    u32 realAddress = m_pages[address/KB(16)] * KB(16) + (address % KB(16));
+    copy((u8*)buffer, (u8*)buffer + size, m_ram.begin() + realAddress);
 }
 
 void Spectrum::load(u16 address, const vector<u8>& buffer)
@@ -312,7 +331,13 @@ void Spectrum::page(int bank, int page)
     assert(bank >= 0 && bank < 4);
     assert(page >= 0 && page < (m_ram.size() / KB(16)));
 
-    m_pages[page] = bank;
+    m_pages[bank] = page;
+}
+
+string& Spectrum::pageName(int bank)
+{
+    assert(bank >= 0 && bank < 4);
+    return m_pageNames[m_pages[bank]];
 }
 
 //----------------------------------------------------------------------------------------------------------------------

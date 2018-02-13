@@ -76,7 +76,7 @@ void ModelWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
             int index = (int)m_models[m_selectedModel];
             m_models.erase(m_models.begin() + m_selectedModel);
             m_models.insert(m_models.begin(), (Model)index);
-            m_nx.getSpeccy().reset(m_models[m_selectedModel]);
+            m_nx.getSpeccy().reset((Model)index);
         }
         m_selectedModel = -1;
     }

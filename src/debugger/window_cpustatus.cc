@@ -29,6 +29,10 @@ void CpuStatusWindow::onDraw(Draw &draw)
     draw.printString(m_x + 1, m_y + 13, "IM", false, colour);
     draw.printString(m_x + 1, m_y + 14, "HALT", false, colour);
     draw.printString(m_x + 1, m_y + 16, "FPS", false, colour);
+    draw.printString(m_x + 12, m_y + 11, "S0: ", false, colour);
+    draw.printString(m_x + 12, m_y + 12, "S1: ", false, colour);
+    draw.printString(m_x + 12, m_y + 13, "S2: ", false, colour);
+    draw.printString(m_x + 12, m_y + 14, "S3: ", false, colour);
 
     draw.printSquashedString(m_x + 27, m_y + 1, "Stack", colour);
     const char hex[] = "0123456789ABCDEF";
@@ -76,6 +80,12 @@ void CpuStatusWindow::onDraw(Draw &draw)
     {
         draw.printString(m_x + 29, m_y + 3 + i, draw.format("%04X", m_nx.getSpeccy().peek16(a, ts)), false, colour);
         a += 2;
+    }
+
+    // Print out the banks
+    for (int i = 0; i < 4; ++i)
+    {
+        draw.printSquashedString(m_x + 16, m_y + 11 + i, m_nx.getSpeccy().pageName(i), colour);
     }
 }
 

@@ -156,6 +156,7 @@ public:
     //------------------------------------------------------------------------------------------------------------------
 
     void            page                (int bank, int page);
+    string&         pageName            (int bank);
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);
@@ -253,6 +254,7 @@ private:
 
     // Memory state
     vector<u8>      m_pages;
+    vector<string>  m_pageNames;
     vector<u8>      m_ram;
     vector<u8>      m_contention;
     bool            m_romWritable;
