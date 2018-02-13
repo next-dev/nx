@@ -23,6 +23,8 @@ using u64 = uint64_t;
 
 using TState = i64;
 
+#define KB(x) (1024 * (x))
+
 #define NX_ASSERT(...) assert(__VA_ARGS__)
 
 #ifdef _WIN32

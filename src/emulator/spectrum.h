@@ -155,6 +155,7 @@ public:
     // Memory interface
     //------------------------------------------------------------------------------------------------------------------
 
+    void            page                (int bank, int page);
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);
@@ -251,6 +252,7 @@ private:
     Tape*           m_tape;
 
     // Memory state
+    vector<u8>      m_pages;
     vector<u8>      m_ram;
     vector<u8>      m_contention;
     bool            m_romWritable;

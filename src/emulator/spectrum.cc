@@ -164,10 +164,25 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
 //----------------------------------------------------------------------------------------------------------------------
 
 extern const u8 gRom48[16384];
+extern const u8 gRom128_0[16384];
+extern const u8 gRom128_1[16384];
 
 void Spectrum::initMemory()
 {
-    m_ram.resize(65536);
+    setRomWriteState(true);
+
+    switch (m_model)
+    {
+    case Model::ZX48:
+        m_ram.resize(KB(64));
+        m_pages = { 0, 1, 2, 3 };
+        break;
+
+    case Model::ZX128:
+        m_ram.resize(KB(16) * 10);      // 8*16K RAM, 2*16K ROM
+        m_pages = { 9, 5, 2, 0 };
+        break;
+    }
     m_contention.resize(70930);
 
     // Build contention table
@@ -198,19 +213,30 @@ void Spectrum::initMemory()
     std::mt19937 rng;
     rng.seed(std::random_device()());
     std::uniform_int_distribution<int> dist(0, 255);
-    for (int a = 0; a < 0xffff; ++a)
+    for (int a = 0; a < m_ram.size(); ++a)
     {
         m_ram[a] = (u8)dist(rng);
     }
 
-    setRomWriteState(false);
-    load(0, gRom48, 16384);
+    // Initialise the ROMs
+    switch (m_model)
+    {
+    case Model::ZX48:
+        load(0, gRom48, KB(16));
+        break;
+
+    case Model::ZX128:
+        load(0, gRom128_1, KB(16));
+        page(0, 8);
+        load(0, gRom128_0, KB(16));
+        break;
+    }
     setRomWriteState(false);
 }
 
 u8 Spectrum::peek(u16 address)
 {
-    return m_ram[address];
+    return m_ram[m_pages[address / KB(16)] * KB(16) + (address % KB(16))];
 }
 
 u8 Spectrum::peek(u16 address, TState& t)
@@ -226,7 +252,10 @@ u16 Spectrum::peek16(u16 address, TState& t)
 
 void Spectrum::poke(u16 address, u8 x)
 {
-    if (m_romWritable || address >= 0x4000) m_ram[address] = x;
+    if (m_romWritable || address >= 0x4000)
+    {
+        m_ram[m_pages[address / KB(16)] * KB(16) + (address % KB(16))] = x;
+    }
 }
 
 void Spectrum::poke(u16 address, u8 x, TState& t)
@@ -276,6 +305,14 @@ void Spectrum::contend(u16 address, TState delay, int num, TState& t)
 TState Spectrum::contention(TState tStates)
 {
     return m_contention[tStates];
+}
+
+void Spectrum::page(int bank, int page)
+{
+    assert(bank >= 0 && bank < 4);
+    assert(page >= 0 && page < (m_ram.size() / KB(16)));
+
+    m_pages[page] = bank;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
