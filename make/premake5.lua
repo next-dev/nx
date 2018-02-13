@@ -45,8 +45,10 @@ solution "nx"
             "../src/**.h",
 			"../src/**.cc",
             "../src/**.c",
+            "../src/**.ico",
+            "../src/**.rc",
             "../README.md",
-            "../etc/keys.txt"
+            "../etc/keys.txt",
 		}
         includedirs {
             "../include",

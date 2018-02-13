@@ -588,8 +588,6 @@ Nx::Nx(int argc, char** argv)
     m_machine->getVideoSprite().setScale(float(kDefaultScale * 2), float(kDefaultScale * 2));
     m_ui.getSprite().setScale(float(kDefaultScale), float(kDefaultScale));
 
-    //m_machine->load(0, loadFile(romFileName));
-    
     // Deal with the command line
     bool loadedFiles = false;
     for (int i = 1; i < argc; ++i)
