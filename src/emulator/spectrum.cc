@@ -41,6 +41,10 @@ Spectrum::Spectrum(function<void()> frameFunc)
     , m_speaker(0)
     , m_tapeEar(0)
 
+    //--- 128K paging ----------------------------------------------------
+    , m_pagingDisabled(false)
+    , m_shadowScreen(false)
+
     //--- Kempston -------------------------------------------------------
     , m_kempstonJoystick(false)
     , m_kempstonState(0)
@@ -351,6 +355,8 @@ void Spectrum::initIo()
     m_tapeEar = 0;
     m_speaker = 0;
     m_kempstonState = 0;
+    m_pagingDisabled = false;
+    m_shadowScreen = false;
 }
 
 void Spectrum::ioContend(u16 port, TState delay, int num, TState& t)
@@ -370,8 +376,8 @@ void Spectrum::ioContend(u16 port, TState delay, int num, TState& t)
 
 u8 Spectrum::in(u16 port, TState& t)
 {
-    u8 x = 0;
-    bool isUlaPort = ((port & 1) == 0);
+    u8 x = 0xff;
+    bool isUla48Port = ((port & 1) == 0);
 
     //
     // Early contention
@@ -388,7 +394,7 @@ u8 Spectrum::in(u16 port, TState& t)
     //
     // Late contention
     //
-    if (isUlaPort)
+    if (isUla48Port)
     {
         contend(port, 3, 1, t);
     }
@@ -409,7 +415,7 @@ u8 Spectrum::in(u16 port, TState& t)
     //
 
     Reg p(port);
-    if (isUlaPort)
+    if (isUla48Port)
     {
         x = 0xff;
         u8 row = p.h;
@@ -433,9 +439,10 @@ u8 Spectrum::in(u16 port, TState& t)
             // Kempston joystick
             x = m_kempstonState;
             break;
-                
+
         default:
             // Do nothing!
+            // TODO: Floating bus!
             break;
         }
     }
@@ -465,6 +472,25 @@ void Spectrum::out(u16 port, u8 x, TState& t)
     {
         m_borderColour = x & 7;
         m_speaker = (x & 0x10) ? 1 : 0;
+    }
+
+    //
+    // 128K ports
+    //
+    if (m_model == Model::ZX128)
+    {
+        if (!m_pagingDisabled && (port & 0x8002) == 0)
+        {
+            u8 page = x & 0x07;
+            u8 shadow = x & 0x08;
+            u8 rom = x & 0x10;
+            u8 disable = x & 0x20;
+
+            m_pages[3] = int(page);
+            m_shadowScreen = (shadow != 0);
+            m_pages[0] = int(rom) ? 9 : 8;
+            m_pagingDisabled = (disable != 0);
+        }
     }
 
     //
@@ -632,7 +658,7 @@ void Spectrum::updateVideo()
 
             // Calculate attribute address
             // 010S SRRR CCCX XXXX --> 0101 10SS CCCX XXXX
-            u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + 0x5800;
+            u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + (m_shadowScreen ? 0xc800 : 0x5800);
             u8 attr = peek(aaddr);
 
             u8 lastPixelData = pixelData;

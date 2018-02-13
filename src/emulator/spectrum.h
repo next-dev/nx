@@ -268,6 +268,10 @@ private:
     u8              m_speaker;
     u8              m_tapeEar;
 
+    // 128K paging state
+    bool            m_pagingDisabled;
+    bool            m_shadowScreen;
+
     // Debugger state
     vector<Breakpoint>  m_breakpoints;
 
