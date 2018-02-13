@@ -1110,7 +1110,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
     {
         if (m_selectedTab == -1) getEditor().key(key, down, shift, ctrl, alt);
 
-        if (down && ctrl && !alt)
+        if (down && ctrl && !alt && !shift)
         {
             if (key == K::Tab)
             {
@@ -1127,7 +1127,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
             }
         }
 
-        if ((m_selectedTab >= 0) && !down && !ctrl)
+        if ((m_selectedTab >= 0) && !down && !ctrl && !shift && !alt)
         {
             int index = m_editorOrder[m_selectedTab];
             m_editorOrder.erase(m_editorOrder.begin() + m_selectedTab);

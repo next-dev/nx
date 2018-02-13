@@ -18,6 +18,66 @@
 #endif
 
 //----------------------------------------------------------------------------------------------------------------------
+// Model selection
+//----------------------------------------------------------------------------------------------------------------------
+
+ModelWindow::ModelWindow(Nx& nx)
+    : Window(nx, 1, 1, 20, 4, "Select model", Colour::Black, Colour::White, true)
+    , m_models({ Model::ZX48, Model::ZX128 })
+    , m_selectedModel(-1)
+{
+
+}
+
+void ModelWindow::onDraw(Draw& draw)
+{
+    static const char* modelNames[(int)Model::COUNT] = {
+        "ZX Spectrum 48K",
+        "ZX Spectrum 128K",
+    };
+
+    assert(m_models.size() == (int)Model::COUNT);
+
+    for (int i = 0; i < (int)Model::COUNT; ++i)
+    {
+        draw.printSquashedString(m_x + 1, m_y + 1+i, string(modelNames[(int)m_models[i]]), draw.attr(Colour::Black, Colour::White, true));
+        if (i == m_selectedModel)
+        {
+            draw.attrRect(m_x + 1, m_y + 1 + i, m_width - 2, 1, draw.attr(Colour::White, Colour::Red, true));
+        }
+    }
+}
+
+void ModelWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
+{
+    using K = sf::Keyboard::Key;
+
+    if (down && ctrl && !alt && !shift && key == K::Tab)
+    {
+        if (m_selectedModel == -1)
+        {
+            // Pressing CTRL-TAB for the first time, select the 2nd item
+            m_selectedModel = 1;
+        }
+        else
+        {
+            // Press TAB again while pressing CTRL (as releasing CTRL would make this logic unreachable)
+            ++m_selectedModel;
+        }
+        if (m_selectedModel >= (int)Model::COUNT) m_selectedModel = 0;
+    }
+
+    if ((m_selectedModel >= 0) && !down && !ctrl && !shift && !alt)
+    {
+        // CTRL-TAB has been released while selecting model.
+        int index = (int)m_models[m_selectedModel];
+        m_models.erase(m_models.begin() + m_selectedModel);
+        m_models.insert(m_models.begin(), (Model)index);
+        m_selectedModel = -1;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Emulator overlay
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -26,6 +86,7 @@ Emulator::Emulator(Nx& nx)
     , m_speccyKeys((int)Key::COUNT)
     , m_keyRows(8)
     , m_counter(0)
+    , m_modelWindow(nx)
 {
 
 }
@@ -51,6 +112,8 @@ void Emulator::render(Draw& draw)
             colour);
         --m_counter;
     }
+
+    if (m_modelWindow.visible()) m_modelWindow.draw(draw);
 }
 
 void Emulator::showStatus()
@@ -65,7 +128,11 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
 
     using K = sf::Keyboard;
 
-    if (down && ctrl && !shift && !alt)
+    if (m_modelWindow.visible())
+    {
+        m_modelWindow.keyPress(key, down, shift, ctrl, alt);
+    }
+    else if (down && ctrl && !shift && !alt)
     {
         fill(m_speccyKeys.begin(), m_speccyKeys.end(), false);
 
@@ -107,6 +174,10 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
         case K::Z:
             getEmulator().toggleZoom();
 
+        case K::Tab:
+            // Switch model - let the model window handle it
+            m_modelWindow.keyPress(key, down, shift, ctrl, alt);
+            break;
 
         default:
             break;

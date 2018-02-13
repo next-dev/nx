@@ -29,6 +29,39 @@ enum class Joystick
     Fire
 };
 
+enum class Model
+{
+    ZX48,
+    ZX128,
+//     ZXPlus2,
+//     ZXPlus2A,
+//     ZXPlus3,
+//     ZXNext,
+
+    COUNT
+};
+
+//----------------------------------------------------------------------------------------------------------------------
+// Model window
+//----------------------------------------------------------------------------------------------------------------------
+
+class ModelWindow final : public Window
+{
+public:
+    ModelWindow(Nx& nx);
+
+    bool visible() const { return m_selectedModel >= 0; }
+
+private:
+    void onDraw(Draw& draw) override;
+    void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
+    void onText(char ch) override {};
+
+private:
+    vector<Model>   m_models;
+    int             m_selectedModel;
+};
+
 //----------------------------------------------------------------------------------------------------------------------
 // Emulator overlay
 //----------------------------------------------------------------------------------------------------------------------
@@ -59,6 +92,8 @@ private:
     vector<u8>          m_keyRows;
     int                 m_counter;
 
+    // Model select
+    ModelWindow         m_modelWindow;
 
 };
 
