@@ -15,7 +15,8 @@
 
 Spectrum::Spectrum(function<void()> frameFunc)
     //--- Clock state ----------------------------------------------------
-    : m_tState(0)
+    : m_model(Model::ZX48)
+    , m_tState(0)
 
     //--- Video state ----------------------------------------------------
     , m_image(new u32[kWindowWidth * kWindowHeight])
@@ -44,7 +45,7 @@ Spectrum::Spectrum(function<void()> frameFunc)
     , m_kempstonJoystick(false)
     , m_kempstonState(0)
 {
-    reset();
+    reset(Model::ZX48);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -85,14 +86,13 @@ void Spectrum::setRomWriteState(bool writable)
 // Overrides
 //----------------------------------------------------------------------------------------------------------------------
 
-void Spectrum::reset(bool hard /* = true */)
+void Spectrum::reset(Model model)
 {
+    m_model = model;
     m_audio.stop();
-    if (hard)
-    {
-        initMemory();
-        initVideo();
-    }
+    initMemory();
+    initVideo();
+    initIo();
     m_z80.restart();
     m_tState = 0;
     m_audio.start();
@@ -281,6 +281,15 @@ TState Spectrum::contention(TState tStates)
 //----------------------------------------------------------------------------------------------------------------------
 // I/O
 //----------------------------------------------------------------------------------------------------------------------
+
+void Spectrum::initIo()
+{
+    m_borderColour = 0;
+    for (int i = 0; i < 8; ++i) m_keys[i] = 0;
+    m_tapeEar = 0;
+    m_speaker = 0;
+    m_kempstonState = 0;
+}
 
 void Spectrum::ioContend(u16 port, TState delay, int num, TState& t)
 {

@@ -76,7 +76,7 @@ void ModelWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
             int index = (int)m_models[m_selectedModel];
             m_models.erase(m_models.begin() + m_selectedModel);
             m_models.insert(m_models.begin(), (Model)index);
-            m_nx.getSpeccy().reset(true);
+            m_nx.getSpeccy().reset(m_models[m_selectedModel]);
         }
         m_selectedModel = -1;
     }
@@ -150,7 +150,7 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             break;
 
         case K::R:
-            getSpeccy().reset(false);
+            getSpeccy().reset(getSpeccy().getModel());
             break;
 
         case K::O:
