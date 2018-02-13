@@ -58,14 +58,15 @@ These controls are only valid when no other window is showing.
 | Ctrl+T           | Toggle tape browser                                   |
 | Ctrl+Z           | Zoom mode (maximum clock speed)                       |
 | Ctrl+Space       | Start/Stop tape                                       |
+| Ctrl+Tab         | Switch machines                                       |
 | F5               | Pause the machine and enter debugger mode             |
-| ~                | Enter debugger mode                                   |
+| `                | Enter debugger mode                                   |
 
 # Debugger Controls
 
 | Key              | Description                                                      |
 |------------------|------------------------------------------------------------------|
-| ~                | Leave debugger mode                                              |
+| `                | Leave debugger mode                                              |
 | Up/Down          | Scroll through current window                                    |
 | PgUp/PgDn        | Page through current window                                      |
 | Tab              | Cycle through current window                                     |
