@@ -81,6 +81,7 @@ public:
     int getNumLines() const;
     
     void insert(char ch);
+    void insert(string str);
     void backspace(int num);
     void deleteChar(int num);
     void moveTo(int pos);
@@ -162,6 +163,7 @@ public:
     bool text(char ch);
 
     void clear();
+    void ensureVisibleCursor();
 
     EditorData& getData() { return m_data; }
     const EditorData& getData() const { return m_data; }
@@ -169,9 +171,6 @@ public:
     void setFileName(string fileName) { m_fileName = fileName; }
     void save(string fileName = string());
 
-private:
-    void ensureVisibleCursor();
-    
 private:
     EditorData          m_data;
     int                 m_x;

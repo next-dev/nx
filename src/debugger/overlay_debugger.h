@@ -113,6 +113,10 @@ private:
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
     void onText(char ch) override;
 
+    void onEnter(Editor& editor);
+
+    void prompt();
+
 private:
     Editor m_commandEditor;
 };

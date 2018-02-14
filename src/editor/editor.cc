@@ -172,6 +172,14 @@ void EditorData::insert(char ch)
     DUMP();
 }
 
+void EditorData::insert(string str)
+{
+    for (auto ch : str)
+    {
+        insert(ch);
+    }
+}
+
 void EditorData::moveTo(int pos)
 {
     pos = max(0, min(pos, dataLength()));
@@ -632,6 +640,7 @@ Editor::Editor(int xCell,
     , m_commentColour(bkgColour)
     , m_allowedChars(128, true)
     , m_ioAllowed(increaseSize != 0)
+    , m_onEnter(onEnter)
 {
     for (int i = 0; i < 32; ++i) m_allowedChars[i] = false;
     m_allowedChars[127] = false;
