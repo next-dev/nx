@@ -109,7 +109,10 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
 
 void Debugger::text(char ch)
 {
-    SelectableWindow::getSelected().text(ch);
+    if (ch != '`')
+    {
+        SelectableWindow::getSelected().text(ch);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
