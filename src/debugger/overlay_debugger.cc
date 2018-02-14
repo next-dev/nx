@@ -14,6 +14,7 @@ Debugger::Debugger(Nx& nx)
     , m_memoryDumpWindow(nx)
     , m_disassemblyWindow(nx)
     , m_cpuStatusWindow(nx)
+    , m_commandWindow(nx)
     , m_memoryDumpCommands({
         "G|oto",
         "C|hecksums",
@@ -86,6 +87,10 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             {
                 getMemoryDumpWindow().Select();
             }
+            else if (getMemoryDumpWindow().isSelected())
+            {
+                getCommandWindow().Select();
+            }
             else
             {
                 getDisassemblyWindow().Select();
@@ -116,6 +121,7 @@ void Debugger::render(Draw& draw)
     m_memoryDumpWindow.draw(draw);
     m_disassemblyWindow.draw(draw);
     m_cpuStatusWindow.draw(draw);
+    m_commandWindow.draw(draw);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

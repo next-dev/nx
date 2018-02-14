@@ -7,6 +7,7 @@
 #include <config.h>
 #include <utils/ui.h>
 
+#include <functional>
 #include <vector>
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -144,8 +145,9 @@ private:
 class Editor
 {
 public:
+    using EnterFunction = function<void(Editor&)>;
     Editor(int xCell, int yCell, int width, int height, u8 bkgColour, bool font6,
-        int initialSize, int increaseSize);
+        int initialSize, int increaseSize, EnterFunction onEnter = {});
     
     void onlyAllowDecimal();
     void onlyAllowHex();
@@ -183,6 +185,7 @@ private:
     vector<bool>        m_allowedChars;
     string              m_fileName;
     bool                m_ioAllowed;
+    EnterFunction       m_onEnter;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -100,6 +100,24 @@ protected:
 };
 
 //----------------------------------------------------------------------------------------------------------------------
+// Command editor
+//----------------------------------------------------------------------------------------------------------------------
+
+class CommandWindow final : public SelectableWindow
+{
+public:
+    CommandWindow(Nx& nx);
+
+private:
+    void onDraw(Draw& draw) override;
+    void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
+    void onText(char ch) override;
+
+private:
+    Editor m_commandEditor;
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Debugger
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -118,11 +136,13 @@ public:
     MemoryDumpWindow&   getMemoryDumpWindow() { return m_memoryDumpWindow; }
     DisassemblyWindow&  getDisassemblyWindow() { return m_disassemblyWindow; }
     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
+    CommandWindow&      getCommandWindow() { return m_commandWindow; }
 
 private:
     MemoryDumpWindow    m_memoryDumpWindow;
     DisassemblyWindow   m_disassemblyWindow;
     CpuStatusWindow     m_cpuStatusWindow;
+    CommandWindow       m_commandWindow;
 
     vector<string>      m_memoryDumpCommands;
     vector<string>      m_disassemblyCommands;

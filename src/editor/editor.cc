@@ -612,7 +612,15 @@ bool EditorData::save(const char* fileName)
 // Editor
 //----------------------------------------------------------------------------------------------------------------------
 
-Editor::Editor(int xCell, int yCell, int width, int height, u8 bkgColour, bool font6, int initialSize, int increaseSize)
+Editor::Editor(int xCell,
+               int yCell,
+               int width,
+               int height,
+               u8 bkgColour,
+               bool font6,
+               int initialSize,
+               int increaseSize,
+               EnterFunction onEnter)
     : m_data(initialSize, increaseSize, width-1)
     , m_x(xCell)
     , m_y(yCell)
@@ -937,7 +945,14 @@ bool Editor::text(char ch)
             break;
 
         case 13:    // newline
-            data.newline();
+            if (m_onEnter)
+            {
+                m_onEnter(*this);
+            }
+            else
+            {
+                data.newline();
+            }
             break;
         }
     }
