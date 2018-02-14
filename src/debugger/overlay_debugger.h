@@ -108,6 +108,10 @@ class CommandWindow final : public SelectableWindow
 public:
     CommandWindow(Nx& nx);
 
+    using CommandFunction = function<vector<string> (vector<string>)>;
+
+    void registerCommand(string cmd, CommandFunction handler);
+
 private:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
@@ -116,9 +120,11 @@ private:
     void onEnter(Editor& editor);
 
     void prompt();
+    string extractInput(EditorData& data);
 
 private:
     Editor m_commandEditor;
+    map<string, CommandFunction> m_handlers;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -141,6 +147,18 @@ public:
     DisassemblyWindow&  getDisassemblyWindow() { return m_disassemblyWindow; }
     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
     CommandWindow&      getCommandWindow() { return m_commandWindow; }
+
+private:
+    // Command utilities
+    vector<string> syntaxCheck(const vector<string>& args, const char* format, vector<string> desc);
+    string decimalWord(u16 x);
+    string decimalByte(u8 x);
+    string hexWord(u16 x);
+    string hexByte(u8 x);
+
+    bool parseNumber(const string& str, int& i);
+    bool parseByte(const string& str, u8& out);
+    bool parseWord(const string& str, u16& out);
 
 private:
     MemoryDumpWindow    m_memoryDumpWindow;

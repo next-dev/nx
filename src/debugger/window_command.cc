@@ -51,38 +51,87 @@ void CommandWindow::onText(char ch)
 // Editor reaction
 //----------------------------------------------------------------------------------------------------------------------
 
+string CommandWindow::extractInput(EditorData& data)
+{
+    string input;
+    int x0 = data.getPosAtLine(data.getCurrentLine());
+    SplitView view = data.getText();
+    if (view[x0] != ';')
+    {
+        // Transfer a previous line to the end
+        if (view[x0] == '>')
+        {
+            x0++;
+            if (x0 != data.dataLength() && view[x0] == ' ') x0++;
+        }
+
+        while (x0 != data.dataLength() && view[x0] != '\n')
+        {
+            char ch = view[x0++];
+            if (ch >= 'a' && ch <= 'z') ch -= 32;
+            input.push_back(ch);
+        }
+    }
+
+    return input;
+}
+
+void CommandWindow::registerCommand(string cmd, CommandFunction handler)
+{
+    m_handlers[cmd] = handler;
+}
+
 void CommandWindow::onEnter(Editor& editor)
 {
     EditorData& data = editor.getData();
+    string input = extractInput(data);
+
     if (data.getCurrentLine() == editor.getData().getNumLines()-1)
     {
         // Editing on last line!
         data.newline();
-        data.insert("; Command accepted");
-        data.newline();
+
+        // Extract command
+        vector<string> args;
+        string arg;
+        int i = 0;
+
+        while (input[i] != 0)
+        {
+            arg.clear();
+            while (input[i] != 0 && iswspace(input[i])) ++i;
+            while (input[i] != 0 && !iswspace(input[i]))
+            {
+                arg.push_back(input[i++]);
+            }
+            if (!arg.empty()) args.push_back(arg);
+        }
+
+        // Execute command
+        if (!args.empty())
+        {
+            auto it = m_handlers.find(args[0]);
+            if (it != m_handlers.end())
+            {
+                args.erase(args.begin());
+                vector<string> output = it->second(args);
+                for (const auto& line : output)
+                {
+                    data.insert("; ");
+                    data.insert(line);
+                    data.newline();
+                }
+            }
+        }
+
         prompt();
     }
     else
     {
-        int x0 = data.getPosAtLine(data.getCurrentLine());
-        SplitView view1 = data.getText();
-        if (view1[x0] != ';')
-        {
-            // Transfer a previous line to the end
-            if (view1[x0] == '>')
-            {
-                x0++;
-                if (view1[x0] == ' ') x0++;
-            }
-
-            data.moveTo(data.dataLength());
-            editor.ensureVisibleCursor();
-            SplitView view2 = data.getText();
-            while (view2[x0] != '\n')
-            {
-                data.insert(view2[x0++]);
-            }
-        }
+        string input = extractInput(data);
+        data.moveTo(data.dataLength());
+        editor.ensureVisibleCursor();
+        data.insert(input);
     }
 }
 
