@@ -54,8 +54,8 @@ Debugger::Debugger(Nx& nx)
                 getSpeccy().toggleBreakpoint(addr);
                 errors.emplace_back(
                     stringFormat(getSpeccy().hasUserBreakpointAt(addr)
-                        ? "Breakpoint set at {0}."
-                        : "Breakpoint reset at {0}.", hexWord(addr)));
+                        ? "Breakpoint set at ${0}."
+                        : "Breakpoint reset at ${0}.", hexWord(addr)));
             }
             else
             {
