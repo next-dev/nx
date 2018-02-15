@@ -157,6 +157,7 @@ public:
 private:
     // Command utilities
     vector<string> syntaxCheck(const vector<string>& args, const char* format, vector<string> desc);
+    vector<string> describeCommand(const char* format, vector<string> desc);
 
 private:
     MemoryDumpWindow    m_memoryDumpWindow;

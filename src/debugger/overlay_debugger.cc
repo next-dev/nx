@@ -61,9 +61,8 @@ Debugger::Debugger(Nx& nx)
         // Known commands
         return {
             "B   Toggle breakpoint",
-            "FB  Find byte",
+            "F   Find byte(s)",
             "FW  Find word",
-            "FS  Find string",
         };
     });
 
@@ -99,24 +98,43 @@ Debugger::Debugger(Nx& nx)
     //
     // Find commands
     //
-    m_commandWindow.registerCommand("FB", [this](vector<string> args) -> vector<string> {
-        vector<string> errors = syntaxCheck(args, "b", { "FB", "byte" });
+    m_commandWindow.registerCommand("F", [this](vector<string> args) -> vector<string> {
+        vector<string> desc = { "F", "byte/string" };
+        vector<string> errors = syntaxCheck(args, "+s", desc);
         if (errors.empty())
         {
+            vector<u8> bytes;
             u8 b;
-            if (parseByte(args[0], b))
+            for (int i = 0; i < args.size(); ++i)
             {
-                m_findAddresses = getSpeccy().findByte(b);
+                if (parseByte(args[i], b))
+                {
+                    bytes.push_back(b);
+                }
+                else
+                {
+                    u16 w;
+                    if (parseWord(args[i], w))
+                    {
+                        // Catch any value that is not a byte and isn't a string
+                        errors.emplace_back(stringFormat("Argument {0} is the wrong type.", i+1));
+                        vector<string> description = describeCommand("+s", desc);
+                        errors.insert(errors.end(), description.begin(), description.end());
+                        break;
+                    }
+                    for (auto c : args[i]) bytes.push_back(b);
+                }
+            }
+
+            if (bytes.size() > 0)
+            {
+                m_findAddresses = getSpeccy().findSequence(bytes);
                 for (u32 add : m_findAddresses)
                 {
                     errors.push_back(getSpeccy().addressName(add, true));
                 }
                 errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
                 errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
-            }
-            else
-            {
-                errors.push_back("Invalid parameter.");
             }
         }
 
@@ -145,21 +163,6 @@ Debugger::Debugger(Nx& nx)
 
         return errors;
     });
-    m_commandWindow.registerCommand("FS", [this](vector<string> args) -> vector<string> {
-        vector<string> errors = syntaxCheck(args, "s", { "FS", "string" });
-        if (errors.empty())
-        {
-            m_findAddresses = getSpeccy().findString(args[0]);
-            for (u32 add : m_findAddresses)
-            {
-                errors.push_back(getSpeccy().addressName(add, true));
-            }
-            errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
-            errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
-        }
-
-        return errors;
-    });
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -169,85 +172,131 @@ Debugger::Debugger(Nx& nx)
 vector<string> Debugger::syntaxCheck(const vector<string>& args, const char* format, vector<string> desc)
 {
     vector<string> errors;
+    char plus = 0;
+    char star = 0;
 
     // Check number of arguments
-    if (args.size() == strlen(format))
+    for (int i = 0, count = 0; format[i] != 0;)
     {
-        for (int i = 0; format[i] != 0; ++i)
+        // Check overflow of arguments
+        if (count >= args.size())
         {
-            const string& arg = args[i];
-            switch (format[i])
+            if (!plus && !star) errors.emplace_back(stringFormat("Bad number of args."));
+            break;
+        }
+
+        const string& arg = args[count];
+        switch (format[i])
+        {
+        case 'w':   // Address expected
+        case 'b':   // Byte expected
             {
-            case 'w':   // Address expected
-            case 'b':   // Byte expected
+                if (arg[0] == '$')
                 {
-                    if (arg[0] == '$')
+                    // Value is hexadecimal
+                    int h = 1;
+                    for (; arg[h] != 0; ++h)
                     {
-                        // Value is hexadecimal
-                        int h = 0;
-                        for (; arg[h + 1] != 0; ++h)
+                        if (!isxdigit(arg[h]))
                         {
-                            if (!isxdigit(arg[h + 1]))
-                            {
-                                errors.emplace_back(stringFormat("Invalid hex value for argument {0}.", i+1));
-                                break;
-                            }
-                        }
-                        if (h > (format[i] == 'w' ? 4 : 2))
-                        {
-                            errors.emplace_back(stringFormat("Argument {0} too large.", i+1));
+                            if (!star) errors.emplace_back(stringFormat("Invalid hex value for argument {0}.", i+1));
+                            star = 0;
+                            break;
                         }
                     }
-                    else
+                    if (h > (format[i] == 'w' ? 5 : 3))
                     {
-                        // Value is decimal
-                        int t = 0;
-                        for (int d = 0; arg[d + 1] != 0; ++d)
-                        {
-                            if (!isdigit(arg[d + 1]))
-                            {
-                                errors.emplace_back(stringFormat("Invalid decimal value for argument {0}.", i+1));
-                                break;
-                            }
-                            t *= 10;
-                            t += arg[d+1] - '0';
-                        }
-                        if (t > 65535)
-                        {
-                            errors.emplace_back(stringFormat("Argument {0} too large.", i+1));
-                        }
+                        if (!star) errors.emplace_back(stringFormat("Argument {0} too large.", i+1));
+                        star = 0;
                     }
                 }
-                break;
+                else
+                {
+                    // Value is decimal
+                    int t = 0;
+                    for (int d = 0; arg[d] != 0; ++d)
+                    {
+                        if (!isdigit(arg[d]))
+                        {
+                            if (!star) errors.emplace_back(stringFormat("Invalid decimal value for argument {0}.", i+1));
+                            star = 0;
+                            break;
+                        }
+                        t *= 10;
+                        t += arg[d] - '0';
+                    }
+                    if (t > 65535)
+                    {
+                        if (!star) errors.emplace_back(stringFormat("Argument {0} too large.", i+1));
+                        star = 0;
+                    }
+                }
+            }
+            ++count;
+            break;
 
-            case 's':
-                break;
+        case 's':
+            ++count;
+            break;
 
-            default:
-                assert(0);
-                break;
+        case '+':
+            assert(plus == 0);
+            assert(star == 0);
+            plus = format[i+1];
+            break;
+
+        case '*':
+            assert(plus == 0);
+            assert(star == 0);
+            star = format[++i];
+            break;
+
+        default:
+            assert(0);
+            break;
+        }
+
+        if (!errors.empty()) break;
+
+        if (plus)
+        {
+            if (format[i] == '+')
+            {
+                ++i;
+            }
+            else
+            {
+                star = plus;
+                plus = 0;
             }
         }
-    }
-    else
-    {
-        errors.emplace_back(stringFormat("Bad number of args."));
-        errors.emplace_back(stringFormat("Expected {0}, got {1}.", strlen(format), args.size()));
+        if (!plus && !star)
+        {
+            ++i;
+        }
     }
 
     if (!errors.empty())
     {
         // An error occurred
-        errors.emplace_back("Syntax:");
-        string syntax = " " + desc[0];
-        for (int i = 1; i < desc.size(); ++i)
-        {
-            syntax += string(" <") + desc[i] + ">";
-        }
-        errors.emplace_back(syntax);
+        vector<string> lines = describeCommand(format, desc);
+        errors.insert(errors.end(), lines.begin(), lines.end());
     }
 
     return errors;
+}
+
+vector<string> Debugger::describeCommand(const char* format, vector<string> desc)
+{
+    vector<string> lines;
+    lines.emplace_back("Syntax:");
+    string syntax = " " + desc[0];
+    for (int i = 1; i < desc.size(); ++i)
+    {
+        syntax += string(" <") + desc[i] + ">";
+    }
+    lines.emplace_back(syntax);
+    return lines;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
