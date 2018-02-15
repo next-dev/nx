@@ -71,7 +71,7 @@ public:
 class EditorData
 {
 public:
-    EditorData(int initialSize, int increaseSize, int maxLineLength);
+    EditorData(int initialSize, int increaseSize);
 
     void clear();
     SplitView getLine(int n) const;
@@ -131,7 +131,6 @@ private:
     int             m_cursor;
     int             m_endBuffer;
     int             m_increaseSize;
-    int             m_maxLineLength;
     int             m_lastOffset;       // Used for remembering the line offset when moving up and down
     bool            m_changed;          // True, if the data changed since last reset
     vector<int>     m_initialTabs;
@@ -178,6 +177,7 @@ private:
     int                 m_width;
     int                 m_height;
     int                 m_topLine;
+    int                 m_lineOffset;
     bool                m_font6;
     u8                  m_bkgColour;
     u8                  m_commentColour;

@@ -37,14 +37,13 @@ SplitView::SplitView(const vector<char>& v, int start, int end)
 // EditorData
 //----------------------------------------------------------------------------------------------------------------------
 
-EditorData::EditorData(int initialSize, int increaseSize, int maxLineLength)
+EditorData::EditorData(int initialSize, int increaseSize)
     : m_buffer(16)
     , m_lines(1, 0)
     , m_cursor(0)
     , m_currentLine(0)
     , m_endBuffer((int)m_buffer.size())
     , m_increaseSize(increaseSize)
-    , m_maxLineLength(maxLineLength)
     , m_lastOffset(-1)
     , m_changed(false)
     , m_initialTabs()
@@ -160,7 +159,6 @@ int EditorData::toVirtualPos(int actualPos) const
 
 void EditorData::insert(char ch)
 {
-    if (lineLength(m_currentLine) == m_maxLineLength) return;
     bool result = ensureSpace(1);
     if (result)
     {
@@ -629,12 +627,13 @@ Editor::Editor(int xCell,
                int initialSize,
                int increaseSize,
                EnterFunction onEnter)
-    : m_data(initialSize, increaseSize, width-1)
+    : m_data(initialSize, increaseSize)
     , m_x(xCell)
     , m_y(yCell)
     , m_width(width)
     , m_height(height)
     , m_topLine(0)
+    , m_lineOffset(0)
     , m_font6(font6)
     , m_bkgColour(bkgColour)
     , m_commentColour(bkgColour)
@@ -693,16 +692,23 @@ void Editor::render(Draw& draw, int line)
         y += m_y;
 
         auto view = data.getLine((int)line);
-        for (int i = 0; x < m_x + m_width; ++x, ++i)
+
+        // Text off-screen is important for setting the syntax 
+        for (int i = 0; i < m_lineOffset; ++i)
+        {
+            if (view[i] == ';') colour = m_commentColour;
+        }
+        for (int i = m_lineOffset; x < m_x + m_width; ++x, ++i)
         {
             if (view[i] == ';') colour = m_commentColour;
             draw.printChar(x, y, view[i], colour);
         }
 
+        // Render the cursor if on the same line
         int currentX = m_data.getCurrentPosInLine();
-        if ((m_data.getCurrentLine() == line) && (m_data.getCurrentPosInLine() < m_width))
+        if ((m_data.getCurrentLine() == line) && (currentX < (m_lineOffset + m_width)))
         {
-            draw.pokeAttr(m_x + currentX, y, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
+            draw.pokeAttr(m_x + currentX - m_lineOffset, y, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
         }
     }
 }
@@ -735,13 +741,30 @@ void Editor::ensureVisibleCursor()
     // Check for down scroll
     else if (m_data.getCurrentLine() >= (m_topLine + m_height))
     {
-        m_topLine = std::min(m_data.getNumLines(), m_topLine + K_LINE_SKIP);
+        m_topLine = std::min(m_data.getNumLines() - 1, m_topLine + K_LINE_SKIP);
 
         // Check to see if visible yet.  If not, just jump.
         if (m_data.getCurrentLine() >= (m_topLine + m_height))
         {
             m_topLine = std::max(0, m_data.getCurrentLine() - (m_height / 2));
         }
+    }
+
+    // Check for left scroll
+    while(1)
+    {
+        int x = m_data.getCurrentPosInLine();
+        if (x < m_lineOffset)
+        {
+            m_lineOffset = std::max(0, m_lineOffset - K_LINE_SKIP);
+            continue;
+        }
+        else if (x >= (m_lineOffset + m_width))
+        {
+            m_lineOffset = std::min(m_data.lineLength(m_data.getCurrentLine()) - 1, m_lineOffset + K_LINE_SKIP);
+            continue;
+        }
+        break;
     }
 }
 
@@ -802,10 +825,12 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
         {
         case K::Left:
             m_data.leftChar(1);
+            ensureVisibleCursor();
             break;
 
         case K::Right:
             m_data.rightChar(1);
+            ensureVisibleCursor();
             break;
 
         case K::Up:
@@ -820,14 +845,17 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::Delete:
             m_data.deleteChar(1);
+            ensureVisibleCursor();
             break;
 
         case K::Home:
             m_data.home();
+            ensureVisibleCursor();
             break;
 
         case K::End:
             m_data.end();
+            ensureVisibleCursor();
             break;
 
         case K::PageUp:
@@ -848,6 +876,7 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::Tab:
             m_data.tab();
+            ensureVisibleCursor();
             break;
 
         default:
@@ -865,6 +894,7 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
         {
         case K::Tab:    // Back tab
             m_data.untab();
+            ensureVisibleCursor();
             break;
 
         default:
@@ -899,10 +929,12 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::Left:   // Ctrl-Left
             m_data.moveTo(m_data.lastWordPos());
+            ensureVisibleCursor();
             break;
 
         case K::Right:  // Ctrl-Right
             m_data.moveTo(m_data.nextWordPos());
+            ensureVisibleCursor();
             break;
 
         default:
@@ -938,29 +970,30 @@ bool Editor::text(char ch)
     EditorData& data = getData();
     if (m_allowedChars[ch])
     {
-        if (m_data.getCurrentPosInLine() < m_width)
+        if (ch >= ' ' && ch < 127)
         {
-            if (ch >= ' ' && ch < 127)
-            {
-                data.insert(ch);
-                return true;
-            }
+            data.insert(ch);
+            ensureVisibleCursor();
+            return true;
         }
 
         switch (ch)
         {
         case 8:     // backspace
             data.backspace(1);
+            ensureVisibleCursor();
             break;
 
         case 13:    // newline
             if (m_onEnter)
             {
                 m_onEnter(*this);
+                ensureVisibleCursor();
             }
             else
             {
                 data.newline();
+                ensureVisibleCursor();
             }
             break;
         }

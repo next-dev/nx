@@ -67,9 +67,7 @@ string CommandWindow::extractInput(EditorData& data)
 
         while (x0 != data.dataLength() && view[x0] != '\n')
         {
-            char ch = view[x0++];
-            if (ch >= 'a' && ch <= 'z') ch -= 32;
-            input.push_back(ch);
+            input.push_back(view[x0++]);
         }
     }
 
@@ -100,11 +98,37 @@ void CommandWindow::onEnter(Editor& editor)
         {
             arg.clear();
             while (input[i] != 0 && iswspace(input[i])) ++i;
-            while (input[i] != 0 && !iswspace(input[i]))
+            if (input[i] == 0) break;
+            if (input[i] == '"')
             {
-                arg.push_back(input[i++]);
+                // A string was found
+                ++i;
+                while (input[i] != 0 && input[i] != '"')
+                {
+                    arg.push_back(input[i++]);
+                }
+                if (input[i] == 0)
+                {
+                    data.insert("; Error: unterminated string.");
+                    data.newline();
+                    prompt();
+                    return;
+                }
+                else
+                {
+                    ++i;
+                }
             }
-            if (!arg.empty()) args.push_back(arg);
+            else
+            {
+                while (input[i] != 0 && !iswspace(input[i]))
+                {
+                    char ch = input[i++];
+                    if (ch >= 'a' && ch <= 'z') ch -= 32;
+                    arg.push_back(ch);
+                }
+            }
+            args.push_back(arg);
         }
 
         // Execute command
@@ -121,6 +145,11 @@ void CommandWindow::onEnter(Editor& editor)
                     data.insert(line);
                     data.newline();
                 }
+            }
+            else
+            {
+                data.insert("; Unknown command");
+                data.newline();
             }
         }
 

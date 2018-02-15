@@ -44,6 +44,9 @@ Debugger::Debugger(Nx& nx)
 {
     m_disassemblyWindow.Select();
 
+    //
+    // Breakpoint command
+    //
     m_commandWindow.registerCommand("B", [this](vector<string> args) {
         vector<string> errors = syntaxCheck(args, "w", { "B", "address" });
         if (errors.empty())
