@@ -54,8 +54,8 @@ void CpuStatusWindow::onDraw(Draw &draw)
     u8 coff = draw.attr(Colour::Black, Colour::Red, true);
     for (int i = 0; i < 8; ++i)
     {
-        draw.printChar(m_x + 8 + (i * 2), m_y + 9, (f & 0x80) ? '1' : '0',
-            (f & 0x80) ? con : coff);
+        draw.printChar(m_x + 8 + (i * 2), m_y + 9, (f & 0x80) ? ',' : '+',
+            (f & 0x80) ? con : coff, gGfxFont);
         f <<= 1;
     }
 
