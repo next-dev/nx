@@ -85,7 +85,7 @@ void CpuStatusWindow::onDraw(Draw &draw)
     // Print out the banks
     for (int i = 0; i < 4; ++i)
     {
-        draw.printSquashedString(m_x + 16, m_y + 11 + i, m_nx.getSpeccy().pageName(i), colour);
+        draw.printSquashedString(m_x + 16, m_y + 11 + i, m_nx.getSpeccy().slotName(i), colour);
     }
     if (m_nx.getSpeccy().isShadowScreen())
     {

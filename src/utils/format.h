@@ -5,7 +5,8 @@
 #pragma once
 
 #include <codecvt>
-
+#include <types.h>
+#include <config.h>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Character conversion routines
@@ -20,6 +21,15 @@ inline int toDigit(char c)
 {
     return c - '0';
 }
+
+string decimalWord(u16 x);
+string decimalByte(u8 x);
+string hexWord(u16 x);
+string hexByte(u8 x);
+
+bool parseNumber(const string& str, int& i);
+bool parseByte(const string& str, u8& out);
+bool parseWord(const string& str, u16& out);
 
 //----------------------------------------------------------------------------------------------------------------------
 // Internal code

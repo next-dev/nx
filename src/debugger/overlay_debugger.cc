@@ -55,6 +55,19 @@ Debugger::Debugger(Nx& nx)
     m_disassemblyWindow.Select();
 
     //
+    // Help command
+    //
+    m_commandWindow.registerCommand("?", [this](vector<string> args) -> vector<string> {
+        // Known commands
+        return {
+            "B   Toggle breakpoint",
+            "FB  Find byte",
+            "FW  Find word",
+            "FS  Find string",
+        };
+    });
+
+    //
     // Breakpoint command
     //
     m_commandWindow.registerCommand("B", [this](vector<string> args) {
@@ -83,6 +96,70 @@ Debugger::Debugger(Nx& nx)
         return errors;
     });
 
+    //
+    // Find commands
+    //
+    m_commandWindow.registerCommand("FB", [this](vector<string> args) -> vector<string> {
+        vector<string> errors = syntaxCheck(args, "b", { "FB", "byte" });
+        if (errors.empty())
+        {
+            u8 b;
+            if (parseByte(args[0], b))
+            {
+                m_findAddresses = getSpeccy().findByte(b);
+                for (u32 add : m_findAddresses)
+                {
+                    errors.push_back(getSpeccy().addressName(add, true));
+                }
+                errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
+                errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
+            }
+            else
+            {
+                errors.push_back("Invalid parameter.");
+            }
+        }
+
+        return errors;
+    });
+    m_commandWindow.registerCommand("FW", [this](vector<string> args) -> vector<string> {
+        vector<string> errors = syntaxCheck(args, "w", { "FW", "word" });
+        if (errors.empty())
+        {
+            u16 w;
+            if (parseWord(args[0], w))
+            {
+                m_findAddresses = getSpeccy().findWord(w);
+                for (u32 add : m_findAddresses)
+                {
+                    errors.push_back(getSpeccy().addressName(add, true));
+                }
+                errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
+                errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
+            }
+            else
+            {
+                errors.push_back("Invalid parameter.");
+            }
+        }
+
+        return errors;
+    });
+    m_commandWindow.registerCommand("FS", [this](vector<string> args) -> vector<string> {
+        vector<string> errors = syntaxCheck(args, "s", { "FS", "string" });
+        if (errors.empty())
+        {
+            m_findAddresses = getSpeccy().findString(args[0]);
+            for (u32 add : m_findAddresses)
+            {
+                errors.push_back(getSpeccy().addressName(add, true));
+            }
+            errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
+            errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
+        }
+
+        return errors;
+    });
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -143,6 +220,9 @@ vector<string> Debugger::syntaxCheck(const vector<string>& args, const char* for
                 }
                 break;
 
+            case 's':
+                break;
+
             default:
                 assert(0);
                 break;
@@ -168,97 +248,6 @@ vector<string> Debugger::syntaxCheck(const vector<string>& args, const char* for
     }
 
     return errors;
-}
-
-string Debugger::decimalWord(u16 x)
-{
-    string s;
-    int div = 10000;
-    while (div > 1 && (x / div == 0)) div /= 10;
-
-    while (div != 0)
-    {
-        int d = x / div;
-        x %= div;
-        div /= 10;
-        s.push_back('0' + d);
-    }
-
-    return s;
-}
-
-string Debugger::decimalByte(u8 x)
-{
-    return decimalWord(u16(x));
-}
-
-string Debugger::hexWord(u16 x)
-{
-    string s;
-    int div = 4096;
-
-    while (div != 0)
-    {
-        int d = x / div;
-        x %= div;
-        div /= 16;
-        s.push_back(d < 10 ? '0' + d : 'A' + d - 10);
-    }
-
-    return s;
-}
-
-string Debugger::hexByte(u8 x)
-{
-    return hexWord(u16(x));
-}
-
-bool Debugger::parseNumber(const string& str, int& n)
-{
-    int base = str[0] == '$' ? 16 : 10;
-    int i = str[0] == '$' ? 1 : 0;
-    n = 0;
-
-    for (; str[i] != 0; ++i)
-    {
-        int c = int(str[i]);
-
-        n *= base;
-        if (c >= '0' && c <= '9')
-        {
-            n += (c - '0');
-        }
-        else if (base == 16 && (c >= 'A' && c <= 'F'))
-        {
-            n += (c - 'A' + 10);
-        }
-        else if (base == 16 && (c >= 'a' && c <= 'f'))
-        {
-            n += (c - 'a' + 10);
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool Debugger::parseWord(const string& str, u16& out)
-{
-    int n;
-    bool result = parseNumber(str, n) && (n >= 0 && n < 65536);
-    if (result) out = u16(n);
-    return result;
-}
-
-bool Debugger::parseByte(const string& str, u8& out)
-{
-    int n;
-    bool result = parseNumber(str, n) && (n >= 0 && n < 256);
-    if (result) out = u8(n);
-    return result;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

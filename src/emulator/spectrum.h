@@ -159,13 +159,19 @@ public:
 
     void            page                (int slot, int page);
     int             getPage             (int slot) const;
-    string&         pageName            (int slot);
+    string&         slotName            (int slot);
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);
     void            load                (u16 address, const vector<u8>& buffer);
     void            load                (u16 address, const void* buffer, i64 size);
     void            setRomWriteState    (bool writable);
+    vector<u32>     findSequence        (vector<u8> seq);
+    vector<u32>     findByte            (u8 byte);
+    vector<u32>     findWord            (u16 word);
+    vector<u32>     findString          (string str);
+    u32             convertAddress      (size_t ramOffset);
+    string          addressName         (u32 address, bool moreInfo);
 
     //------------------------------------------------------------------------------------------------------------------
     // I/O interface
@@ -257,7 +263,7 @@ private:
 
     // Memory state
     vector<u8>      m_pages;
-    vector<string>  m_pageNames;
+    vector<string>  m_slotNames;
     vector<u8>      m_ram;
     vector<u8>      m_contention;
     bool            m_romWritable;

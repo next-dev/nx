@@ -4,6 +4,7 @@
 
 #include <emulator/spectrum.h>
 #include <tape/tape.h>
+#include <utils/format.h>
 
 #include <algorithm>
 #include <cassert>
@@ -84,6 +85,98 @@ void Spectrum::setBorderColour(u8 borderColour)
 void Spectrum::setRomWriteState(bool writable)
 {
     m_romWritable = writable;
+}
+
+vector<u32> Spectrum::findSequence(vector<u8> seq)
+{
+    auto it = m_ram.begin();
+    vector<u32> addresses;
+    while (it != m_ram.end())
+    {
+        it = std::search(it, m_ram.end(), seq.begin(), seq.end());
+        if (it != m_ram.end())
+        {
+            addresses.emplace_back(convertAddress(std::distance(m_ram.begin(), it)));
+            std::advance(it, seq.size());
+        }
+    }
+
+    return addresses;
+}
+
+vector<u32> Spectrum::findByte(u8 byte)
+{
+    return findSequence({ byte });
+}
+
+vector<u32> Spectrum::findWord(u16 word)
+{
+    return findSequence({ u8(word % 256), u8(word / 256) });
+}
+
+vector<u32> Spectrum::findString(string str)
+{
+    return findSequence(vector<u8>(str.begin(), str.end()));
+}
+
+u32 Spectrum::convertAddress(size_t ramOffset)
+{
+    switch (m_model)
+    {
+    case Model::ZX48:
+        return u32(ramOffset);
+        break;
+
+    case Model::ZX128:
+    case Model::ZXPlus2:
+        {
+            int page = int(ramOffset) / KB(16);
+            int add = int(ramOffset) % KB(16);
+
+            return (u32(page) << 16) + u32(add);
+        }
+        break;
+
+    default:
+        assert(0);
+        return u32(ramOffset);
+    }
+}
+
+string Spectrum::addressName(u32 address, bool moreInfo)
+{
+    u16 page = u16(address / KB(64));
+    u16 add = u16(address % KB(64));
+    string s;
+
+    if (m_model == Model::ZX128 || m_model == Model::ZXPlus2)
+    {
+        if (page < 8)
+        {
+            s = stringFormat("{0}:{1}", page, hexWord(u16(add)));
+        }
+        else
+        {
+            s = stringFormat("ROM{0}:{1}", page - 8, hexWord(u16(add)));
+        }
+
+        if (moreInfo)
+        {
+            for (int i = 0; i < 4; ++i)
+            {
+                if (m_pages[i] == page)
+                {
+                    s += stringFormat(" (${0})", hexWord(add + (i * KB(16))));
+                }
+            }
+        }
+    }
+    else
+    {
+        s = stringFormat("${0}", hexWord(u16(add)));
+    }
+
+    return s;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -181,7 +274,7 @@ void Spectrum::initMemory()
     {
     case Model::ZX48:
         m_ram.resize(KB(64));
-        m_pageNames = {
+        m_slotNames = {
             "ROM",
             "$4000",
             "$8000",
@@ -193,7 +286,7 @@ void Spectrum::initMemory()
     case Model::ZX128:
     case Model::ZXPlus2:
         m_ram.resize(KB(16) * 10);      // 8*16K RAM, 2*16K ROM
-        m_pageNames = {
+        m_slotNames = {
             "Bank 0",
             "Bank 1",
             "Bank 2",
@@ -353,10 +446,10 @@ int Spectrum::getPage(int slot) const
     return m_pages[slot];
 }
 
-string& Spectrum::pageName(int slot)
+string& Spectrum::slotName(int slot)
 {
     assert(slot >= 0 && slot < 4);
-    return m_pageNames[m_pages[slot]];
+    return m_slotNames[m_pages[slot]];
 }
 
 //----------------------------------------------------------------------------------------------------------------------

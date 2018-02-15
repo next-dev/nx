@@ -157,14 +157,6 @@ public:
 private:
     // Command utilities
     vector<string> syntaxCheck(const vector<string>& args, const char* format, vector<string> desc);
-    string decimalWord(u16 x);
-    string decimalByte(u8 x);
-    string hexWord(u16 x);
-    string hexByte(u8 x);
-
-    bool parseNumber(const string& str, int& i);
-    bool parseByte(const string& str, u8& out);
-    bool parseWord(const string& str, u16& out);
 
 private:
     MemoryDumpWindow    m_memoryDumpWindow;
@@ -177,6 +169,8 @@ private:
     vector<string>      m_cliCommands;
 
     bool                m_zoomMode;
+
+    vector<u32>         m_findAddresses;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
