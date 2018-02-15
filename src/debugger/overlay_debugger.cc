@@ -122,7 +122,7 @@ Debugger::Debugger(Nx& nx)
                         errors.insert(errors.end(), description.begin(), description.end());
                         break;
                     }
-                    for (auto c : args[i]) bytes.push_back(b);
+                    for (auto c : args[i]) bytes.push_back(c);
                 }
             }
 
