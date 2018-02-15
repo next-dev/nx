@@ -551,6 +551,14 @@ Window::Window(Nx& nx, int x, int y, int width, int height, std::string title, C
 
 }
 
+void Window::setPosition(int x, int y, int width, int height)
+{
+    m_x = x;
+    m_y = y;
+    m_width = width;
+    m_height = height;
+}
+
 void Window::draw(Draw& draw)
 {
     draw.window(m_x, m_y, m_width, m_height, m_title.c_str(), (m_bkgColour & 0x40) != 0, m_bkgColour);

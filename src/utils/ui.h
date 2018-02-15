@@ -165,6 +165,7 @@ public:
     virtual void text(char ch);
 
     void setTitle(string title)     { m_title = title; }
+    void setPosition(int x, int y, int width, int height);
 
 protected:
     //

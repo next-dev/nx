@@ -170,6 +170,8 @@ public:
     void setFileName(string fileName) { m_fileName = fileName; }
     void save(string fileName = string());
 
+    void setPosition(int xCell, int yCell, int width, int height);
+
 private:
     EditorData          m_data;
     int                 m_x;

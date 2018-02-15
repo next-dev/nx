@@ -24,6 +24,18 @@ DisassemblyWindow::DisassemblyWindow(Nx& nx)
     m_gotoEditor.onlyAllowHex();
 }
 
+void DisassemblyWindow::zoomMode(bool flag)
+{
+    if (flag)
+    {
+        setPosition(1, 22, 78, 30);
+    }
+    else
+    {
+        setPosition(1, 22, 43, 30);
+    }
+}
+
 void DisassemblyWindow::adjustBar()
 {
     if (m_address < m_topAddress)
@@ -59,7 +71,6 @@ void DisassemblyWindow::adjustBar()
     if (row == m_height - 1)
     {
         setView(m_address);
-        m_topAddress = m_address;
     }
     else while (row > m_height / 2)
     {
@@ -87,6 +98,7 @@ void DisassemblyWindow::setView(u16 newTopAddress)
     if (-1 == findViewAddress(newTopAddress))
     {
         m_viewedAddresses.clear();
+        m_viewedAddresses.push_back(newTopAddress);
     }
     m_topAddress = newTopAddress;
 }
@@ -299,6 +311,7 @@ void DisassemblyWindow::onText(char ch)
                 
                 setCursor(t);
             }
+            break;
                 
             default:
                 m_gotoEditor.text(ch);

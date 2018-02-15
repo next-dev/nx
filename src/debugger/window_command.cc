@@ -23,6 +23,20 @@ void CommandWindow::prompt()
     m_commandEditor.getData().insert("> ");
 }
 
+void CommandWindow::zoomMode(bool flag)
+{
+    if (flag)
+    {
+        setPosition(1, 22, 78, 30);
+        m_commandEditor.setPosition(2, 23, 76, 28);
+    }
+    else
+    {
+        setPosition(45, 22, 34, 30);
+        m_commandEditor.setPosition(46, 23, 32, 28);
+    }
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Window overrides
 //----------------------------------------------------------------------------------------------------------------------

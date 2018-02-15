@@ -25,6 +25,11 @@ MemoryDumpWindow::MemoryDumpWindow(Nx& nx)
     m_gotoEditor.onlyAllowHex();
 }
 
+void MemoryDumpWindow::zoomMode(bool flag)
+{
+    setPosition(1, 1, 43, flag ? 51 : 20);
+}
+
 void MemoryDumpWindow::onDraw(Draw& draw)
 {
     u16 a = m_address;

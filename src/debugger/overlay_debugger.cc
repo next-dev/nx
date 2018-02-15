@@ -25,7 +25,9 @@ Debugger::Debugger(Nx& nx)
         "PgUp|Page up",
         "PgDn|Page down",
         "~|Exit",
-        "Tab|Switch window"})
+        "Tab|Switch window",
+        "Ctrl-Z|Toggle Zoom",
+        })
     , m_disassemblyCommands({
         "G|oto",
         "F1|Render video",
@@ -40,7 +42,15 @@ Debugger::Debugger(Nx& nx)
         "PgUp|Page up",
         "PgDn|Page down",
         "~|Exit",
-        "Tab|Switch window"})
+        "Tab|Switch window",
+        "Ctrl-Z|Toggle Zoom",
+        })
+    , m_cliCommands({
+        "~|Exit",
+        "Tab|Switch window",
+        "Ctrl-Z|Toggle Zoom"
+        })
+    , m_zoomMode(false)
 {
     m_disassemblyWindow.Select();
 
@@ -308,6 +318,18 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
         }
     }
+    else if (!shift && ctrl && !alt)
+    {
+        switch (key)
+        {
+        case K::Z:
+            m_zoomMode = !m_zoomMode;
+            break;
+
+        default:
+            SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
+        }
+    }
     else
     {
         SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
@@ -329,9 +351,38 @@ void Debugger::text(char ch)
 void Debugger::render(Draw& draw)
 {
     m_memoryDumpWindow.draw(draw);
-    m_disassemblyWindow.draw(draw);
     m_cpuStatusWindow.draw(draw);
-    m_commandWindow.draw(draw);
+
+    if (m_zoomMode)
+    {
+        m_memoryDumpWindow.zoomMode(true);
+        m_disassemblyWindow.zoomMode(true);
+        m_commandWindow.zoomMode(true);
+
+        if (m_memoryDumpWindow.isSelected())
+        {
+            m_commandWindow.zoomMode(false);
+            m_commandWindow.draw(draw);
+        }
+        else if (m_disassemblyWindow.isSelected())
+        {
+            m_memoryDumpWindow.zoomMode(false);
+            m_disassemblyWindow.draw(draw);
+        }
+        else if (m_commandWindow.isSelected())
+        {
+            m_memoryDumpWindow.zoomMode(false);
+            m_commandWindow.draw(draw);
+        }
+    }
+    else
+    {
+        m_memoryDumpWindow.zoomMode(false);
+        m_disassemblyWindow.zoomMode(false);
+        m_commandWindow.zoomMode(false);
+        m_disassemblyWindow.draw(draw);
+        m_commandWindow.draw(draw);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -340,7 +391,18 @@ void Debugger::render(Draw& draw)
 
 const vector<string>& Debugger::commands() const
 {
-    return m_memoryDumpWindow.isSelected() ? m_memoryDumpCommands : m_disassemblyCommands;
+    if (m_memoryDumpWindow.isSelected())
+    {
+        return m_memoryDumpCommands;
+    }
+    else if (m_disassemblyWindow.isSelected())
+    {
+        return m_disassemblyCommands;
+    }
+    else
+    {
+        return m_cliCommands;
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -1006,6 +1006,14 @@ void Editor::clear()
     getData().clear();
 }
 
+void Editor::setPosition(int xCell, int yCell, int width, int height)
+{
+    m_x = xCell;
+    m_y = yCell;
+    m_width = width;
+    m_height = height;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // EditorWindow
 //----------------------------------------------------------------------------------------------------------------------

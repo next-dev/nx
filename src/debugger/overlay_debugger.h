@@ -18,6 +18,8 @@ class MemoryDumpWindow final : public SelectableWindow
 public:
     MemoryDumpWindow(Nx& nx);
 
+    void zoomMode(bool flag);
+
 protected:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
@@ -54,6 +56,8 @@ public:
     void setCursor(u16 address);
     u16 disassemble(Disassembler& d, u16 address);
     u16 disassemble(u16 address);
+
+    void zoomMode(bool flag);
 
 private:
     void onDraw(Draw& draw) override;
@@ -112,6 +116,8 @@ public:
 
     void registerCommand(string cmd, CommandFunction handler);
 
+    void zoomMode(bool flag);
+
 private:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
@@ -168,6 +174,9 @@ private:
 
     vector<string>      m_memoryDumpCommands;
     vector<string>      m_disassemblyCommands;
+    vector<string>      m_cliCommands;
+
+    bool                m_zoomMode;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
