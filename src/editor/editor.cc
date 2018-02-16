@@ -772,17 +772,10 @@ void Editor::save(string fileName)
 {
     if (fileName.empty())
     {
-        if (getFileName().empty())
-        {
-            const char* filters[] = { "*.asm", "*.s" };
-            const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
-                filters, "Source code");
-            fileName = fn ? fn : "";
-        }
-        else
-        {
-            fileName = getFileName();
-        }
+        const char* filters[] = { "*.asm", "*.s" };
+        const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
+            filters, "Source code");
+        fileName = fn ? fn : "";
     }
     if (!fileName.empty())
     {
