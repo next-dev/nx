@@ -163,6 +163,7 @@ public:
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);
+    u8              pagePeek            (u16 page, u16 address);
     void            load                (u16 address, const vector<u8>& buffer);
     void            load                (u16 address, const void* buffer, i64 size);
     void            setRomWriteState    (bool writable);

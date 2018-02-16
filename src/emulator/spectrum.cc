@@ -382,6 +382,11 @@ void Spectrum::poke(u16 address, u8 x)
     }
 }
 
+u8 Spectrum::pagePeek(u16 page, u16 address)
+{
+    return m_ram[page * KB(16) + (address % KB(16))];
+}
+
 void Spectrum::poke(u16 address, u8 x, TState& t)
 {
     contend(address, 3, 1, t);
@@ -756,19 +761,23 @@ void Spectrum::updateVideo()
     // It takes 4 t-states to write 1 byte.
     int elapsedTStates = int(tState + 1 - m_drawTState);
     int numBytes = (elapsedTStates >> 2) + ((elapsedTStates % 4) > 0 ? 1 : 0);
+    int vramPage = m_model == Model::ZX48
+        ? 1
+        : m_shadowScreen ? 7 : 5;
 
     for (int i = 0; i < numBytes; ++i)
     {
         if (m_videoMap[m_drawTState] > 1)
         {
             // Pixel address
+            // TODO: video map address are 0-based, move special codes to different range.
             u16 paddr = m_videoMap[m_drawTState];
-            u8 pixelData = peek(paddr);
+            u8 pixelData = pagePeek(vramPage, paddr);
 
             // Calculate attribute address
             // 010S SRRR CCCX XXXX --> 0101 10SS CCCX XXXX
-            u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + (m_shadowScreen ? 0xc800 : 0x5800);
-            u8 attr = peek(aaddr);
+            u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + 0x5800;
+            u8 attr = pagePeek(vramPage, aaddr);
 
             u8 lastPixelData = pixelData;
             u8 lastAttrData = attr;
