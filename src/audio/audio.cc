@@ -22,6 +22,7 @@ Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
     , m_tStatesUpdated(0)
     , m_tStateCounter(0)
     , m_audioValue(0)
+    , m_tapeAudioValue(0)
     , m_writePosition(0)
     , m_audioHost(0)
     , m_audioDevice(0)
@@ -137,7 +138,7 @@ int Audio::callback(const void *input,
     return paContinue;
 }
 
-void Audio::updateBeeper(i64 tState, u8 speaker)
+void Audio::updateBeeper(i64 tState, u8 speaker, u8 tape)
 {
     if (m_mute) speaker = 0;
 
@@ -147,14 +148,21 @@ void Audio::updateBeeper(i64 tState, u8 speaker)
         if (m_tStateCounter + dt > m_numTStatesPerSample)
         {
             m_audioValue += int(speaker ? (m_numTStatesPerSample - m_tStateCounter) : 0);
-            m_fillBuffer[m_writePosition++] = ((m_audioValue * (2 * NX_VOLUME)) / m_numTStatesPerSample) - NX_VOLUME;
+            m_tapeAudioValue += int(tape ? (m_numTStatesPerSample - m_tStateCounter) : 0);
+
+            i16 speakerSample = ((m_audioValue * (2 * NX_VOLUME)) / m_numTStatesPerSample) - NX_VOLUME;
+            i16 tapeSample = ((m_tapeAudioValue * (2 * NX_VOLUME)) / m_numTStatesPerSample) - NX_VOLUME;
+
+            m_fillBuffer[m_writePosition++] = (speakerSample + tapeSample) / 2;
 
             dt = (m_tStateCounter + dt) - m_numTStatesPerSample;
             m_audioValue = 0;
+            m_tapeAudioValue = 0;
             m_tStateCounter = 0;
         }
 
         m_audioValue += int(speaker ? dt : 0);
+        m_tapeAudioValue += int(tape ? dt : 0);
         m_tStateCounter += dt;
     }
     m_tStatesUpdated = tState;
