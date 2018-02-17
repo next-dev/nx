@@ -223,7 +223,7 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
             m_z80.step(m_tState);
             updateVideo();
             updateTape(m_tState - startTState);
-            m_audio.updateBeeper(m_tState, m_speaker);
+            m_audio.updateBeeper(m_tState, m_speaker, m_tapeEar ? 1 : 0);
             //m_audio.updateBeeper(m_tState, m_tapeEar ? 1 : 0);
             if ((runMode == RunMode::Normal) && shouldBreak(m_z80.PC()))
             {

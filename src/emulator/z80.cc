@@ -2078,6 +2078,7 @@ void Z80::step(i64& tState)
     {
         m_eiHappened = false;
         m_nmi = false;
+        if (!m_eiHappened) m_interrupt = false;
 
         u8 opCode = fetchInstruction(tState);
         execute(opCode, tState);

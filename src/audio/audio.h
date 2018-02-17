@@ -62,7 +62,7 @@ public:
     void start();
     void stop();
 
-    void updateBeeper(i64 tState, u8 speaker);
+    void updateBeeper(i64 tState, u8 speaker, u8 tape);
     void mute(bool enabled) { m_mute = enabled; }
 
     bool isMute() const { return m_mute; }
@@ -90,6 +90,7 @@ private:
     i64                 m_tStatesUpdated;
     i64                 m_tStateCounter;
     int                 m_audioValue;
+    int                 m_tapeAudioValue;
     int                 m_writePosition;
 
     PaHostApiIndex      m_audioHost;
