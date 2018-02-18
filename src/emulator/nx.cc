@@ -566,7 +566,7 @@ Nx::Nx(int argc, char** argv)
     , m_assembler(*this)
 
     //--- Rendering -----------------------------------------------------------------
-    , m_window(sf::VideoMode(kWindowWidth * kDefaultScale * 2, kWindowHeight * kDefaultScale * 2), "NX " NX_VERSION,
+    , m_window(sf::VideoMode(kWindowWidth * (kDefaultScale + 1), kWindowHeight * (kDefaultScale + 1)), "NX " NX_VERSION,
                sf::Style::Titlebar | sf::Style::Close)
 
     //--- Peripherals ---------------------------------------------------------------
@@ -585,8 +585,8 @@ Nx::Nx(int argc, char** argv)
     m_tempPath = fs::path(argv[0]).parent_path();
 #endif
     setScale(kDefaultScale);
-    m_machine->getVideoSprite().setScale(float(kDefaultScale * 2), float(kDefaultScale * 2));
-    m_ui.getSprite().setScale(float(kDefaultScale), float(kDefaultScale));
+    m_machine->getVideoSprite().setScale(float(kDefaultScale + 1), float(kDefaultScale + 1));
+    m_ui.getSprite().setScale(float(kDefaultScale + 1) / 2, float(kDefaultScale + 1) / 2);
 
     // Deal with the command line
     bool loadedFiles = false;
