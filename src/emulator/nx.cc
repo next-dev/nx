@@ -649,7 +649,10 @@ void Nx::render()
 
 void Nx::setScale(int scale)
 {
-    m_window.setSize({ unsigned(kWindowWidth * scale * 2), unsigned(kWindowHeight * scale * 2) });
+    unsigned windowWidth = unsigned(kWindowWidth * (scale + 1));
+    unsigned windowheight = unsigned(kWindowHeight * (scale + 1));
+
+    m_window.setSize({ windowWidth, windowheight });
 
     sf::Vector2i pos = m_window.getPosition();
     if (pos.x < 0 || pos.y < 0)
@@ -694,8 +697,12 @@ void Nx::run()
                         setScale(1);
                         break;
 
-                    case sf::Keyboard::Key::Num2:
+                    case sf::Keyboard::Key::Num3:
                         setScale(2);
+                        break;
+
+                    case sf::Keyboard::Key::Num2:
+                        setScale(3);
                         break;
 
                     default:

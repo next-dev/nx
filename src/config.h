@@ -80,7 +80,7 @@ const int kBorderHeight = (kWindowHeight - kScreenHeight) / 2;
 static const int kUiWidth = kWindowWidth * 2;
 static const int kUiHeight = kWindowHeight * 2;
 
-const int kDefaultScale = 2;
+const int kDefaultScale = 3;
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
