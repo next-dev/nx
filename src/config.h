@@ -26,9 +26,9 @@ using namespace std;
 // Version information
 //----------------------------------------------------------------------------------------------------------------------
 
-#define NX_MINOR_VERSION        0
 #define NX_MAJOR_VERSION        0
-#define NX_PATCH_VERSION        4
+#define NX_MINOR_VERSION        0
+#define NX_PATCH_VERSION        5
 
 #define NX_STR2(x) #x
 #define NX_STR(x) NX_STR2(x)
@@ -80,7 +80,7 @@ const int kBorderHeight = (kWindowHeight - kScreenHeight) / 2;
 static const int kUiWidth = kWindowWidth * 2;
 static const int kUiHeight = kWindowHeight * 2;
 
-const int kDefaultScale = 2;
+const int kDefaultScale = 3;
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

@@ -42,7 +42,14 @@ These controls are available regardless which mode you are in.
 | Key              | Description                                           |
 |------------------|-------------------------------------------------------|
 | Ctrl+1           | Select small window size.                             |
-| Ctrl+2           | Select large window size.                             |
+| Ctrl+2           | Select large window size (default).                   |
+| Ctrl+3           | Select medium window size.                            |
+
+Please note, because currently the debugger/editor UIs use twice the resolution of the emulated display, and
+because medium size uses 3x3 PC pixels for every 1 emulated pixel, they do not look great.  You should only use medium
+mode for just using the emulator if you can't put up with the odd display.  I will eventually get round to fixing this but
+I have other priorities currently.  But for those people who think small is too small and large is too large, this will be
+a temporary solution.
 
 # Emulator Controls
 

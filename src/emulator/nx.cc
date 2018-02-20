@@ -566,7 +566,7 @@ Nx::Nx(int argc, char** argv)
     , m_assembler(*this)
 
     //--- Rendering -----------------------------------------------------------------
-    , m_window(sf::VideoMode(kWindowWidth * kDefaultScale * 2, kWindowHeight * kDefaultScale * 2), "NX " NX_VERSION,
+    , m_window(sf::VideoMode(kWindowWidth * (kDefaultScale + 1), kWindowHeight * (kDefaultScale + 1)), "NX " NX_VERSION,
                sf::Style::Titlebar | sf::Style::Close)
 
     //--- Peripherals ---------------------------------------------------------------
@@ -585,8 +585,8 @@ Nx::Nx(int argc, char** argv)
     m_tempPath = fs::path(argv[0]).parent_path();
 #endif
     setScale(kDefaultScale);
-    m_machine->getVideoSprite().setScale(float(kDefaultScale * 2), float(kDefaultScale * 2));
-    m_ui.getSprite().setScale(float(kDefaultScale), float(kDefaultScale));
+    m_machine->getVideoSprite().setScale(float(kDefaultScale + 1), float(kDefaultScale + 1));
+    m_ui.getSprite().setScale(float(kDefaultScale + 1) / 2, float(kDefaultScale + 1) / 2);
 
     // Deal with the command line
     bool loadedFiles = false;
@@ -649,7 +649,10 @@ void Nx::render()
 
 void Nx::setScale(int scale)
 {
-    m_window.setSize({ unsigned(kWindowWidth * scale * 2), unsigned(kWindowHeight * scale * 2) });
+    unsigned windowWidth = unsigned(kWindowWidth * (scale + 1));
+    unsigned windowheight = unsigned(kWindowHeight * (scale + 1));
+
+    m_window.setSize({ windowWidth, windowheight });
 
     sf::Vector2i pos = m_window.getPosition();
     if (pos.x < 0 || pos.y < 0)
@@ -694,8 +697,12 @@ void Nx::run()
                         setScale(1);
                         break;
 
-                    case sf::Keyboard::Key::Num2:
+                    case sf::Keyboard::Key::Num3:
                         setScale(2);
+                        break;
+
+                    case sf::Keyboard::Key::Num2:
+                        setScale(3);
                         break;
 
                     default:

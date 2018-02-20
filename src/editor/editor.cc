@@ -797,7 +797,7 @@ void Editor::save(string fileName)
         }
         else
         {
-            setFileName(fileName);
+            setFileName(finalName);
         }
     }
 
