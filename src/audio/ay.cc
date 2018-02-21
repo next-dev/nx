@@ -4,13 +4,88 @@
 
 #include <audio/ay.h>
 
+static const int kAYFrequency = 44100;
+static const int kAYChannels = 2;
+static const int kAYBits = 16;
+
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
 AYChip::AYChip()
 {
-    reset(Type::AY, 44100, 1, 16);
+    reset(Type::AY);
+
+    // Generate envelope tables                     CALH
+    //
+    //  0   \_______    Single decay then off       0000
+    //
+    //  4   /|______    Single attack then off      0100
+    //
+    //  8   \|\|\|\|    Repeated decay              1000
+    //
+    //  9   \_______    Single decay then off       1001
+    //
+    //  10  \/\/\/\/    Repeated decay-attack       1010
+    //        ______
+    //  11  \|          Single decay then hold      1011
+    //
+    //  12  /|/|/|/|    Repeated attack             1100
+    //       _______
+    //  13  /           Single attack then hold     1101
+    //
+    //  14  /\/\/\/\    Repeated attack-delay       1110
+    //
+    //  15  /|______    Single attack then off      1111
+    //
+    //
+    //  C = Continue
+    //  A = Initial attack
+    //  L = aLternate
+    //  H = Hold
+    //
+
+    for (int i = 0; i < 16; ++i)
+    {
+        bool hold = false;
+
+        // Calculate initial pattern and volume
+        int attack = (i & 4) ? 1 : -1;
+        int volume = (i & 4) ? -1 : 32;
+
+        for (int x = 0; x < 128; ++x)
+        {
+            if (!hold)
+            {
+                volume += attack;
+                if (volume < 0 || volume >= 32)
+                {
+                    // Completed initial sound, calculate next pattern
+                    if (i & 8)
+                    {
+                        // Sound continues.  If bit 2, alternate sound
+                        if (i & 2) attack = -attack;
+                        if (i & 1)
+                        {
+                            hold = true;
+                            volume = (attack > 0) ? 31 : 0;
+                        }
+                        else
+                        {
+                            volume = (attack > 0) ? 0 : 31;
+                        }
+                    }
+                    else
+                    {
+                        volume = 0;
+                        hold = true;
+                    }
+                }
+            }
+
+            m_envelopes[i][x];
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -37,21 +112,26 @@ int gYmTable[32] =
     42664,  50986,  58842,  65535
 };
 
-void AYChip::reset(Type type, int freq, int chans, int bits)
+void AYChip::reset(Type type)
 {
-    switch (type)
+    m_stereoMode = StereoMode::ABC;
+    m_dirty = true;
+
+    // Set up the volume tables
+    if (type == Type::AY)
     {
-    case Type::AY:      m_table = gAyTable;     break;
-    case Type::YM:      m_table = gYmTable;     break;
+        for (int i = 0; i < 32; ++i)
+        {
+            m_table[i] = gAyTable[i/2];
+        }
     }
-
-    m_freq = freq;
-    m_numChannels = chans;
-    m_sampleSize = bits;
-
-    assert(bits == 8 || bits == 16);
-    assert(chans == 1 || chans == 2);
-    assert(freq >= 50);
+    else
+    {
+        for (int i = 0; i < 32; ++i)
+        {
+            m_table[i] = gYmTable[i];
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -91,5 +171,98 @@ void AYChip::setRegs(vector<u8> regs)
         m_regs.m_envType = regs[13] & 0x0f;
         m_counters[CounterEnvelope] = 0;
         m_envX = 0;
+    }
+}
+
+
+void AYChip::setReg(Register reg, u8 x)
+{
+    switch (reg)
+    {
+    case Register::PitchA_Fine:
+        m_regs.m_tone[0] = (m_regs.m_tone[0] & 0xf00) | x;
+        break;
+
+    case Register::PitchA_Coarse:
+        m_regs.m_tone[0] = (m_regs.m_tone[0] & 0xff) | ((x & 0x0f) << 8);
+        break;
+
+    case Register::PitchB_Fine:
+        m_regs.m_tone[1] = (m_regs.m_tone[1] & 0xf00) | x;
+        break;
+
+    case Register::PitchB_Coarse:
+        m_regs.m_tone[1] = (m_regs.m_tone[1] & 0xff) | ((x & 0x0f) << 8);
+        break;
+
+    case Register::PitchC_Fine:
+        m_regs.m_tone[2] = (m_regs.m_tone[2] & 0xf00) | x;
+        break;
+
+    case Register::PitchC_Coarse:
+        m_regs.m_tone[2] = (m_regs.m_tone[2] & 0xff) | ((x & 0x0f) << 8);
+        break;
+
+    case Register::PitchNoise:
+        m_regs.m_noise = x & 0x1f;
+        break;
+
+    case Register::Mixer:
+        m_regs.m_mixerTone[0] = !(x & 0x01);
+        m_regs.m_mixerTone[1] = !(x & 0x02);
+        m_regs.m_mixerTone[2] = !(x & 0x04);
+        m_regs.m_mixerNoise[0] = !(x & 0x08);
+        m_regs.m_mixerNoise[1] = !(x & 0x10);
+        m_regs.m_mixerNoise[2] = !(x & 0x20);
+        break;
+
+    case Register::VolumeA:
+        m_regs.m_volume[0] = (x & 0x0f);
+        m_regs.m_envelope[0] = (x & 0x10);
+        break;
+
+    case Register::VolumeB:
+        m_regs.m_volume[0] = (x & 0x0f);
+        m_regs.m_envelope[0] = (x & 0x10);
+        break;
+
+    case Register::VolumeC:
+        m_regs.m_volume[0] = (x & 0x0f);
+        m_regs.m_envelope[0] = (x & 0x10);
+        break;
+
+    case Register::EnvelopeDuration_Fine:
+        m_regs.m_envFreq = (m_regs.m_envFreq & 0xff00) | x;
+        break;
+
+    case Register::EnvelopeDuration_Coarse:
+        m_regs.m_envFreq = (m_regs.m_envFreq & 0x00ff) | (x << 8);
+        break;
+
+    case Register::EnvelopeShape:
+        m_regs.m_envType = x & 0x0f;
+        m_envX = 0;
+        m_counters[CounterEnvelope] = 0;
+        break;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Generate sound wave for playing
+//----------------------------------------------------------------------------------------------------------------------
+
+void AYChip::play(void* outBuf, size_t numFrames)
+{
+    if (m_dirty)
+    {
+        //
+        // Generate volumes
+        //
+        for (int i = 0; i < 32; ++i)
+        {
+
+        }
+
+        m_dirty = false;
     }
 }

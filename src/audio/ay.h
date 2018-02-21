@@ -7,6 +7,8 @@
 #include <types.h>
 #include <config.h>
 
+#include <array>
+
 class AYChip
 {
 public:
@@ -35,11 +37,22 @@ public:
         IoPortA,                    // 8 bits       14
     };
 
+    enum class StereoMode
+    {
+        Mono,
+        ABC,
+        ACB,
+        BAC,
+        BCA,
+        CAB,
+        CBA
+    };
+
     AYChip();
 
-    void reset(Type type, int freq, int chans, int bits);
+    void reset(Type type);
     void setRegs(vector<u8> regs);
-    void setReg(Register reg, u8 value);
+    void setReg(Register reg, u8 x);
 
     void play(void* outBuf, size_t numFrames);
 
@@ -68,13 +81,15 @@ private:
         CounterEnvelope,
     };
 
+    bool            m_dirty;            // Signify that data has changed.
     RegisterInfo    m_regs;
-    int*            m_table;
-    int             m_freq;
-    int             m_numChannels;
-    int             m_sampleSize;       // In bits
+    StereoMode      m_stereoMode;
 
     int             m_state[4];         // State for A, B, C & noise.
     int             m_counters[5];      // Counter for A, B, C, noise and envelope.
     int             m_envX;
+
+    // Generated data
+    array<int, 32>              m_table;
+    array<array<int, 128>, 16>  m_envelopes;
 };
