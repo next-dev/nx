@@ -37,6 +37,7 @@ public:
         IoPortA,                    // 8 bits       14
     };
 
+    // Define which channels are L, R and both (enum uses format: LBR, Left-Both-Right)
     enum class StereoMode
     {
         Mono,
@@ -45,12 +46,14 @@ public:
         BAC,
         BCA,
         CAB,
-        CBA
+        CBA,
+
+        COUNT
     };
 
     AYChip();
 
-    void reset(Type type);
+    void reset(Type type, StereoMode stereoMode = StereoMode::ABC);
     void setRegs(vector<u8> regs);
     void setReg(Register reg, u8 x);
 
@@ -89,7 +92,9 @@ private:
     int             m_counters[5];      // Counter for A, B, C, noise and envelope.
     int             m_envX;
 
-    // Generated data
-    array<int, 32>              m_table;
-    array<array<int, 128>, 16>  m_envelopes;
+    // Cached generated data
+    array<array<int, 32>, 6>    m_volumes;      // Cached volumes regenerated.
+    array<int, 32>              m_table;        // 32 levels of volume (0-0xffff)
+    array<int, 6>               m_equaliser;    // Volume equalisation between left and right channels based on mode
+    array<array<int, 128>, 16>  m_envelopes;    // Volume levels for each of the envelope patterns
 };

@@ -112,9 +112,21 @@ int gYmTable[32] =
     42664,  50986,  58842,  65535
 };
 
-void AYChip::reset(Type type)
+int gEqualiser[(int)AYChip::StereoMode::COUNT][6] =
 {
-    m_stereoMode = StereoMode::ABC;
+    //  A-L     A-R     B-L     B-R     C-L     C-R
+    {   2,      2,      2,      2,      2,      2       },      // Mono
+    {   2,      0,      1,      1,      0,      2       },      // ABC
+    {   2,      0,      0,      2,      1,      1,      },      // ACB
+    {   1,      1,      2,      0,      0,      2       },      // BAC
+    {   0,      2,      2,      0,      1,      1,      },      // BCA
+    {   1,      1,      0,      2,      2,      0,      },      // CAB
+    {   0,      2,      1,      1,      2,      0,      },      // CBA
+};
+
+void AYChip::reset(Type type, StereoMode stereoMode)
+{
+    m_stereoMode = stereoMode;
     m_dirty = true;
 
     // Set up the volume tables
@@ -130,6 +142,28 @@ void AYChip::reset(Type type)
         for (int i = 0; i < 32; ++i)
         {
             m_table[i] = gYmTable[i];
+        }
+    }
+
+    // Set up the equaliser tables
+    int eq[3] = { 33, 70, 100 };
+    if (type == Type::YM) eq[0] = 5;
+    for (int i = 0; i < 6; ++i)
+    {
+        m_equaliser[i] = gEqualiser[(int)stereoMode][i];
+    }
+
+    for (int i = 0; i < 5; ++i) m_counters[i] = 0;
+
+    //
+    // Generate volumes that maps channel/volume to actual volume
+    //
+    for (int i = 0; i < 32; ++i)
+    {
+        int vol = m_table[i];       // Real volume level
+        for (int c = 0; c < 6; ++c)
+        {
+            m_volumes[c][i] = (int)(((float)vol * m_equaliser[c]) / 100.0f);
         }
     }
 }
@@ -172,6 +206,8 @@ void AYChip::setRegs(vector<u8> regs)
         m_counters[CounterEnvelope] = 0;
         m_envX = 0;
     }
+
+    m_dirty = true;
 }
 
 
@@ -245,6 +281,8 @@ void AYChip::setReg(Register reg, u8 x)
         m_counters[CounterEnvelope] = 0;
         break;
     }
+
+    m_dirty = true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -256,13 +294,18 @@ void AYChip::play(void* outBuf, size_t numFrames)
     if (m_dirty)
     {
         //
-        // Generate volumes
+        // Calculate the maximum volume for each channel
         //
-        for (int i = 0; i < 32; ++i)
-        {
-
-        }
+        int maxLeft = m_volumes[0][31] + m_volumes[2][31] + m_volumes[4][31];
+        int maxRight = m_volumes[1][31] + m_volumes[3][31] + m_volumes[5][31];
+        int volume = std::max(maxLeft, maxRight);
 
         m_dirty = false;
+    }
+
+    while (numFrames-- > 0)
+    {
+        int left = 0;
+        int right = 0;
     }
 }
