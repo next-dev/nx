@@ -1506,7 +1506,8 @@ void Z80::execute(u8 opCode, i64& tState)
     decodeInstruction(opCode, x, y, z, p, q);
 
     // Commonly used local variables
-    u8 d = 0;       // Used for displacement
+    i8 d = 0;       // Used for displacement
+    u8 r8 = 0;      // Temporary space for 8-bit register
     u16 tt = 0;     // Temporary for an address
     u8* r;          // Temporary for a reference
 
@@ -1540,7 +1541,7 @@ void Z80::execute(u8 opCode, i64& tState)
                 {
                     d = displacement(PEEK(PC()));
                     CONTEND(PC(), 1, 5);
-                    PC() += (i8)(d + 1);
+                    PC() += (u16)(d + 1);
                     MP() = PC();
                 }
                 else
@@ -1553,7 +1554,7 @@ void Z80::execute(u8 opCode, i64& tState)
             case 3:     // 18 - JR d
                 d = displacement(PEEK(PC()));
                 CONTEND(PC(), 1, 5);
-                PC() += (i8)(d + 1);
+                PC() += (u16)(d + 1);
                 MP() = PC();
                 break;
 
@@ -1562,7 +1563,7 @@ void Z80::execute(u8 opCode, i64& tState)
                 {
                     d = displacement(PEEK(PC()));
                     CONTEND(PC(), 1, 5);
-                    PC() += (i8)(d + 1);
+                    PC() += (u16)(d + 1);
                     MP() = PC();
                 }
                 else
@@ -1663,10 +1664,10 @@ void Z80::execute(u8 opCode, i64& tState)
             // 04, 0C, 14, 1C, 24, 2C, 34, 3C - INC B()/C()/D/E/H/L()/(HL())/A()
             if (y == 6)
             {
-                d = PEEK(HL());
+                r8 = PEEK(HL());
                 CONTEND(HL(), 1, 1);
-                incReg8(d);
-                POKE(HL(), d);
+                incReg8(r8);
+                POKE(HL(), r8);
             }
             else
             {
@@ -1678,10 +1679,10 @@ void Z80::execute(u8 opCode, i64& tState)
             // 05, 0D, 15, 1D, 25, 2D, 35, 3D - DEC B()/C()/D/E/H/L()/(HL())/A()
             if (y == 6)
             {
-                d = PEEK(HL());
+                r8 = PEEK(HL());
                 CONTEND(HL(), 1, 1);
-                decReg8(d);
-                POKE(HL(), d);
+                decReg8(r8);
+                POKE(HL(), r8);
             }
             else
             {
@@ -1786,8 +1787,8 @@ void Z80::execute(u8 opCode, i64& tState)
             if (z == 6)
             {
                 // ALU(y) (HL())
-                d = PEEK(HL());
-                getAlu(y)(d);
+                r8 = PEEK(HL());
+                getAlu(y)(r8);
             }
             else
             {
@@ -1871,10 +1872,10 @@ void Z80::execute(u8 opCode, i64& tState)
                 case 0:     // 00-3F: Rotate/Shift instructions
                     if (z == 6)
                     {
-                        d = PEEK(HL());
+                        r8 = PEEK(HL());
                         CONTEND(HL(), 1, 1);
-                        getRotateShift(y)(d);
-                        POKE(HL(), d);
+                        getRotateShift(y)(r8);
+                        POKE(HL(), r8);
                     }
                     else
                     {
@@ -1886,9 +1887,9 @@ void Z80::execute(u8 opCode, i64& tState)
                     if (z == 6)
                     {
                         // BIT n,(HL())
-                        d = PEEK(HL());
+                        r8 = PEEK(HL());
                         CONTEND(HL(), 1, 1);
-                        bitReg8MP(d, y);
+                        bitReg8MP(r8, y);
                     }
                     else
                     {
@@ -1900,10 +1901,10 @@ void Z80::execute(u8 opCode, i64& tState)
                     if (z == 6)
                     {
                         // RES n,(HL())
-                        d = PEEK(HL());
+                        r8 = PEEK(HL());
                         CONTEND(HL(), 1, 1);
-                        resReg8(d, y);
-                        POKE(HL(), d);
+                        resReg8(r8, y);
+                        POKE(HL(), r8);
                     }
                     else
                     {
@@ -1915,10 +1916,10 @@ void Z80::execute(u8 opCode, i64& tState)
                     if (z == 6)
                     {
                         // BIT n,(HL())
-                        d = PEEK(HL());
+                        r8 = PEEK(HL());
                         CONTEND(HL(), 1, 1);
-                        setReg8(d, y);
-                        POKE(HL(), d);
+                        setReg8(r8, y);
+                        POKE(HL(), r8);
                     }
                     else
                     {
@@ -1928,19 +1929,19 @@ void Z80::execute(u8 opCode, i64& tState)
                 break;
 
             case 2:     // D3 - OUT (n),A()       A() -> $AAnn
-                d = PEEK(PC());
-                NX_LOG_OUT((u16)d | ((u16)A() << 8), A());
-                m_ext.out((u16)d | ((u16)A() << 8), A(), tState);
+                r8 = PEEK(PC());
+                NX_LOG_OUT((u16)r8 | ((u16)A() << 8), A());
+                m_ext.out((u16)r8 | ((u16)A() << 8), A(), tState);
                 m_mp.h = A();
-                m_mp.l = (u8)(d + 1);
+                m_mp.l = (u8)(r8 + 1);
                 ++PC();
                 break;
 
             case 3:     // DB - IN A(),(n)        A() <- $AAnn
-                d = PEEK(PC());
-                tt = ((u16)A() << 8) | d;
+                r8 = PEEK(PC());
+                tt = ((u16)A() << 8) | r8;
                 m_mp.h = A();
-                m_mp.l = (u8)(d + 1);
+                m_mp.l = (u8)(r8 + 1);
                 A() = m_ext.in(tt, tState);
                 NX_LOG_IN(tt, A());
                 ++PC();
@@ -2027,8 +2028,8 @@ void Z80::execute(u8 opCode, i64& tState)
 
         case 6:
             // C6, CE, D6, DE(), E6, EE, F6, FE - ALU A(),n
-            d = PEEK(PC()++);
-            getAlu(y)(d);
+            r8 = PEEK(PC()++);
+            getAlu(y)(r8);
             break;  // x, z = (3, 6)
 
         case 7:
