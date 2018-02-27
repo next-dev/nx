@@ -8,6 +8,10 @@ static const int kAYFrequency = 44100;
 static const int kAYChannels = 2;
 static const int kAYBits = 16;
 
+static const int kAYMaxAmp = 24575;
+static const int kAYChipFreq = 1773400;
+static const int kAYTicksPerSample = (kAYChipFreq / kAYFrequency / 8);
+
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
@@ -127,6 +131,7 @@ int gEqualiser[(int)AYChip::StereoMode::COUNT][6] =
 void AYChip::reset(Type type, StereoMode stereoMode)
 {
     m_stereoMode = stereoMode;
+    m_envX = 0;
     m_dirty = true;
 
     // Set up the volume tables
@@ -134,7 +139,7 @@ void AYChip::reset(Type type, StereoMode stereoMode)
     {
         for (int i = 0; i < 32; ++i)
         {
-            m_table[i] = gAyTable[i/2];
+            m_table[i] = gAyTable[i / 2];
         }
     }
     else
@@ -166,6 +171,9 @@ void AYChip::reset(Type type, StereoMode stereoMode)
             m_volumes[c][i] = (int)(((float)vol * m_equaliser[c]) / 100.0f);
         }
     }
+
+    m_counters.fill(0);
+    m_bits.fill(false);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -299,13 +307,63 @@ void AYChip::play(void* outBuf, size_t numFrames)
         int maxLeft = m_volumes[0][31] + m_volumes[2][31] + m_volumes[4][31];
         int maxRight = m_volumes[1][31] + m_volumes[3][31] + m_volumes[5][31];
         int volume = std::max(maxLeft, maxRight);
+        m_amp = kAYTicksPerSample * volume / kAYMaxAmp;
 
         m_dirty = false;
     }
+
+    u16* p16 = (u16 *)outBuf;
 
     while (numFrames-- > 0)
     {
         int left = 0;
         int right = 0;
+
+        for (int t = 0; t < kAYTicksPerSample; ++t)
+        {
+            // Use counters to determine frequency of square waves for each channel
+            for (int c = 0; c < 2; ++c)
+            {
+                if (++m_counters[c] >= m_regs.m_tone[c])
+                {
+                    m_counters[c] = 0;
+                    m_bits[c] = !m_bits[c];
+                }
+            }
+
+            // Generate Noise
+
+            // Manage the envelopes
+            if (++m_counters[CounterEnvelope] >= m_regs.m_envFreq)
+            {
+                m_counters[CounterEnvelope] = 0;
+                if (++m_envX > 127)
+                {
+                    m_envX = 64;
+                }
+            }
+
+            // Mix the envelopes in with the tones
+            for (int c = 0; c < 2; ++c)
+            {
+                if ((m_bits[c] || !m_regs.m_mixerTone[c]) && (m_bits[3] || !m_regs.m_mixerNoise[c]))
+                {
+                    int vol = (m_regs.m_envelope[c])
+                        ? m_envelopes[m_regs.m_envType][m_envX]
+                        : m_regs.m_volume[c] * 2 + 1;
+                    assert(vol >= 0 && vol < 32);
+                    left += m_volumes[c * 2][vol];
+                    right += m_volumes[c * 2 + 1][vol];
+                }
+            }
+        } // for t
+
+        left /= m_amp;
+        right /= m_amp;
+
+        // Write out the sound waves
+        *p16++ = left;
+        *p16++ = right;
     }
 }
+

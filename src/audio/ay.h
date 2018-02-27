@@ -87,9 +87,10 @@ private:
     bool            m_dirty;            // Signify that data has changed.
     RegisterInfo    m_regs;
     StereoMode      m_stereoMode;
+    int             m_amp;              // Scale factor for amplitude
 
-    int             m_state[4];         // State for A, B, C & noise.
-    int             m_counters[5];      // Counter for A, B, C, noise and envelope.
+    array<bool, 4>  m_bits;             // Current on/off state for channel (for producing square waves)
+    array<int, 5>   m_counters;         // Counter for A, B, C, noise and envelope.
     int             m_envX;
 
     // Cached generated data
