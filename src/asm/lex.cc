@@ -31,9 +31,8 @@ static char gNameChar[128] =
 };
 
 // Keywords
-static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::Type::KEYWORDS)] =
+static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::Type::KEYWORDS) - 1] =
 {
-    0,
     "A",
     "ADC",
     "ADD",
@@ -129,12 +128,31 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "Z",
 };
 
+const char* Lex::getKeywordString(Element::Type type)
+{
+    return gKeywords[(int)type - (int)Element::Type::KEYWORDS - 1];
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Lexer implementation
 //----------------------------------------------------------------------------------------------------------------------
 
 Lex::Lex()
 {
+    // Build the keyword table
+    int numKeywords = sizeof(gKeywords) / sizeof(gKeywords[0]);
+    // If this asserts, we can't encode a keyword in 8 bits.
+    assert(numKeywords < 256);
+    m_keywords.fill(0);
+    for (int i = 0; i < numKeywords; ++i)
+    {
+        u64 h = StringTable::hash(gKeywords[i]);
+        int idx = int(h % kKeywordHashSize);
+        // If this asserts, there is too many keywords with the same hashed index (maximum 8)
+        assert((m_keywords[idx] & 0xff00000000000000ull) == 0);
+        m_keywords[idx] <<= 8;
+        m_keywords[idx] += u64(i);
+    }
 }
 
 void Lex::parse(Assembler& assembler, string fileName)
@@ -218,7 +236,122 @@ Lex::Element::Type Lex::error(Assembler& assembler, const std::string& msg)
 
 Lex::Element::Type Lex::next(Assembler& assembler)
 {
-    error(assembler, "Assembler not implemented yet!");
-    return Element::Type::EndOfFile;
+    char c = nextChar();
+
+    //
+    // Find the first meaningful character (but handle end of file too!).
+    //
+    for (;;)
+    {
+        if (0 == c)
+        {
+            // End of file
+
+            // Make sure that the stream of tokens has an EOF token.
+            if (m_elements.empty() || m_elements.back().m_type != Element::Type::EndOfFile)
+            {
+                Element el;
+                el.m_s0 = m_cursor - 1;
+                el.m_s1 = m_cursor;
+                buildElemInt(el, Element::Type::EndOfFile, m_lastPosition, 0);
+            }
+
+            return Element::Type::EndOfFile;
+        }
+
+        if ('\n' != c && iswspace(c))
+        {
+            // Keep skipping whitespace
+            c = nextChar();
+            continue;
+        }
+
+        // Check for comments
+        if (';' == c)
+        {
+            while (c != 0 && c != '\n') c = nextChar();
+            continue;
+        }
+
+        break;
+    }
+
+    Element el;
+    Element::Pos pos = m_lastPosition;
+    el.m_s0 = m_cursor - 1;
+    el.m_s1 = m_cursor;
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Check for new line
+    //------------------------------------------------------------------------------------------------------------------
+
+    if ('\n' == c)
+    {
+        return buildElemInt(el, Element::Type::Newline, pos, 0);
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Check for symbols and keywords
+    //------------------------------------------------------------------------------------------------------------------
+
+    else if (gNameChar[c] == 1)
+    {
+        // Possible symbol or keyword
+        int l = 1;
+
+        while (gNameChar[c]) c = nextChar();
+        ungetChar();
+
+        el.m_s1 = m_cursor;
+        u64 h = StringTable::hash((const char *)el.m_s0, (const char *)el.m_s1);
+        u64 tokens = m_keywords[h % kKeywordHashSize];
+        i64 sizeToken = (el.m_s1 - el.m_s0);
+
+        while (tokens != 0)
+        {
+            int index = (tokens & 0xff);
+            tokens >>= 8;
+
+            if (strlen(gKeywords[index]) == sizeToken)
+            {
+                // Length of source string and current keyword match.
+                if (_strnicmp((const char *)el.m_s0, gKeywords[index], sizeToken) == 0)
+                {
+                    // It is a keyword
+                    return buildElemInt(el, (Element::Type)((int)Element::Type::KEYWORDS + 1 + index), pos, 0);
+                }
+            }
+        }
+
+        // It's a symbol
+        return buildElemSymbol(el, Element::Type::Symbol, pos, assembler.getSymbol(el.m_s0, el.m_s1));
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Unknown token
+    //------------------------------------------------------------------------------------------------------------------
+
+    else {
+        buildElemInt(el, Element::Type::Unknown, pos, 0);
+        return error(assembler, "Unknown token");
+    }
+}
+
+Lex::Element::Type Lex::buildElemInt(Element& el, Element::Type type, Element::Pos pos, i64 integer)
+{
+    el.m_type = type;
+    el.m_position = pos;
+    el.m_integer = integer;
+    m_elements.push_back(el);
+    return type;
+}
+
+Lex::Element::Type Lex::buildElemSymbol(Element& el, Element::Type type, Element::Pos pos, i64 symbol)
+{
+    el.m_type = type;
+    el.m_position = pos;
+    el.m_symbol = symbol;
+    m_elements.push_back(el);
+    return type;
 }
 

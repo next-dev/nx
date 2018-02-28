@@ -27,7 +27,7 @@ public:
         while (hdr != 0)
         {
             const char* s = m_strings.data() + m_headers[hdr].m_data;
-            if (strcmp(s, str) == 0) return i64(hdr);
+            if (strcmp(s, (const char *)str) == 0) return i64(hdr);
             hdr = m_headers[hdr].m_next;
         }
 
@@ -45,18 +45,58 @@ public:
         return i64(hdrIndex);
     }
 
-    const char* const get(i64 handle) const
+    i64 add(const char* start, const char* end)
     {
-        return m_strings.data() + m_headers[handle].m_data;
+        u64 i = hash(start, end) % kHashSize;
+        size_t hdr = m_hashTable[i];
+        while (hdr != 0)
+        {
+            const char* s = m_strings.data() + m_headers[hdr].m_data;
+            if (strncmp(s, start, size_t(end - start)) == 0) return i64(hdr);
+            hdr = m_headers[hdr].m_next;
+        }
+
+        // Not found!
+        size_t data = m_strings.size();
+        size_t hdrIndex = m_headers.size();
+        m_headers.emplace_back(Header{ data, m_hashTable[i] });
+        m_hashTable[i] = hdrIndex;
+        while (start != end)
+        {
+            m_strings.emplace_back(*start++);
+        }
+        m_strings.emplace_back(0);
+
+        return i64(hdrIndex);
     }
 
-private:
-    u64 hash(const char* str)
+    const u8* const get(i64 handle) const
+    {
+        return (const u8*)(m_strings.data() + m_headers[handle].m_data);
+    }
+
+    static u64 hash(const char* str)
     {
         u64 h = 14695981039346656037;
         while (*str != 0)
         {
-            h ^= *str++;
+            char c = *str++;
+            c = (c >= 'a' && c <= 'z') ? c : c - 32;
+            h ^= c;
+            h *= (u64)1099511628211ull;
+        }
+
+        return h;
+    }
+
+    static u64 hash(const char* start, const char* end)
+    {
+        u64 h = 14695981039346656037;
+        while (start != end)
+        {
+            char c = *start++;
+            c = (c >= 'a' && c <= 'z') ? c : c - 32;
+            h ^= c;
             h *= (u64)1099511628211ull;
         }
 

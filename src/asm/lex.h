@@ -7,10 +7,13 @@
 #include <config.h>
 #include <asm/stringtable.h>
 
+#include <array>
 #include <map>
 #include <vector>
 
 class Assembler;
+
+const int kKeywordHashSize = 32;
 
 class Lex
 {
@@ -25,16 +28,19 @@ public:
     {
         enum class Type
         {
+            EndOfFile,
+
             Unknown,
             Error,
 
             // End of token stream
-            EndOfFile,
 
             // Literals
             Newline,
             Symbol,
             Integer,
+            String,
+            Char,
 
             // Operators
             Comma,
@@ -43,7 +49,6 @@ public:
             Dollar,
             Plus,
             Minus,
-            Quote,
             Colon,
             LogicOr,
             LogicAnd,
@@ -164,30 +169,36 @@ public:
 
         Type        m_type;
         Pos         m_position;
+        const u8*   m_s0;
+        const u8*   m_s1;
         union {
             i64         m_symbol;
-            u8*         m_s0;
-            u8*         m_s1;
-            i64         i;
+            i64         m_integer;
         };
     };
+
+    const vector<Element>& elements() const { return m_elements; }
+    const char* getKeywordString(Element::Type type);
+    const vector<u8>& getFile() const { return m_file; }
 
 private:
     char nextChar();
     void ungetChar();
     Element::Type next(Assembler& assembler);
     Element::Type error(Assembler& assembler, const std::string& msg);
+    Element::Type buildElemInt(Element& el, Element::Type type, Element::Pos pos, i64 integer);
+    Element::Type buildElemSymbol(Element& el, Element::Type type, Element::Pos pos, i64 symbol);
 
-
-    vector<Element>     m_elements;
-    vector<u8>          m_file;
-    string              m_fileName;
-    const u8*           m_start;
-    const u8*           m_end;
-    const u8*           m_cursor;
-    const u8*           m_lastCursor;
-    Element::Pos        m_position;
-    Element::Pos        m_lastPosition;
+    array<u64, kKeywordHashSize>    m_keywords;
+    vector<Element>                 m_elements;
+    vector<u8>                      m_file;
+    string                          m_fileName;
+    const u8*                       m_start;
+    const u8*                       m_end;
+    const u8*                       m_cursor;
+    const u8*                       m_lastCursor;
+    Element::Pos                    m_position;
+    Element::Pos                    m_lastPosition;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
