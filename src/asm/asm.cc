@@ -42,11 +42,13 @@ void Assembler::parse(std::string initialFile)
                 "EOF",
                 "UNKNOWN",
                 "ERROR",
+
                 "NEWLINE",
                 "SYMBOL",
                 "INTEGER",
                 "STRING",
                 "CHAR",
+
                 "COMMA",
                 "OPEN-PAREN",
                 "CLOSE-PAREN",
@@ -90,7 +92,7 @@ void Assembler::parse(std::string initialFile)
 
                     case T::String:
                     case T::Char:
-                        line += string(el.m_s0, el.m_s1);
+                        line += string(": \"") + string(el.m_s0, el.m_s1) + "\"";
                         break;
 
                     default:

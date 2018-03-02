@@ -81,7 +81,7 @@ public:
         while (*str != 0)
         {
             char c = *str++;
-            c = (c >= 'a' && c <= 'z') ? c : c - 32;
+            c = (c >= 'a' && c <= 'z') ? c - 32 : c;
             h ^= c;
             h *= (u64)1099511628211ull;
         }
@@ -95,7 +95,7 @@ public:
         while (start != end)
         {
             char c = *start++;
-            c = (c >= 'a' && c <= 'z') ? c : c - 32;
+            c = (c >= 'a' && c <= 'z') ? c - 32 : c;
             h ^= c;
             h *= (u64)1099511628211ull;
         }

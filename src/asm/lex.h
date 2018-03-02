@@ -182,7 +182,7 @@ public:
     const vector<u8>& getFile() const { return m_file; }
 
 private:
-    char nextChar();
+    char nextChar(bool toUpper = true);
     void ungetChar();
     Element::Type next(Assembler& assembler);
     Element::Type error(Assembler& assembler, const std::string& msg);

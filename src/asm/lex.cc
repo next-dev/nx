@@ -22,7 +22,7 @@ static char gNameChar[128] =
     //          00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f // Characters
     /* 00 */    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
     /* 10 */    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
-    /* 20 */    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //  !"#$%&' ()*+,-./
+    /* 20 */    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, //  !"#$%&' ()*+,-./
     /* 30 */    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, // 01234567 89:;<=>?
     /* 40 */    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // @ABCDEFG HIJKLMNO
     /* 50 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, // PQRSTUVW XYZ[\]^_
@@ -31,8 +31,9 @@ static char gNameChar[128] =
 };
 
 // Keywords
-static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::Type::KEYWORDS) - 1] =
+static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::Type::KEYWORDS)] =
 {
+    0,
     "A",
     "ADC",
     "ADD",
@@ -130,7 +131,7 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
 
 const char* Lex::getKeywordString(Element::Type type)
 {
-    return gKeywords[(int)type - (int)Element::Type::KEYWORDS - 1];
+    return gKeywords[(int)type - (int)Element::Type::KEYWORDS];
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -144,7 +145,7 @@ Lex::Lex()
     // If this asserts, we can't encode a keyword in 8 bits.
     assert(numKeywords < 256);
     m_keywords.fill(0);
-    for (int i = 0; i < numKeywords; ++i)
+    for (int i = 1; i < numKeywords; ++i)
     {
         u64 h = StringTable::hash(gKeywords[i]);
         int idx = int(h % kKeywordHashSize);
@@ -168,7 +169,7 @@ void Lex::parse(Assembler& assembler, string fileName)
     while (next(assembler) != Element::Type::EndOfFile) ;
 }
 
-char Lex::nextChar()
+char Lex::nextChar(bool toUpper)
 {
     char c;
 
@@ -180,7 +181,7 @@ char Lex::nextChar()
     ++m_position.m_col;
 
     // Convert to uppercase.
-    if (c >= 'a' && c <= 'z') c -= 32;
+    if (toUpper && c >= 'a' && c <= 'z') c -= 32;
 
     // Check for newlines
     if ('\r' == c || '\n' == c)
@@ -318,7 +319,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                 if (_strnicmp((const char *)el.m_s0, gKeywords[index], sizeToken) == 0)
                 {
                     // It is a keyword
-                    return buildElemInt(el, (Element::Type)((int)Element::Type::KEYWORDS + 1 + index), pos, 0);
+                    return buildElemInt(el, (Element::Type)((int)Element::Type::KEYWORDS + index), pos, 0);
                 }
             }
         }
@@ -326,6 +327,158 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         // It's a symbol
         return buildElemSymbol(el, Element::Type::Symbol, pos, assembler.getSymbol(el.m_s0, el.m_s1));
     }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Check for strings
+    //------------------------------------------------------------------------------------------------------------------
+
+    else if ('"' == c || '\'' == c)
+    {
+        char delim = c;
+        el.m_s0 = m_cursor;
+        pos = m_position;
+        c = nextChar(false);
+        string s;
+        while (c != delim)
+        {
+            if (0 == c || '\n' == c)
+            {
+                return error(assembler, "Unterminated string.");
+            }
+
+            if (c == '\\')
+            {
+                c = nextChar(false);
+                switch (c)
+                {
+                case '\\':  s += '\\';          break;
+                case 'n':   s += '\n';          break;
+                case 'r':   s += '\r';          break;
+                case '0':   s += '\0';          break;
+                case '\'':  s += '\'';          break;
+                case '"':   s += '"';           break;
+                case 'x':
+                    {
+                        i64 t = 0;
+
+                        // First nibble
+                        c = nextChar(false);
+                        if (!(c >= '0' && c <= '9') && !(c >= 'A' && c <= 'F') && !(c >= 'a' && c <= 'f'))
+                        {
+                            ungetChar();
+                            return error(assembler, "Invalid hexadecimal character in string.");
+                        }
+                        t = c - '0';
+                        if (c >= 'a' && c <= 'f') t -= 32;
+                        if (c >= 'A' && c <= 'F') t -= 7;
+
+                        // Second nibble
+                        c = nextChar(false);
+                        if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
+                        {
+                            t *= 16;
+                            t += c - '0';
+                            if (c >= 'a' && c <= 'f') t -= 32;
+                            if (c >= 'A' && c <= 'F') t -= 7;
+                        }
+                        else
+                        {
+                            ungetChar();
+                        }
+
+                        s += char(t);
+                    }
+                    break;
+                }
+            }
+
+            s += c;
+            c = nextChar(false);
+        }
+        el.m_s1 = m_cursor - 1;
+
+        if ('\'' == c)
+        {
+            if (s.size() != 1)
+            {
+                return error(assembler, "Invalid character literal.");
+            }
+            return buildElemInt(el, Element::Type::Char, pos, int(s[0]));
+        }
+        else
+        {
+            return buildElemSymbol(el, Element::Type::String, pos,
+                assembler.getSymbol((const u8 *)s.data(), (const u8 *)s.data() + s.size()));
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Check for integers
+    //------------------------------------------------------------------------------------------------------------------
+
+    // Possible numbers:
+    //      42
+    //      -21
+    //      +36
+    //      $2a
+    //      -$4f
+    //      +$9c
+
+    else if (
+        // Check for digits
+        (c >= '0' && c <= '9') ||
+        '$' == c)
+    {
+        // Possible number
+        int base = 10;
+
+        if ('$' == c)
+        {
+            base = 16;
+            c = nextChar();
+            if (!(c >= '0' && c <= '9') && !(c >= 'A' && c <= 'F'))
+            {
+                // Not a hexadecimal digit, but a reference to current address.
+                // However, if there was a previous '-', then that's an error
+                ungetChar();
+                return buildElemInt(el, Element::Type::Dollar, pos, 0);
+            }
+
+            // OK, from now on it should be a number
+            base = 16;
+        }
+
+        // Should now be parsing digits
+        i64 t = 0;
+        while ((c >= '0' && c <= '9') || (base == 16 && c >= 'A' && c <= 'F'))
+        {
+            t *= base;
+            t += (c - '0');
+            if (c >= 'A' && c <= 'F') t -= 7;
+            c = nextChar();
+        }
+        ungetChar();
+
+        return buildElemInt(el, Element::Type::Integer, pos, t);
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Check for operators
+    //------------------------------------------------------------------------------------------------------------------
+
+    else if (',' == c) return buildElemInt(el, Element::Type::Comma, pos, 0);
+    else if ('(' == c) return buildElemInt(el, Element::Type::OpenParen, pos, 0);
+    else if (')' == c) return buildElemInt(el, Element::Type::CloseParen, pos, 0);
+    else if ('+' == c) return buildElemInt(el, Element::Type::Plus, pos, 0);
+    else if ('-' == c) return buildElemInt(el, Element::Type::Minus, pos, 0);
+    else if (':' == c) return buildElemInt(el, Element::Type::Colon, pos, 0);
+    else if ('|' == c) return buildElemInt(el, Element::Type::LogicOr, pos, 0);
+    else if ('&' == c) return buildElemInt(el, Element::Type::LogicAnd, pos, 0);
+    else if ('^' == c) return buildElemInt(el, Element::Type::LogicXor, pos, 0);
+    else if ('~' == c) return buildElemInt(el, Element::Type::Tilde, pos, 0);
+    else if ('*' == c) return buildElemInt(el, Element::Type::Multiply, pos, 0);
+    else if ('/' == c) return buildElemInt(el, Element::Type::Divide, pos, 0);
+    else if ('%' == c) return buildElemInt(el, Element::Type::Mod, pos, 0);
 
     //------------------------------------------------------------------------------------------------------------------
     // Unknown token
