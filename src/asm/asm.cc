@@ -6,7 +6,7 @@
 #include <asm/overlay_asm.h>
 #include <utils/format.h>
 
-#define NX_DEBUG_LOG_LEX    (1)
+#define NX_DEBUG_LOG_LEX    (0)
 
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
@@ -18,6 +18,106 @@ Assembler::Assembler(AssemblerWindow& window, std::string initialFile)
 {
     window.clear();
     parse(initialFile);
+}
+
+void Assembler::dumpLex(const Lex& l)
+{
+    // Dump the output
+    const char* typeNames[(int)Lex::Element::Type::KEYWORDS] = {
+        "EOF",
+        "UNKNOWN",
+        "ERROR",
+
+        "NEWLINE",
+        "SYMBOL",
+        "INTEGER",
+        "STRING",
+        "CHAR",
+
+        "COMMA",
+        "OPEN-PAREN",
+        "CLOSE-PAREN",
+        "DOLLAR",
+        "PLUS",
+        "MINUS",
+        "COLON",
+        "LOGIC-OR",
+        "LOGIC-AND",
+        "LOGIC-XOR",
+        "SHIFT-LEFT",
+        "SHIFT-RIGHT",
+        "TILDE",
+        "MULTIPLY",
+        "DIVIDE",
+        "MOD",
+    };
+
+    using T = Lex::Element::Type;
+
+    for (const auto& el : l.elements())
+    {
+        string line;
+
+        //
+        // Draw first line describing it
+        //
+        if ((int)el.m_type < (int)T::KEYWORDS)
+        {
+            line = stringFormat("{0}: {1}", el.m_position.m_line, typeNames[(int)el.m_type]);
+
+            switch (el.m_type)
+            {
+            case T::Symbol:
+                line += stringFormat(": {0}", m_symbols.get(el.m_symbol));
+                break;
+
+            case T::Integer:
+                line += stringFormat(": {0}", el.m_integer);
+                break;
+
+            case T::String:
+            case T::Char:
+                line += string(": \"") + string(el.m_s0, el.m_s1) + "\"";
+                break;
+
+            default:
+                break;
+            }
+        }
+        else
+        {
+            line = stringFormat("{0}: {1}", el.m_position.m_line, l.getKeywordString(el.m_type));
+        }
+        output(line);
+
+        //
+        // Output source/marker
+        //
+        if (el.m_type > T::EndOfFile && el.m_type != T::KEYWORDS)
+        {
+            int x = el.m_position.m_col - 1;
+            int len = (int)(el.m_s1 - el.m_s0);
+
+            // Print line that token resides in
+            line.clear();
+            const vector<u8>& file = l.getFile();
+            for (const i8* p = (const i8 *)(file.data() + el.m_position.m_lineOffset);
+                (p < (const i8 *)(file.data() + file.size()) && (*p != '\r') && (*p != '\n'));
+                ++p)
+            {
+                line += *p;
+            }
+            output(line);
+            line.clear();
+
+            // Print the marker
+            for (int j = 0; j < x; ++j) line += ' ';
+            line += '^';
+            for (int j = 0; j < len - 1; ++j) line += '~';
+            output(line);
+        }
+        output("");
+    }
 }
 
 void Assembler::parse(std::string initialFile)
@@ -37,104 +137,9 @@ void Assembler::parse(std::string initialFile)
             m_sessions[initialFile].parse(*this, initialFile);
 
 #if NX_DEBUG_LOG_LEX
-            // Dump the output
-            const char* typeNames[(int)Lex::Element::Type::KEYWORDS] = {
-                "EOF",
-                "UNKNOWN",
-                "ERROR",
-
-                "NEWLINE",
-                "SYMBOL",
-                "INTEGER",
-                "STRING",
-                "CHAR",
-
-                "COMMA",
-                "OPEN-PAREN",
-                "CLOSE-PAREN",
-                "DOLLAR",
-                "PLUS",
-                "MINUS",
-                "COLON",
-                "LOGIC-OR",
-                "LOGIC-AND",
-                "LOGIC-XOR",
-                "SHIFT-LEFT",
-                "SHIFT-RIGHT",
-                "TILDE",
-                "MULTIPLY",
-                "DIVIDE",
-                "MOD",
-            };
-
-            using T = Lex::Element::Type;
-
-            for (const auto& el : m_sessions[initialFile].elements())
-            {
-                string line;
-
-                //
-                // Draw first line describing it
-                //
-                if ((int)el.m_type < (int)T::KEYWORDS)
-                {
-                    line = stringFormat("{0}: {1}", el.m_position.m_line, typeNames[(int)el.m_type]);
-
-                    switch (el.m_type)
-                    {
-                    case T::Symbol:
-                        line += stringFormat(": {0}", m_symbols.get(el.m_symbol));
-                        break;
-
-                    case T::Integer:
-                        line += stringFormat(": {0}", el.m_integer);
-                        break;
-
-                    case T::String:
-                    case T::Char:
-                        line += string(": \"") + string(el.m_s0, el.m_s1) + "\"";
-                        break;
-
-                    default:
-                        break;
-                    }
-                }
-                else
-                {
-                    line = stringFormat("{0}: {1}", el.m_position.m_line, m_sessions[initialFile].getKeywordString(el.m_type));
-                }
-                output(line);
-
-                //
-                // Output source/marker
-                //
-                if (el.m_type > T::EndOfFile && el.m_type != T::KEYWORDS)
-                {
-                    int x = el.m_position.m_col - 1;
-                    int len = (int)(el.m_s1 - el.m_s0);
-
-                    // Print line that token resides in
-                    line.clear();
-                    const vector<u8>& file = m_sessions[initialFile].getFile();
-                    for (const i8* p = (const i8 *)(file.data() + el.m_position.m_lineOffset);
-                         (p < (const i8 *)(file.data() + file.size()) && (*p != '\r') && (*p != '\n'));
-                         ++p)
-                    {
-                        line += *p;
-                    }
-                    output(line);
-                    line.clear();
-
-                    // Print the marker
-                    for (int j = 0; j < x; ++j) line += ' ';
-                    line += '^';
-                    for (int j = 0; j < len - 1; ++j) line += '~';
-                    output(line);
-                }
-                output("");
-            }
-        }
+            dumpLex(m_sessions[initialFile]);
 #endif // NX_DEBUG_LOG_LEX
+        }
     }
 
     m_assemblerWindow.output("");

@@ -27,6 +27,7 @@ public:
 private:
     void parse(std::string initialFile);
     void summarise();
+    void dumpLex(const Lex& l);
 
 private:
     map<string, Lex> m_sessions;

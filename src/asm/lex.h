@@ -178,7 +178,7 @@ public:
     };
 
     const vector<Element>& elements() const { return m_elements; }
-    const char* getKeywordString(Element::Type type);
+    const char* getKeywordString(Element::Type type) const;
     const vector<u8>& getFile() const { return m_file; }
 
 private:

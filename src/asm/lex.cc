@@ -129,7 +129,7 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "Z",
 };
 
-const char* Lex::getKeywordString(Element::Type type)
+const char* Lex::getKeywordString(Element::Type type) const
 {
     return gKeywords[(int)type - (int)Element::Type::KEYWORDS];
 }
