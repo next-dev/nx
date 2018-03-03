@@ -22,7 +22,7 @@ static char gNameChar[128] =
     //          00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f // Characters
     /* 00 */    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
     /* 10 */    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, //
-    /* 20 */    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, //  !"#$%&' ()*+,-./
+    /* 20 */    0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, //  !"#$%&' ()*+,-./
     /* 30 */    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, // 01234567 89:;<=>?
     /* 40 */    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // @ABCDEFG HIJKLMNO
     /* 50 */    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, // PQRSTUVW XYZ[\]^_
@@ -38,6 +38,7 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "ADC",
     "ADD",
     "AF",
+    "AF'",
     "AND",
     "B",
     "BC",
@@ -88,6 +89,7 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "NEG",
     "NOP",
     "NZ",
+    "OPT",
     "OR",
     "ORG",
     "OTDR",
@@ -458,6 +460,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
             c = nextChar();
         }
         ungetChar();
+        el.m_s1 = m_cursor;
 
         return buildElemInt(el, Element::Type::Integer, pos, t);
     }

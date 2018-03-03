@@ -67,6 +67,7 @@ public:
             ADC,
             ADD,
             AF,
+            AF_,
             AND,
             B,
             BC,
@@ -117,6 +118,7 @@ public:
             NEG,
             NOP,
             NZ,
+            OPT,
             OR,
             ORG,
             OTDR,
@@ -180,6 +182,7 @@ public:
     const vector<Element>& elements() const { return m_elements; }
     const char* getKeywordString(Element::Type type) const;
     const vector<u8>& getFile() const { return m_file; }
+    const string& getFileName() const { return m_fileName; }
 
 private:
     char nextChar(bool toUpper = true);

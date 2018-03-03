@@ -1367,7 +1367,13 @@ void Nx::assemble(const string& fileName)
     }
     else
     {
-        Assembler assembler(m_assembler.getWindow(), fileName);
+        Assembler assembler(m_assembler.getWindow(), fileName,
+            {
+                getSpeccy().getPage(0),
+                getSpeccy().getPage(1),
+                getSpeccy().getPage(2),
+                getSpeccy().getPage(3),
+            });
     }
 
 }

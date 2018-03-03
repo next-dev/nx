@@ -70,6 +70,7 @@ void AssemblerWindow::onDraw(Draw& draw)
 
         while (x < endX)
         {
+            if (lineType == LineType::Error && msg[i] == '^') colour = error;
             draw.printChar(x++, y, msg[i], colour);
             if (lineType == LineType::Error)
             {
