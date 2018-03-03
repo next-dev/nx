@@ -11,8 +11,12 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <array>
 #include <string>
 #include <vector>
+
+static const int kNumSlots = 4;
+static const u16 kPageSize = 0x4000;
 
 //----------------------------------------------------------------------------------------------------------------------
 // Model
@@ -159,11 +163,13 @@ public:
 
     void            page                (int slot, int page);
     int             getPage             (int slot) const;
+    u16             getNumPages         () const;
     string&         slotName            (int slot);
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);
-    u8              pagePeek            (u16 page, u16 address);
+    u8              pagePeek            (u16 page, u16 address) const;
+    void            pagePoke            (u16 page, u16 address, u8 byte);
     void            load                (u16 address, const vector<u8>& buffer);
     void            load                (u16 address, const void* buffer, i64 size);
     void            setRomWriteState    (bool writable);
@@ -243,49 +249,49 @@ private:
 
 private:
     // Model
-    Model           m_model;
+    Model                       m_model;
 
     // Clock state
-    TState          m_tState;
+    TState                      m_tState;
 
     // Video state
-    u32*            m_image;
-    sf::Texture     m_videoTexture;
-    sf::Sprite      m_videoSprite;
-    u8              m_frameCounter;
-    vector<u16>     m_videoMap;         // Maps t-states to addresses
-    int             m_videoWrite;       // Write point into 2D image array
-    TState          m_startTState;      // Starting t-state for top-left of window
-    TState          m_drawTState;       // Current t-state that has been draw to
+    u32*                        m_image;
+    sf::Texture                 m_videoTexture;
+    sf::Sprite                  m_videoSprite;
+    u8                          m_frameCounter;
+    vector<u16>                 m_videoMap;         // Maps t-states to addresses
+    int                         m_videoWrite;       // Write point into 2D image array
+    TState                      m_startTState;      // Starting t-state for top-left of window
+    TState                      m_drawTState;       // Current t-state that has been draw to
 
     // Audio state
-    Audio           m_audio;
-    Tape*           m_tape;
+    Audio                       m_audio;
+    Tape*                       m_tape;
 
     // Memory state
-    vector<u8>      m_pages;
-    vector<string>  m_slotNames;
-    vector<u8>      m_ram;
-    vector<u8>      m_contention;
-    bool            m_romWritable;
+    array<u8, kNumSlots>        m_slots;
+    vector<string>              m_pageNames;
+    vector<u8>                  m_ram;
+    vector<u8>                  m_contention;
+    bool                        m_romWritable;
 
     // CPU state
-    Z80             m_z80;
+    Z80                         m_z80;
 
     // ULA state
-    u8              m_borderColour;
-    vector<u8>      m_keys;
-    u8              m_speaker;
-    u8              m_tapeEar;
+    u8                          m_borderColour;
+    vector<u8>                  m_keys;
+    u8                          m_speaker;
+    u8                          m_tapeEar;
 
     // 128K paging state
-    bool            m_pagingDisabled;
-    bool            m_shadowScreen;
+    bool                        m_pagingDisabled;
+    bool                        m_shadowScreen;
 
     // Debugger state
-    vector<Breakpoint>  m_breakpoints;
+    vector<Breakpoint>          m_breakpoints;
 
     // Kempston
-    bool            m_kempstonJoystick;
-    u8              m_kempstonState;
+    bool                        m_kempstonJoystick;
+    u8                          m_kempstonState;
 };

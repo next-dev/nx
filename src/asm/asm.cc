@@ -4,16 +4,20 @@
 
 #include <asm/asm.h>
 #include <asm/overlay_asm.h>
+#include <emulator/spectrum.h>
 #include <utils/format.h>
 
 #define NX_DEBUG_LOG_LEX    (0)
+
+const Assembler::Address Assembler::INVALID_ADDRESS = { u8(-1), u16(-1) };
 
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-Assembler::Assembler(AssemblerWindow& window, std::string initialFile, array<int, 4> pages)
+Assembler::Assembler(AssemblerWindow& window, Spectrum& speccy, std::string initialFile, array<int, 4> pages)
     : m_assemblerWindow(window)
+    , m_speccy(speccy)
     , m_numErrors(0)
     , m_pages(pages)
     , m_blockIndex(-1)
@@ -25,7 +29,7 @@ Assembler::Assembler(AssemblerWindow& window, std::string initialFile, array<int
 void Assembler::dumpLex(const Lex& l)
 {
     // Dump the output
-    const char* typeNames[(int)Lex::Element::Type::KEYWORDS] = {
+    const char* typeNames[(int)Lex::Element::Type::_KEYWORDS] = {
         "EOF",
         "UNKNOWN",
         "ERROR",
@@ -63,7 +67,7 @@ void Assembler::dumpLex(const Lex& l)
         //
         // Draw first line describing it
         //
-        if ((int)el.m_type < (int)T::KEYWORDS)
+        if ((int)el.m_type < (int)T::_KEYWORDS)
         {
             line = stringFormat("{0}: {1}", el.m_position.m_line, typeNames[(int)el.m_type]);
 
@@ -95,7 +99,7 @@ void Assembler::dumpLex(const Lex& l)
         //
         // Output source/marker
         //
-        if (el.m_type > T::EndOfFile && el.m_type != T::KEYWORDS)
+        if (el.m_type > T::EndOfFile && el.m_type != T::_KEYWORDS)
         {
             int x = el.m_position.m_col - 1;
             int len = (int)(el.m_s1 - el.m_s0);
@@ -232,17 +236,59 @@ Assembler::Address Assembler::addressUp(u16 addr)
     return { u8(slot), u16(addr & 0x3fff) };
 }
 
-Assembler::Address Assembler::incAddress(Address addr, int n)
+u16 Assembler::getZ80Address(Address addr)
 {
-    u64 fullAddress = getFullAddress(addr);
-    fullAddress += n;
-    return getPagedAddress(fullAddress);
+    u16 a = 0;
+    for (int i = 0; i < m_pages.size(); ++i, a += kPageSize)
+    {
+        if (m_pages[i] == addr.m_page)
+        {
+            // We've found the correct page in the Z80 address space (64K).
+            assert(addr.m_offset < kPageSize);
+            return a + addr.m_offset;
+        }
+    }
+
+    assert(0);
+    return 1;
+}
+
+Assembler::Address Assembler::incAddress(Address addr, const Block& currentBlock, int n)
+{
+    if (currentBlock.m_crossPage)
+    {
+        // Addresses are in the Z80 address range.
+        u16 address = getZ80Address(addr);
+        u16 newAddress = address + n;
+
+        if (newAddress < address)
+        {
+            // There was an overlap
+            return INVALID_ADDRESS;
+        }
+        else
+        {
+            return addressUp(newAddress);
+        }
+    }
+    else
+    {
+        u64 fullAddress = getFullAddress(addr);
+        fullAddress += n;
+        Address newAddress = getPagedAddress(fullAddress);
+        return (newAddress.m_page == addr.m_page) ? newAddress : INVALID_ADDRESS;
+    }
 }
 
 Assembler::Block& Assembler::openBlock()
 {
     Address addr = getAddress();
     Block blk(addr);
+
+    // Check to see if the block is cross-page (i.e. created with ORG $nnnn, rather than ORG $nn:$nnnn)
+    blk.m_crossPage = m_blockIndex == -1 ? true : block().m_crossPage;
+
+    // Insert it in the correct position
     auto it = m_blocks.insert(upper_bound(m_blocks.begin(), m_blocks.end(), blk), blk);
     m_blockIndex = it - m_blocks.begin();
     return *it;
@@ -266,6 +312,11 @@ Assembler::Block& Assembler::block()
     return m_blocks[m_blockIndex];
 }
 
+bool Assembler::validAddress() const
+{
+    return !(m_address == INVALID_ADDRESS);
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Assembler
 //----------------------------------------------------------------------------------------------------------------------
@@ -276,15 +327,14 @@ void Assembler::assemble(const Lex& l, const vector<Lex::Element>& elems)
 
     using T = Lex::Element::Type;
 
+    // Pass 1
     while (e->m_type != T::EndOfFile)
     {
-        if (e->m_type == T::Symbol || e->m_type > T::KEYWORDS)
+        if (e->m_type == T::Symbol || e->m_type > T::_KEYWORDS)
         {
             // Lines start with either a symbol or keyword.
             const Lex::Element* start = e;
-            do {
-                ++e;
-            } while (e->m_type != T::Newline && e->m_type != T::EndOfFile);
+            while (e->m_type != T::Newline) ++e;
 
             // We convert the line into an instruction and then assemble it.
             assembleLine(l, start, e);
@@ -292,11 +342,24 @@ void Assembler::assemble(const Lex& l, const vector<Lex::Element>& elems)
         else if (e->m_type != T::Newline)
         {
             error(l, *e, "Invalid opcode.");
-            while (e->m_type != T::Newline && e->m_type != T::EndOfFile) ++e;
+            while (e->m_type != T::Newline) ++e;
         }
-        else
+
+        ++e;
+    }
+    if (numErrors()) return;
+
+    // Pass 2 - write all the values
+    if (numErrors()) return;
+
+    // Write code to memory
+    for (const Block& blk : m_blocks)
+    {
+        Address addr = blk.m_address;
+        for (const u8& byte : blk.m_bytes)
         {
-            ++e;
+            m_speccy.pagePoke(addr.m_page, addr.m_offset, byte);
+            addr = incAddress(addr, blk, 1);
         }
     }
 }
@@ -328,6 +391,173 @@ void Assembler::assembleLine(const Lex& l, const Lex::Element* e, const Lex::Ele
         if (e[1].m_type == T::Colon) ++e;
         ++e;
     }
+
+    if (e->m_type == T::Newline) return;
+
+    //
+    // Find the opcode/directive
+    //
+    Instruction inst;
+
+    if (e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES)
+    {
+        // We have an opcode.
+        if (m_blocks.empty()) openBlock();
+
+        inst.m_opCode = e->m_type;
+        inst.m_opCodeElem = *e;
+        if (buildInstruction(l, ++e, end, inst))
+        {
+            // Valid syntax on instruction, but is it a valid instruction?  If so, emit code.
+            assembleInstruction(l, inst);
+        }
+        e = end;
+    }
+    else if (e->m_type > T::_END_OPCODES && e->m_type < T::_END_DIRECTIVES)
+    {
+        // We have a directive
+    }
+    else
+    {
+        error(l, *e, "Invalid opcode.");
+    }
+}
+
+bool Assembler::buildInstruction(const Lex& l, const Lex::Element* e, const Lex::Element* end, Instruction& inst)
+{
+    using T = Lex::Element::Type;
+    inst.m_dst.m_type = T::Unknown;
+    inst.m_src.m_type = T::Unknown;
+
+    if (e->m_type == T::Newline)
+    {
+        return true;
+    }
+
+    // Destination part
+    if (e->m_type > T::_END_DIRECTIVES)
+    {
+        // Registers or flags
+        inst.m_dst.m_type = e->m_type;
+        inst.m_dstElem = *e;
+        ++e;
+    }
+    else
+    {
+        error(l, *e, "Invalid operand.");
+        return false;
+    }
+
+    // Expect a comma or newline
+    if (e->m_type == T::Newline) return true;
+    else if (e->m_type == T::Comma) ++e;
+    else
+    {
+        error(l, *e, "Expected comma or newline.");
+        return false;
+    }
+
+    // Source part
+    if (e->m_type > T::_END_DIRECTIVES)
+    {
+        // Registers or flags
+        inst.m_src.m_type = e->m_type;
+        inst.m_srcElem = *e;
+        ++e;
+    }
+    else
+    {
+        error(l, *e, "Invalid operand.");
+        return false;
+    }
+
+    if (e != end)
+    {
+        error(l, *e, "Extraneous tokens found after instruction.");
+        return false;
+    }
+
+    return true;
+}
+
+void Assembler::assembleInstruction(const Lex& l, const Instruction& inst)
+{
+    using T = Lex::Element::Type;
+
+    switch (inst.m_opCode)
+    {
+    case T::NOP:
+        if (expectOperands(l, inst, 0))
+        {
+            emit8(0);
+        }
+        break;
+
+    default:
+        error(l, inst.m_opCodeElem, "Unknown opcode.");
+    }
+}
+
+bool Assembler::expectOperands(const Lex& l, const Instruction& inst, int numOps)
+{
+    using T = Lex::Element::Type;
+
+    switch (numOps)
+    {
+    case 0:
+        if (inst.m_dst.m_type != T::Unknown || inst.m_src.m_type != T::Unknown)
+        {
+            error(l, inst.m_dstElem, "Expected no operands for this opcode.");
+            return false;
+        }
+        break;
+
+    case 1:
+        if (inst.m_dst.m_type == T::Unknown)
+        {
+            error(l, inst.m_opCodeElem, "Operand missing.");
+            return false;
+        }
+        if (inst.m_src.m_type != T::Unknown)
+        {
+            error(l, inst.m_srcElem, "Too many operands for this opcode.");
+            return false;
+        }
+        break;
+
+    case 2:
+        if (inst.m_dst.m_type == T::Unknown || inst.m_src.m_type == T::Unknown)
+        {
+            error(l, inst.m_opCodeElem, "Missing operand(s).");
+            return false;
+        }
+
+    default:
+        assert(0);
+        return false;
+    }
+
+    return true;
+}
+
+bool Assembler::emit8(u8 byte)
+{
+    if (validAddress())
+    {
+        block().m_bytes.emplace_back(byte);
+        m_address = incAddress(m_address, block(), 1);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool Assembler::emit16(u16 word)
+{
+    if (!emit8(word % 256)) return false;
+    return emit8(word / 256);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

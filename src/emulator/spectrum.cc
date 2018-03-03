@@ -130,8 +130,8 @@ u32 Spectrum::convertAddress(size_t ramOffset)
     case Model::ZX128:
     case Model::ZXPlus2:
         {
-            int page = int(ramOffset) / KB(16);
-            int add = int(ramOffset) % KB(16);
+            int page = int(ramOffset) / kPageSize;
+            int add = int(ramOffset) % kPageSize;
 
             return (u32(page) << 16) + u32(add);
         }
@@ -164,9 +164,9 @@ string Spectrum::addressName(u32 address, bool moreInfo)
         {
             for (int i = 0; i < 4; ++i)
             {
-                if (m_pages[i] == page)
+                if (m_slots[i] == page)
                 {
-                    s += stringFormat(" (${0})", hexWord(add + (i * KB(16))));
+                    s += stringFormat(" (${0})", hexWord(add + (i * kPageSize)));
                 }
             }
         }
@@ -274,19 +274,19 @@ void Spectrum::initMemory()
     {
     case Model::ZX48:
         m_ram.resize(KB(64));
-        m_slotNames = {
+        m_pageNames = {
             "ROM",
             "$4000",
             "$8000",
             "$C000",
         };
-        m_pages = { 0, 1, 2, 3 };
+        m_slots = { 0, 1, 2, 3 };
         break;
 
     case Model::ZX128:
     case Model::ZXPlus2:
-        m_ram.resize(KB(16) * 10);      // 8*16K RAM, 2*16K ROM
-        m_slotNames = {
+        m_ram.resize(kPageSize * 10);      // 8*16K RAM, 2*16K ROM
+        m_pageNames = {
             "Bank 0",
             "Bank 1",
             "Bank 2",
@@ -298,7 +298,7 @@ void Spectrum::initMemory()
             "ROM 0 (Editor)",
             "ROM 1 (Basic)",
         };
-        m_pages = { 9, 5, 2, 0 };
+        m_slots = { 9, 5, 2, 0 };
         break;
     }
     m_contention.resize(70930);
@@ -340,19 +340,19 @@ void Spectrum::initMemory()
     switch (m_model)
     {
     case Model::ZX48:
-        load(0, gRom48, KB(16));
+        load(0, gRom48, kPageSize);
         break;
 
     case Model::ZX128:
-        load(0, gRom128_1, KB(16));
+        load(0, gRom128_1, kPageSize);
         page(0, 8);
-        load(0, gRom128_0, KB(16));
+        load(0, gRom128_0, kPageSize);
         break;
 
     case Model::ZXPlus2:
-        load(0, gRomPlus2_1, KB(16));
+        load(0, gRomPlus2_1, kPageSize);
         page(0, 8);
-        load(0, gRomPlus2_0, KB(16));
+        load(0, gRomPlus2_0, kPageSize);
         break;
     }
     setRomWriteState(false);
@@ -360,7 +360,7 @@ void Spectrum::initMemory()
 
 u8 Spectrum::peek(u16 address)
 {
-    return m_ram[m_pages[address / KB(16)] * KB(16) + (address % KB(16))];
+    return m_ram[m_slots[address / kPageSize] * kPageSize + (address % kPageSize)];
 }
 
 u8 Spectrum::peek(u16 address, TState& t)
@@ -376,15 +376,24 @@ u16 Spectrum::peek16(u16 address, TState& t)
 
 void Spectrum::poke(u16 address, u8 x)
 {
-    if (m_romWritable || address >= 0x4000)
+    if (m_romWritable || address >= kPageSize)
     {
-        m_ram[m_pages[address / KB(16)] * KB(16) + (address % KB(16))] = x;
+        m_ram[m_slots[address / kPageSize] * kPageSize + (address % kPageSize)] = x;
     }
 }
 
-u8 Spectrum::pagePeek(u16 page, u16 address)
+u8 Spectrum::pagePeek(u16 page, u16 address) const
 {
-    return m_ram[page * KB(16) + (address % KB(16))];
+    assert(page < getNumPages());
+    assert(address < kPageSize);
+    return m_ram[page * kPageSize + (address % kPageSize)];
+}
+
+void Spectrum::pagePoke(u16 page, u16 address, u8 byte)
+{
+    assert(page < getNumPages());
+    assert(address < kPageSize);
+    m_ram[page * kPageSize + (address % kPageSize)] = byte;
 }
 
 void Spectrum::poke(u16 address, u8 x, TState& t)
@@ -403,7 +412,7 @@ void Spectrum::poke16(u16 address, u16 w, TState& t)
 void Spectrum::load(u16 address, const void* buffer, i64 size)
 {
     i64 clampedSize = min((i64)address + size, (i64)65536) - address;
-    u32 realAddress = m_pages[address/KB(16)] * KB(16) + (address % KB(16));
+    u32 realAddress = m_slots[address/kPageSize] * kPageSize + (address % kPageSize);
     copy((u8*)buffer, (u8*)buffer + size, m_ram.begin() + realAddress);
 }
 
@@ -439,22 +448,27 @@ TState Spectrum::contention(TState tStates)
 
 void Spectrum::page(int slot, int page)
 {
-    assert(slot >= 0 && slot < 4);
-    assert(page >= 0 && page < (m_ram.size() / KB(16)));
+    assert(slot >= 0 && slot < kNumSlots);
+    assert(page >= 0 && page < (m_ram.size() / kPageSize));
 
-    m_pages[slot] = page;
+    m_slots[slot] = page;
 }
 
 int Spectrum::getPage(int slot) const
 {
     assert(slot >= 0 && slot < 4);
-    return m_pages[slot];
+    return m_slots[slot];
+}
+
+u16 Spectrum::getNumPages() const
+{
+    return u16(m_ram.size() / kPageSize);
 }
 
 string& Spectrum::slotName(int slot)
 {
-    assert(slot >= 0 && slot < 4);
-    return m_slotNames[m_pages[slot]];
+    assert(slot >= 0 && slot < kNumSlots);
+    return m_pageNames[m_slots[slot]];
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -600,9 +614,9 @@ void Spectrum::out(u16 port, u8 x, TState& t)
             u8 rom = x & 0x10;
             u8 disable = x & 0x20;
 
-            m_pages[3] = int(page);
+            m_slots[3] = int(page);
             m_shadowScreen = (shadow != 0);
-            m_pages[0] = int(rom) ? 9 : 8;
+            m_slots[0] = int(rom) ? 9 : 8;
             m_pagingDisabled = (disable != 0);
         }
     }
@@ -772,12 +786,12 @@ void Spectrum::updateVideo()
             // Pixel address
             // TODO: video map address are 0-based, move special codes to different range.
             u16 paddr = m_videoMap[m_drawTState];
-            u8 pixelData = pagePeek(vramPage, paddr);
+            u8 pixelData = pagePeek(vramPage, paddr - 0x4000);
 
             // Calculate attribute address
             // 010S SRRR CCCX XXXX --> 0101 10SS CCCX XXXX
             u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + 0x5800;
-            u8 attr = pagePeek(vramPage, aaddr);
+            u8 attr = pagePeek(vramPage, aaddr - 0x4000);
 
             u8 lastPixelData = pixelData;
             u8 lastAttrData = attr;

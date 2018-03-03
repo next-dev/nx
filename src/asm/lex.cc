@@ -31,19 +31,13 @@ static char gNameChar[128] =
 };
 
 // Keywords
-static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::Type::KEYWORDS)] =
+static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::Type::_KEYWORDS)] =
 {
     0,
-    "A",
     "ADC",
     "ADD",
-    "AF",
-    "AF'",
     "AND",
-    "B",
-    "BC",
     "BIT",
-    "C",
     "CALL",
     "CCF",
     "CP",
@@ -52,21 +46,14 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "CPI",
     "CPIR",
     "CPL",
-    "D",
     "DAA",
-    "DE",
     "DEC",
     "DI",
     "DJNZ",
-    "E",
     "EI",
-    "EQU",
     "EX",
     "EXX",
-    "H",
     "HALT",
-    "HL",
-    "I",
     "IM",
     "IN",
     "INC",
@@ -74,35 +61,23 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "INDR",
     "INI",
     "INIR",
-    "IX",
-    "IY",
     "JP",
     "JR",
-    "L",
     "LD",
     "LDD",
     "LDDR",
     "LDI",
     "LDIR",
-    "M",
-    "NC",
     "NEG",
     "NOP",
-    "NZ",
-    "OPT",
     "OR",
-    "ORG",
     "OTDR",
     "OTIR",
     "OUT",
     "OUTD",
     "OUTI",
-    "P",
-    "PE",
-    "PO",
     "POP",
     "PUSH",
-    "R",
     "RES",
     "RET",
     "RETI",
@@ -123,17 +98,44 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "SET",
     "SLA",
     "SLL",
-    "SP",
     "SRA",
     "SRL",
     "SUB",
     "XOR",
+    0,
+    "EQU",
+    "OPT",
+    "ORG",
+    0,
+    "A",
+    "AF",
+    "AF'",
+    "B",
+    "BC",
+    "C",
+    "D",
+    "DE",
+    "E",
+    "H",
+    "HL",
+    "I",
+    "IX",
+    "IY",
+    "L",
+    "M",
+    "NC",
+    "NZ",
+    "P",
+    "PE",
+    "PO",
+    "R",
+    "SP",
     "Z",
 };
 
 const char* Lex::getKeywordString(Element::Type type) const
 {
-    return gKeywords[(int)type - (int)Element::Type::KEYWORDS];
+    return gKeywords[(int)type - (int)Element::Type::_KEYWORDS];
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -149,6 +151,8 @@ Lex::Lex()
     m_keywords.fill(0);
     for (int i = 1; i < numKeywords; ++i)
     {
+        if (gKeywords[i] == 0) continue;
+
         u64 h = StringTable::hash(gKeywords[i]);
         int idx = int(h % kKeywordHashSize);
         // If this asserts, there is too many keywords with the same hashed index (maximum 8)
@@ -256,6 +260,11 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                 Element el;
                 el.m_s0 = m_cursor - 1;
                 el.m_s1 = m_cursor;
+                // Add a new line if there isn't one already.
+                if (m_elements.empty() || m_elements.back().m_type != Element::Type::Newline)
+                {
+                    buildElemInt(el, Element::Type::Newline, m_lastPosition, 0);
+                }
                 buildElemInt(el, Element::Type::EndOfFile, m_lastPosition, 0);
             }
 
@@ -321,7 +330,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                 if (_strnicmp((const char *)el.m_s0, gKeywords[index], sizeToken) == 0)
                 {
                     // It is a keyword
-                    return buildElemInt(el, (Element::Type)((int)Element::Type::KEYWORDS + index), pos, 0);
+                    return buildElemInt(el, (Element::Type)((int)Element::Type::_KEYWORDS + index), pos, 0);
                 }
             }
         }
