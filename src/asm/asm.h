@@ -73,8 +73,8 @@ private:
 
     struct Ref
     {
-        size_t      m_blockIndex;
-        size_t      m_blockOffset;
+        Address     m_address;
+        u16         m_z80Address;       // If m_address is INVALID_ADDRESS, this value has meaning
         i64         m_fileName;
         int         m_line;
     };
@@ -83,29 +83,81 @@ private:
     {
         enum class Type
         {
-            integer,        // n, $nn, $nnnn
-            address,        // (n, $nn, $nnnn)
-            symbol,         // label that needs to be looked up
-            compound,
+            Unknown,
+            Integer,        // n, $nn, $nnnn
+            Symbol,         // label that needs to be looked up
+            Address,        // Refers to a paged address - needs functions PAGE() and OFFSET() to convert to ints.
         };
 
-        Type                m_type;
-    };
+        enum class OpType
+        {
+            None
+        };
 
-    struct Operand
-    {
-        Lex::Element::Type  m_type;
-        Expression          m_exp;      // Optional expression
+        struct Sub
+        {
+            Type            m_type;
+            i64             m_value;
+            Lex::Element    m_elem;
+
+            Sub(Type type, i64 value, const Lex::Element& el) : m_type(type), m_value(value), m_elem(el) {}
+        };
+
+        struct Op
+        {
+            OpType          m_opType;
+            Lex::Element    m_elem;
+
+            Op(OpType type, const Lex::Element& el) : m_opType(type), m_elem(el) {}
+        };
+
+        const Lex*      m_lex;
+        vector<Sub>     m_values;
+        vector<Op>      m_ops;
+
+        bool isExpression() const { return (m_values.size() != 0); }
+        bool ready() const { return (m_values.size() == 1) && (m_ops.size() == 0) && m_values[0].m_type == Type::Integer; }
+        bool check8bit(Assembler& assembler, const Lex& l, const Lex::Element& el) const;
+        bool checkSigned8bit(Assembler& assembler, const Lex& l, const Lex::Element& el) const;
+        bool check16bit(Assembler& assembler, const Lex& l, const Lex::Element& el) const;
+
+        u8 get8Bit() const;
+        u16 get16Bit() const;
+
+        void addInteger(i64 i, const Lex::Element& el) {
+            m_values.emplace_back(Type::Integer, i, el);
+        }
+        void addSymbol(i64 sym, const Lex::Element& el) { m_values.emplace_back(Type::Symbol, sym, el); }
+        void addOp(OpType op, const Lex::Element& el) { m_ops.emplace_back(op, el); }
     };
 
     struct Instruction
     {
         Lex::Element::Type  m_opCode;
         Lex::Element        m_opCodeElem;
-        Operand             m_dst;
-        Operand             m_src;
+        Expression          m_dst;
+        Expression          m_src;
         Lex::Element        m_dstElem;
         Lex::Element        m_srcElem;
+    };
+
+    struct DeferredExpression
+    {
+        enum class Type
+        {
+            Bit8,
+            SignedBit8,
+            Bit16,
+        };
+        Type                m_requiredType;
+        Expression          m_expr;
+        Address             m_addr;
+
+        DeferredExpression(Type type, const Expression& expr, Address addr)
+            : m_requiredType(type)
+            , m_expr(expr)
+            , m_addr(addr)
+        {}
     };
 
 private:
@@ -149,26 +201,47 @@ private:
     void assembleInstruction(const Lex& l, const Instruction& inst);
 
     bool expectOperands(const Lex& l, const Instruction& inst, int numOps);
+    void invalidSrcOperand(const Lex& l, const Instruction& inst);
+    void invalidDstOperand(const Lex& l, const Instruction& inst);
     bool emit8(u8 byte);
     bool emit16(u16 word);
+    bool emitXYZ(u8 x, u8 y, u8 z);
+    bool emitXPQZ(u8 x, u8 p, u8 q, u8 z);
+
+    // Decoding utilities (see http://www.z80.info/decoding.htm)
+    u8 rp(Lex::Element::Type t);
+    u8 rp2(Lex::Element::Type t);
+
+    // Pass 2 utilities.  They calculate the expression, and if they're read will emit them, otherwise emit 0, and
+    // store a reference to them for later calculation during pass 2.  If they are ready but invalid size, an error
+    // will occur and 0 will be written out too.
+    void do8bit(const Expression& exp, const Lex& l, const Lex::Element& el);
+    void doSigned8bit(const Expression& exp, const Lex& l, const Lex::Element& el);
+    void do16bit(const Expression& exp, const Lex& l, const Lex::Element& el);
+
+    // Expressions
+    bool eval(Expression& expr);
+
 
 private:
     //------------------------------------------------------------------------------------------------------------------
     // Member variables
     //------------------------------------------------------------------------------------------------------------------
 
-    map<string, Lex>    m_sessions;
-    AssemblerWindow&    m_assemblerWindow;
-    Spectrum&           m_speccy;
-    int                 m_numErrors;
-    StringTable         m_symbols;
-    StringTable         m_files;
+    map<string, Lex>            m_sessions;
+    AssemblerWindow&            m_assemblerWindow;
+    Spectrum&                   m_speccy;
+    int                         m_numErrors;
+    StringTable                 m_symbols;
+    StringTable                 m_files;
 
-    array<int, 4>       m_pages;       // Current configuration of pages
-    vector<Block>       m_blocks;       // Assembled block
-    map<i64, Ref>       m_symbolTable;
-    size_t              m_blockIndex;
-    Address             m_address;
+    array<int, 4>               m_pages;       // Current configuration of pages
+    vector<Block>               m_blocks;       // Assembled block
+    map<i64, Ref>               m_symbolTable;
+    size_t                      m_blockIndex;
+    Address                     m_address;
+
+    vector<DeferredExpression>  m_deferredExprs;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

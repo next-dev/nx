@@ -1,3 +1,3 @@
-Start:
-        nop
+
+Start:  ld    bc,Start
         

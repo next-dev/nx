@@ -301,10 +301,17 @@ Assembler::Address Assembler::getAddress()
 
 Assembler::Ref Assembler::getRef(const string& fileName, int line)
 {
-    u64 addr = getFullAddress(m_address);
-    u64 offset = addr - getFullAddress(block().m_address);
+    Address addr = getAddress();
     i64 fn = m_files.add(fileName.c_str());
-    return Ref{ m_blockIndex, offset, fn, line };
+
+    if (block().m_crossPage)
+    {
+        return Ref{ INVALID_ADDRESS, getZ80Address(addr), fn, line };
+    }
+    else
+    {
+        return Ref{ addr, 0, fn, line };
+    }
 }
 
 Assembler::Block& Assembler::block()
@@ -370,6 +377,7 @@ void Assembler::assembleLine(const Lex& l, const Lex::Element* e, const Lex::Ele
 
     //
     // Check for symbols (i.e. labels)
+    // TODO: Handle <symbol directive ...>
     //
     if (e[0].m_type == T::Symbol)
     {
@@ -426,8 +434,12 @@ void Assembler::assembleLine(const Lex& l, const Lex::Element* e, const Lex::Ele
 bool Assembler::buildInstruction(const Lex& l, const Lex::Element* e, const Lex::Element* end, Instruction& inst)
 {
     using T = Lex::Element::Type;
-    inst.m_dst.m_type = T::Unknown;
-    inst.m_src.m_type = T::Unknown;
+    inst.m_dst = Expression();
+    inst.m_src = Expression();
+    inst.m_dst.m_lex = &l;
+    inst.m_src.m_lex = &l;
+    inst.m_dstElem.m_type = Lex::Element::Type::Unknown;
+    inst.m_srcElem.m_type = Lex::Element::Type::Unknown;
 
     if (e->m_type == T::Newline)
     {
@@ -438,9 +450,7 @@ bool Assembler::buildInstruction(const Lex& l, const Lex::Element* e, const Lex:
     if (e->m_type > T::_END_DIRECTIVES)
     {
         // Registers or flags
-        inst.m_dst.m_type = e->m_type;
-        inst.m_dstElem = *e;
-        ++e;
+        inst.m_dstElem = *e++;
     }
     else
     {
@@ -461,9 +471,24 @@ bool Assembler::buildInstruction(const Lex& l, const Lex::Element* e, const Lex:
     if (e->m_type > T::_END_DIRECTIVES)
     {
         // Registers or flags
-        inst.m_src.m_type = e->m_type;
+        inst.m_srcElem = *e++;
+    }
+    else if (e->m_type == T::Integer)
+    {
+        i64 i = e->m_integer;
         inst.m_srcElem = *e;
-        ++e;
+        inst.m_src.addInteger(i, *e++);
+    }
+    else if (e->m_type == T::Symbol)
+    {
+        i64 i = e->m_symbol;
+        inst.m_srcElem = *e;
+        inst.m_src.addSymbol(i, *e++);
+    }
+    else if (e->m_type == T::Newline)
+    {
+        error(l, *e, "Unfinished instruction found.");
+        return false;
     }
     else
     {
@@ -477,25 +502,11 @@ bool Assembler::buildInstruction(const Lex& l, const Lex::Element* e, const Lex:
         return false;
     }
 
+    // Try to evaluate the source and destination expressions as much as possible.
+    eval(inst.m_dst);
+    eval(inst.m_src);
+
     return true;
-}
-
-void Assembler::assembleInstruction(const Lex& l, const Instruction& inst)
-{
-    using T = Lex::Element::Type;
-
-    switch (inst.m_opCode)
-    {
-    case T::NOP:
-        if (expectOperands(l, inst, 0))
-        {
-            emit8(0);
-        }
-        break;
-
-    default:
-        error(l, inst.m_opCodeElem, "Unknown opcode.");
-    }
 }
 
 bool Assembler::expectOperands(const Lex& l, const Instruction& inst, int numOps)
@@ -505,7 +516,7 @@ bool Assembler::expectOperands(const Lex& l, const Instruction& inst, int numOps
     switch (numOps)
     {
     case 0:
-        if (inst.m_dst.m_type != T::Unknown || inst.m_src.m_type != T::Unknown)
+        if (inst.m_dstElem.m_type != T::Unknown || inst.m_srcElem.m_type != T::Unknown)
         {
             error(l, inst.m_dstElem, "Expected no operands for this opcode.");
             return false;
@@ -513,12 +524,12 @@ bool Assembler::expectOperands(const Lex& l, const Instruction& inst, int numOps
         break;
 
     case 1:
-        if (inst.m_dst.m_type == T::Unknown)
+        if (inst.m_dstElem.m_type == T::Unknown)
         {
             error(l, inst.m_opCodeElem, "Operand missing.");
             return false;
         }
-        if (inst.m_src.m_type != T::Unknown)
+        if (inst.m_srcElem.m_type != T::Unknown)
         {
             error(l, inst.m_srcElem, "Too many operands for this opcode.");
             return false;
@@ -526,11 +537,12 @@ bool Assembler::expectOperands(const Lex& l, const Instruction& inst, int numOps
         break;
 
     case 2:
-        if (inst.m_dst.m_type == T::Unknown || inst.m_src.m_type == T::Unknown)
+        if (inst.m_dstElem.m_type == T::Unknown || inst.m_srcElem.m_type == T::Unknown)
         {
             error(l, inst.m_opCodeElem, "Missing operand(s).");
             return false;
         }
+        break;
 
     default:
         assert(0);
@@ -558,6 +570,296 @@ bool Assembler::emit16(u16 word)
 {
     if (!emit8(word % 256)) return false;
     return emit8(word / 256);
+}
+
+bool Assembler::emitXYZ(u8 x, u8 y, u8 z)
+{
+    assert(x < 4);
+    assert(y < 8);
+    assert(z < 8);
+
+    return emit8((x << 6) | (y << 3) | z);
+}
+
+bool Assembler::emitXPQZ(u8 x, u8 p, u8 q, u8 z)
+{
+    assert(x < 4);
+    assert(p < 4);
+    assert(q < 2);
+    assert(z < 8);
+
+    return emit8((x << 6) | (p << 4) | (q << 3) | z);
+}
+
+void Assembler::invalidSrcOperand(const Lex& l, const Instruction& inst)
+{
+    error(l, inst.m_srcElem, "Invalid operand.");
+}
+
+void Assembler::invalidDstOperand(const Lex& l, const Instruction& inst)
+{
+    error(l, inst.m_dstElem, "Invalid operand.");
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Decoding utilities
+//----------------------------------------------------------------------------------------------------------------------
+
+u8 Assembler::rp(Lex::Element::Type t)
+{
+    switch (t)
+    {
+    case Lex::Element::Type::BC:    return 0;
+    case Lex::Element::Type::DE:    return 1;
+    case Lex::Element::Type::HL:    return 2;
+    case Lex::Element::Type::SP:    return 3;
+    default:
+        assert(0);
+        return 0;
+    }
+}
+
+u8 Assembler::rp2(Lex::Element::Type t)
+{
+    switch (t)
+    {
+    case Lex::Element::Type::BC:    return 0;
+    case Lex::Element::Type::DE:    return 1;
+    case Lex::Element::Type::HL:    return 2;
+    case Lex::Element::Type::AF:    return 3;
+    default:
+        assert(0);
+        return 0;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Pass 2 utilities
+//----------------------------------------------------------------------------------------------------------------------
+
+void Assembler::do8bit(const Expression& exp, const Lex& l, const Lex::Element& el)
+{
+    if (exp.ready())
+    {
+        if (exp.check8bit(*this, l, el))
+        {
+            emit8(exp.get8Bit());
+        }
+        else
+        {
+            error(l, el, "Expression does not evaluate to an 8-bit value.");
+        }
+    }
+    else
+    {
+        m_deferredExprs.emplace_back(DeferredExpression::Type::Bit8, exp, getAddress());
+        emit8(0);
+    }
+}
+
+void Assembler::doSigned8bit(const Expression& exp, const Lex& l, const Lex::Element& el)
+{
+    if (exp.ready())
+    {
+        if (exp.checkSigned8bit(*this, l, el))
+        {
+            emit8(exp.get8Bit());
+        }
+        else
+        {
+            error(l, el, "Expression does not evaluate to a signed 8-bit value.");
+        }
+    }
+    else
+    {
+        m_deferredExprs.emplace_back(DeferredExpression::Type::SignedBit8, exp, getAddress());
+        emit8(0);
+    }
+}
+
+void Assembler::do16bit(const Expression& exp, const Lex& l, const Lex::Element& el)
+{
+    if (exp.ready())
+    {
+        if (exp.check16bit(*this, l, el))
+        {
+            emit16(exp.get16Bit());
+        }
+        else
+        {
+            error(l, el, "Expression does not evaluate to a 16-bit value.");
+        }
+    }
+    else
+    {
+        m_deferredExprs.emplace_back(DeferredExpression::Type::Bit16, exp, getAddress());
+        emit16(0);
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Expression functionality
+//----------------------------------------------------------------------------------------------------------------------
+
+bool Assembler::Expression::check8bit(Assembler& assembler, const Lex& l, const Lex::Element& el) const
+{
+    assert(ready());
+    const Sub& sub = m_values.at(0);
+    assert(sub.m_type == Type::Integer);
+    if (sub.m_value >= 0x00 && sub.m_value <= 0xff)
+    {
+        return true;
+    }
+    else
+    {
+        assembler.error(l, el, "Value too large, must be in the range 0..255.");
+        return false;
+    }
+}
+
+bool Assembler::Expression::checkSigned8bit(Assembler& assembler, const Lex& l, const Lex::Element& el) const
+{
+    assert(ready());
+    const Sub& sub = m_values.at(0);
+    assert(sub.m_type == Type::Integer);
+    if (sub.m_value >= 0x00 && sub.m_value <= 0xff)
+    {
+        return true;
+    }
+    else
+    {
+        assembler.error(l, el, "Value too large, must be in the range -128..127.");
+        return false;
+    }
+}
+
+bool Assembler::Expression::check16bit(Assembler& assembler, const Lex& l, const Lex::Element& el) const
+{
+    assert(ready());
+    const Sub& sub = m_values.at(0);
+    assert(sub.m_type == Type::Integer);
+    if (sub.m_value >= 0x00 && sub.m_value <= 0xffff)
+    {
+        return true;
+    }
+    else
+    {
+        assembler.error(l, el, "Value too large, must be in the range 0..65536.");
+        return false;
+    }
+}
+
+u8 Assembler::Expression::get8Bit() const
+{
+    assert(ready());
+    return u8(m_values[0].m_value);
+}
+
+u16 Assembler::Expression::get16Bit() const
+{
+    assert(ready());
+    return u16(m_values[0].m_value);
+}
+
+bool Assembler::eval(Expression& expr)
+{
+    bool failed = false;
+
+    // Convert the symbols into values
+    for (Expression::Sub& sub : expr.m_values)
+    {
+        if (sub.m_type == Expression::Type::Symbol)
+        {
+            auto labelIt = m_symbolTable.find(sub.m_value);
+            if (labelIt != m_symbolTable.end())
+            {
+                Ref& r = labelIt->second;
+                if (r.m_address == INVALID_ADDRESS)
+                {
+                    // The reference is to a block that is assembled on the Z80 address space.  Therefore, this
+                    // can be converted to a 16-bit value
+                    sub.m_type = Expression::Type::Integer;
+                    sub.m_value = r.m_z80Address;
+                }
+                else
+                {
+                    // The references refers to a paged address (a 24-bit address).
+                    sub.m_type = Expression::Type::Address;
+                    sub.m_value = getFullAddress(r.m_address);
+                }
+            }
+            else
+            {
+                // TODO: Do variable look up
+
+                // We don't know the symbol yet, therefore expression cannot be fully evaluated yet
+                failed = true;
+            }
+        }
+    }
+
+    if (failed) return false;
+
+    for (const Expression::Op& op : expr.m_ops)
+    {
+//         switch (op.m_opType)
+//         {
+// 
+//         }
+    }
+
+    return true;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Instruction parsing
+//----------------------------------------------------------------------------------------------------------------------
+
+void Assembler::assembleInstruction(const Lex& l, const Instruction& inst)
+{
+    using T = Lex::Element::Type;
+
+    switch (inst.m_opCode)
+    {
+    case T::NOP:
+        if (expectOperands(l, inst, 0))
+        {
+            emit8(0);
+        }
+        break;
+
+    case T::LD:
+        if (expectOperands(l, inst, 2))
+        {
+            switch (inst.m_dstElem.m_type)
+            {
+            case T::BC:
+            case T::DE:
+            case T::HL:
+            case T::SP:
+                // LD RR,??
+                {
+                    if (inst.m_src.isExpression())
+                    {
+                        emitXPQZ(0, rp(inst.m_dstElem.m_type), 0, 1);
+                        do16bit(inst.m_src, l, inst.m_srcElem);
+                    }
+                    else
+                    {
+                        invalidSrcOperand(l, inst);
+                    }
+                }
+                break;
+
+            default:
+                invalidDstOperand(l, inst);
+            }
+        }
+        break;
+
+    default:
+        error(l, inst.m_opCodeElem, "Unknown opcode.");
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

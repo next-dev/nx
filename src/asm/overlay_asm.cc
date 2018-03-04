@@ -85,7 +85,7 @@ void AssemblerWindow::onDraw(Draw& draw)
     }
     while (y < endY)
     {
-        for (int x = m_x; x < (m_x + m_width - 1); ++x)
+        for (int x = m_x + 1; x < (m_x + m_width - 1); ++x)
         {
             draw.printChar(x, y, ' ', colour);
         }
