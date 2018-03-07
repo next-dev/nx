@@ -313,6 +313,7 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
         switch (key)
         {
         case K::Tilde:
+        case K::Escape:
             getEmulator().toggleDebugger();
             break;
 
