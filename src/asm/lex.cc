@@ -4,7 +4,6 @@
 
 #include <asm/asm.h>
 #include <asm/lex.h>
-#include <emulator/nxfile.h>
 #include <utils/format.h>
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -162,10 +161,10 @@ Lex::Lex()
     }
 }
 
-void Lex::parse(Assembler& assembler, string fileName)
+void Lex::parse(Assembler& assembler, const vector<u8>& data, string sourceName)
 {
-    m_file = NxFile::loadFile(fileName);
-    m_fileName = fileName;
+    m_file = data;
+    m_fileName = sourceName;
     m_start = m_file.data();
     m_end = m_file.data() + m_file.size();
     m_cursor = m_file.data();

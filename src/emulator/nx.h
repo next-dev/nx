@@ -139,7 +139,7 @@ public:
     void toggleDebugger();
     void showEditor();
     void hideAll();
-    void assemble(const string& fileName);
+    void assemble(const vector<u8>& data, string sourceName);
     void switchModel(Model model);
 
     // Zoom

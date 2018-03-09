@@ -1358,24 +1358,10 @@ void Nx::showEditor()
     m_editor.select();
 }
 
-void Nx::assemble(const string& fileName)
+void Nx::assemble(const vector<u8>& data, string sourceName)
 {
     m_assembler.select();
-    if (fileName.empty())
-    {
-        m_assembler.getWindow().output("!Error: Cannot assembler unless the file has been saved.");
-    }
-    else
-    {
-        Assembler assembler(m_assembler.getWindow(), getSpeccy(), fileName,
-            {
-                getSpeccy().getPage(0),
-                getSpeccy().getPage(1),
-                getSpeccy().getPage(2),
-                getSpeccy().getPage(3),
-            });
-    }
-
+    Assembler assembler(m_assembler.getWindow(), getSpeccy(), data, sourceName);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

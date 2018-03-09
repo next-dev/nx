@@ -101,6 +101,13 @@ SplitView EditorData::getText() const
     return SplitView(m_buffer, 0, m_cursor, m_endBuffer, (int)m_buffer.size());
 }
 
+vector<u8> EditorData::getData() const
+{
+    vector<u8> data(m_buffer.begin(), m_buffer.begin() + m_cursor);
+    data.insert(data.end(), m_buffer.begin() + m_endBuffer, m_buffer.end());
+    return data;
+}
+
 int EditorData::lineLength(int n) const
 {
     int start = m_lines[n];

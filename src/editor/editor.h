@@ -76,6 +76,7 @@ public:
     void clear();
     SplitView getLine(int n) const;
     SplitView getText() const;
+    vector<u8> getData() const;
     int lineLength(int n) const;
     int dataLength() const;
     int getNumLines() const;

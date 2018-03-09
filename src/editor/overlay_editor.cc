@@ -49,7 +49,13 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
             // Ensure that all files are saved
             if (m_window.saveAll())
             {
-                getEmulator().assemble(m_window.getEditor().getFileName());
+                vector<u8> data = m_window.getEditor().getData().getData();
+                string sourceName = m_window.getEditor().getFileName();
+                if (sourceName.empty())
+                {
+                    sourceName = "<Unsaved>";
+                }
+                getEmulator().assemble(data, sourceName);
             }
         }
     }
