@@ -426,18 +426,10 @@ Lex::Element::Type Lex::next(Assembler& assembler)
     // Check for integers
     //------------------------------------------------------------------------------------------------------------------
 
-    // Possible numbers:
-    //      42
-    //      -21
-    //      +36
-    //      $2a
-    //      -$4f
-    //      +$9c
-
     else if (
         // Check for digits
-        (c >= '0' && c <= '9') ||
-        '$' == c)
+        ((c >= '0' && c <= '9') ||
+        '$' == c))
     {
         // Possible number
         int base = 10;

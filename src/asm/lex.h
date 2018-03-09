@@ -170,13 +170,6 @@ public:
             Z,
 
             COUNT,
-
-            // Compound tokens (generated via parsing and used in assembleInstruction)
-            Address_HL,         // (hl)
-            Address_IX,         // (ix+?)
-            Address_IY,         // (iy+?)
-            AddressExpression,  // (...)
-            Expression,         // ...
         };
 
         struct Pos

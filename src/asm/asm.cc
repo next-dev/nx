@@ -8,7 +8,7 @@
 #include <emulator/spectrum.h>
 #include <utils/format.h>
 
-#define NX_DEBUG_LOG_LEX    (1)
+#define NX_DEBUG_LOG_LEX    (0)
 
 //----------------------------------------------------------------------------------------------------------------------
 // MemoryMap::Byte
@@ -250,6 +250,7 @@ void Assembler::dumpLex(const Lex& l)
 
 void Assembler::dumpSymbolTable()
 {
+    output("");
     output("----------------------------------------");
     output("Symbol table:");
     output("Symbol           Address");
@@ -424,19 +425,266 @@ bool Assembler::addSymbol(i64 symbol, MemoryMap::Address address)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Parsing utilties
+//----------------------------------------------------------------------------------------------------------------------
+
+bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE /* = nullptr */)
+{
+    using T = Lex::Element::Type;
+
+    for (char c = *format; c != 0; ++format)
+    {
+        bool pass = false;
+        enum class Mode
+        {
+            Normal,
+            Optional,
+            OneOf,
+        } mode = Mode::Normal;
+
+        switch (c)
+        {
+        case '[':
+            mode = Mode::Optional;
+            pass = true;
+            break;
+
+        case ']':
+            pass = true;
+            break;
+
+        case '{':
+            mode = Mode::OneOf;
+            pass = true;
+            break;
+
+        case '}':
+            pass = false;
+            break;
+
+        case ',':
+            pass = (e->m_type == T::Comma);
+            break;
+
+        case '(':
+            pass = (e->m_type == T::OpenParen);
+            break;
+
+        case ')':
+            pass = (e->m_type == T::CloseParen);
+            break;
+
+        case '\'':
+            pass = (e->m_type == T::AF_);
+            break;
+
+        case 'a':
+            pass = (e->m_type == T::A);
+            break;
+
+        case 'b':
+            pass = (e->m_type == T::B);
+            break;
+
+        case 'c':
+            pass = (e->m_type == T::C);
+            break;
+
+        case 'd':
+            pass = (e->m_type == T::D);
+            break;
+
+        case 'e':
+            pass = (e->m_type == T::E);
+            break;
+
+        case 'h':
+            pass = (e->m_type == T::H);
+            break;
+
+        case 'l':
+            pass = (e->m_type == T::L);
+            break;
+
+        case 'i':
+            pass = (e->m_type == T::I);
+            break;
+
+        case 'r':
+            pass = (e->m_type == T::R);
+            break;
+
+        case 'A':
+            pass = (e->m_type == T::AF);
+            break;
+
+        case 'B':
+            pass = (e->m_type == T::BC);
+            break;
+
+        case 'D':
+            pass = (e->m_type == T::DE);
+            break;
+
+        case 'H':
+            pass = (e->m_type == T::HL);
+            break;
+
+        case 'S':
+            pass = (e->m_type == T::SP);
+            break;
+
+        case 'X':
+            pass = (e->m_type == T::IX);
+            break;
+
+        case 'Y':
+            pass = (e->m_type == T::IY);
+            break;
+
+        case '*':
+            pass = expectExpression(lex, e, outE);
+            break;
+
+        case '%':
+            pass = false;
+            if (e->m_type == T::IX || e->m_type == T::IY)
+            {
+                ++e;
+                if (e->m_type == T::Plus || e->m_type == T::Minus)
+                {
+                    pass = expectExpression(lex, e, &e);
+                    --e;
+                }
+            }
+            break;
+        }
+
+        if (pass)
+        {
+            // If we're in a one-of group, we need to skip to the end
+            if (mode == Mode::OneOf)
+            {
+                while (c != '}') c = *format++;
+            }
+            // If we're in an optional group, we need to skip to the end
+            if (mode == Mode::Optional)
+            {
+                while (c != ']') c = *format++;
+            }
+            mode = Mode::Normal;
+        }
+        else
+        {
+            // If we're in an optional group, it doesn't matter if we pass or not.  Otherwise we fail here.
+            if (mode != Mode::Optional)
+            {
+                return false;
+            }
+        }
+
+        ++e;
+    }
+
+    if (outE) *outE = e;
+    return (e->m_type == T::Newline);
+}
+
+int Assembler::invalidInstruction(Lex& lex, const Lex::Element* e)
+{
+    error(lex, *e, "Invalid instruction.");
+    return 0;
+}
+
+bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE)
+{
+    using T = Lex::Element::Type;
+    int state = 0;
+    int parenDepth = 0;
+
+    for (;;)
+    {
+        switch (state)
+        {
+        case 0:
+            // Start state
+            switch (e->m_type)
+            {
+            case T::OpenParen:
+                ++parenDepth;
+                break;
+
+            case T::Dollar:
+            case T::Symbol:
+            case T::Integer:
+            case T::Char:
+                state = 1;
+                break;
+
+            case T::Plus:
+            case T::Minus:
+            case T::Tilde:
+                state = 2;
+                break;
+
+            default:
+                // #todo: keywords
+                return false;
+            }
+            break;
+
+        case 1:
+            // Value has been read
+            switch (e->m_type)
+            {
+                // Binary operators
+            case T::Plus:
+            case T::Minus:
+            case T::LogicOr:
+            case T::LogicAnd:
+            case T::LogicXor:
+            case T::ShiftLeft:
+            case T::ShiftRight:
+            case T::Multiply:
+            case T::Divide:
+            case T::Mod:
+                state = 0;
+                break;
+
+            case T::Comma:
+            case T::Newline:
+                ++e;
+                if (parenDepth != 0) return false;
+                goto finish_expr;
+            }
+        }
+
+        ++e;
+    }
+
+    finish_expr:
+    if (outE) *outE = e;
+    return true;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Pass 1
 //----------------------------------------------------------------------------------------------------------------------
 
 bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 {
+    output("Pass 1...");
+
     using T = Lex::Element::Type;
     const Lex::Element* e = elems.data();
     i64 symbol = 0;
+    bool symbolToAdd = false;
     bool buildResult = true;
 
     while (e->m_type != T::EndOfFile)
     {
         symbol = 0;
+        symbolToAdd = false;
         if (e->m_type == T::Symbol)
         {
             // Possible label
@@ -448,16 +696,9 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         if (e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES)
         {
             // It's a possible instruction
-            if (symbol)
-            {
-                if (!addSymbol(symbol, m_mmap.getAddress(m_address)))
-                {
-                    // #todo: Output the original line where it is defined.
-                    error(lex, *e, "Symbol already defined.");
-                }
-            }
+            m_address += assembleInstruction1(lex, e);
+            symbolToAdd = true;
 
-            error(lex, *e, "Unimplemented instruction.");
             while (e->m_type != T::Newline) ++e;
             ++e;
             buildResult = false;
@@ -480,10 +721,73 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         else
         {
             ++e;
+            symbolToAdd = true;
+        }
+
+        if (symbolToAdd && symbol)
+        {
+            if (!addSymbol(symbol, m_mmap.getAddress(m_address)))
+            {
+                // #todo: Output the original line where it is defined.
+                error(lex, *e, "Symbol already defined.");
+            }
         }
     }
 
     return true;
+}
+
+#define PARSE(n, format) if (expect(lex, e, (format))) return (n)
+#define CHECK_PARSE(n, format) PARSE(n, format); return invalidInstruction(lex, e)
+
+int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e)
+{
+    using T = Lex::Element::Type;
+    assert(e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES);
+
+    switch (e->m_type)
+    {
+    case T::NOP:
+        CHECK_PARSE(1, "");
+
+    case T::LD:
+        return assembleLoad1(lex, ++e);
+
+    default:
+        error(lex, *e, "Unimplemented instruction.");
+        return 0;
+    }
+}
+
+
+int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e)
+{
+    using T = Lex::Element::Type;
+    const Lex::Element* start = e;
+
+    PARSE(1, "{abcdehl},{abcdehl}");    // LD A/B/C/D/E/H/L,A/B/C/D/E/H/L
+    PARSE(1, "({BDH}),a");              // LD (BC/DE/HL),A
+    PARSE(1, "(H),{bcdehl}");           // LD (HL),B/C/D/E/H/L
+    PARSE(1, "{bcdehl},(H)");           // LD B/C/D/E/H/L,(HL)
+    PARSE(1, "a,({BDH})");              // LD A,(BC/DE/HL)
+    PARSE(2, "{abcdehl},*");            // LD A/B/C/D/E/H/L,nn
+    PARSE(3, "{BDHS},*");               // LD BC/DE/HL/SP,nnnn
+    PARSE(4, "{XY},*");                 // LD IX/IY,nnnn
+    PARSE(2, "(H),*");                  // LD (HL),nn
+    PARSE(2, "a,i");                    // LD A,I
+    PARSE(2, "i,a");                    // LD I,A
+    PARSE(3, "a,(%)");                  // LD A,(IX+nn)
+    PARSE(3, "a,(*)");                  // LD A,(nnnn)
+    PARSE(3, "(*),a");                  // LD (nnnn),A
+    PARSE(4, "(*),{BDHXYS}");           // LD (nnnn),BC/DE/HL/IX/IY/SP
+    PARSE(4, "{BDHXYS},(*)");           // LD BC/DE/HL/IX/IY/SP,(nnnn)
+    PARSE(3, "(%),{abcdehl}");          // LD (IX/IY+nn),A/B/C/D/E/H/L
+    PARSE(3, "{abcdehl},(%)");          // LD A/B/C/D/E/H/L,(IX/IY+nn)
+    PARSE(4, "(%),*");                  // LD (IX/IY+nn),nn
+    PARSE(1, "S,H");                    // LD SP,HL
+    PARSE(2, "S,{XY}");                 // LD SP,IX/IY
+
+    return invalidInstruction(lex, start);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -492,6 +796,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 
 bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 {
+    output("Pass 2...");
     return true;
 }
 
