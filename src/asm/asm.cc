@@ -138,10 +138,15 @@ Assembler::Assembler(AssemblerWindow& window, Spectrum& speccy, const vector<u8>
     , m_speccy(speccy)
     , m_numErrors(0)
     , m_mmap(speccy)
+    , m_address(0)
 {
     window.clear();
     startAssembly(data, sourceName);
 }
+
+//----------------------------------------------------------------------------------------------------------------------
+// Debugging
+//----------------------------------------------------------------------------------------------------------------------
 
 void Assembler::dumpLex(const Lex& l)
 {
@@ -243,6 +248,65 @@ void Assembler::dumpLex(const Lex& l)
     }
 }
 
+void Assembler::dumpSymbolTable()
+{
+    output("----------------------------------------");
+    output("Symbol table:");
+    output("Symbol           Address");
+    output("----------------------------------------");
+
+    struct Symbols
+    {
+        string      m_symbol;
+        string      m_address;
+
+        Symbols() {}
+        Symbols(string symbol, string address) : m_symbol(symbol), m_address(address) {}
+    };
+    vector<Symbols> symbols;
+
+    // Construct the output data
+    for (const auto& symPair : m_symbolTable)
+    {
+        string symbol = (const char *)m_lexSymbols.get(symPair.first);
+
+        int page = symPair.second.m_addr / kPageSize;
+        int offset = symPair.second.m_addr % kPageSize;
+        string addressString;
+
+        for (int slot = 0; slot < kNumSlots; ++slot)
+        {
+            int loadedPage = m_speccy.getPage(slot);
+            if (page == loadedPage)
+            {
+                // Show string as Z80 address
+                addressString = stringFormat("${0}", hexWord(u16(slot * KB(16) + offset)));
+                break;
+            }
+        }
+        if (addressString.empty())
+        {
+            addressString = stringFormat("${0}:{1}", hexWord(u16(page)), hexWord(u16(offset)));
+        }
+
+        symbols.emplace_back(symbol.substr(0, min(symbol.size(), size_t(16))), addressString);
+    }
+
+    // Sort the data in ASCII order for symbols.
+    sort(symbols.begin(), symbols.end(), [](const Symbols& s1, const Symbols& s2) { return s1.m_symbol < s2.m_symbol;  });
+
+    // Output the symbols
+    for (const auto& sym : symbols)
+    {
+        string line = sym.m_symbol;
+        for (size_t i = line.size(); i < 17; ++i) line += ' ';
+        line += sym.m_address;
+        output(line);
+    }
+
+    output("");
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Parser
 //----------------------------------------------------------------------------------------------------------------------
@@ -283,7 +347,6 @@ void Assembler::assemble(const vector<u8>& data, string sourceName)
     dumpLex(m_sessions.back());
 #endif // NX_DEBUG_LOG_LEX
 
-
     //
     // Passes
     //
@@ -291,6 +354,8 @@ void Assembler::assemble(const vector<u8>& data, string sourceName)
     size_t index = m_sessions.size() - 1;
     pass1(m_sessions[index], m_sessions[index].elements());
     pass2(m_sessions[index], m_sessions[index].elements());
+
+    dumpSymbolTable();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -340,6 +405,25 @@ void Assembler::error(const Lex& l, const Lex::Element& el, const string& messag
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Symbol table
+//----------------------------------------------------------------------------------------------------------------------
+
+bool Assembler::addSymbol(i64 symbol, MemoryMap::Address address)
+{
+    auto it = m_symbolTable.find(symbol);
+    if (it == m_symbolTable.end())
+    {
+        // We're good.  This is a new symbol
+        m_symbolTable[symbol] = { address };
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Pass 1
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -347,10 +431,12 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 {
     using T = Lex::Element::Type;
     const Lex::Element* e = elems.data();
-    i64 symbol;
+    i64 symbol = 0;
+    bool buildResult = true;
 
     while (e->m_type != T::EndOfFile)
     {
+        symbol = 0;
         if (e->m_type == T::Symbol)
         {
             // Possible label
@@ -362,10 +448,19 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         if (e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES)
         {
             // It's a possible instruction
+            if (symbol)
+            {
+                if (!addSymbol(symbol, m_mmap.getAddress(m_address)))
+                {
+                    // #todo: Output the original line where it is defined.
+                    error(lex, *e, "Symbol already defined.");
+                }
+            }
+
             error(lex, *e, "Unimplemented instruction.");
             while (e->m_type != T::Newline) ++e;
             ++e;
-            return false;
+            buildResult = false;
         }
         else if (e->m_type > T::_END_OPCODES && e->m_type < T::_END_DIRECTIVES)
         {
@@ -373,14 +468,18 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             error(lex, *e, "Unimplemented directive.");
             while (e->m_type != T::Newline) ++e;
             ++e;
-            return false;
+            buildResult = false;
         }
         else if (e->m_type != T::Newline)
         {
             error(lex, *e, "Invalid instruction or directive.");
             while (e->m_type != T::Newline) ++e;
             ++e;
-            return false;
+            buildResult = false;
+        }
+        else
+        {
+            ++e;
         }
     }
 
