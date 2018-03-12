@@ -628,8 +628,8 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
                 break;
 
             default:
-                // #todo: keywords
-                return false;
+                // #todo: match keywords and (
+                goto expr_failed;
             }
             break;
 
@@ -654,17 +654,43 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
             case T::Comma:
             case T::Newline:
                 ++e;
-                if (parenDepth != 0) return false;
+                if (parenDepth != 0) goto expr_failed;
                 goto finish_expr;
+
+            case T::CloseParen:
+                ++e;
+                if (parenDepth-- == 0) goto expr_failed;
+                break;
+
+            default:
+                goto expr_failed;
+            }
+
+        case 2:
+            switch (e->m_type)
+            {
+            case T::Dollar:
+            case T::Symbol:
+            case T::Integer:
+            case T::Char:
+                state = 1;
+                break;
+
+            default:
+                goto expr_failed;
             }
         }
 
         ++e;
     }
 
-    finish_expr:
+finish_expr:
     if (outE) *outE = e;
     return true;
+
+expr_failed:
+    if (outE) *outE = e;
+    return false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -748,6 +774,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e)
     switch (e->m_type)
     {
     case T::NOP:
+        ++e;
         CHECK_PARSE(1, "");
 
     case T::LD:
