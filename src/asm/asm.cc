@@ -432,16 +432,16 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
 {
     using T = Lex::Element::Type;
 
-    for (char c = *format; c != 0; ++format)
+    enum class Mode
+    {
+        Normal,
+        Optional,
+        OneOf,
+    } mode = Mode::Normal;
+
+    for (char c = *format; c != 0; c = *(++format))
     {
         bool pass = false;
-        enum class Mode
-        {
-            Normal,
-            Optional,
-            OneOf,
-        } mode = Mode::Normal;
-
         switch (c)
         {
         case '[':
@@ -451,99 +451,125 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
 
         case ']':
             pass = true;
+            mode = Mode::Normal;
             break;
 
         case '{':
             mode = Mode::OneOf;
-            pass = true;
+            pass = false;
             break;
 
         case '}':
             pass = false;
+            mode = Mode::Normal;
             break;
 
         case ',':
             pass = (e->m_type == T::Comma);
+            ++e;
             break;
 
         case '(':
             pass = (e->m_type == T::OpenParen);
+            ++e;
             break;
 
         case ')':
             pass = (e->m_type == T::CloseParen);
+            ++e;
             break;
 
         case '\'':
             pass = (e->m_type == T::AF_);
+            ++e;
             break;
 
         case 'a':
             pass = (e->m_type == T::A);
+            ++e;
             break;
 
         case 'b':
             pass = (e->m_type == T::B);
+            ++e;
             break;
 
         case 'c':
             pass = (e->m_type == T::C);
+            ++e;
             break;
 
         case 'd':
             pass = (e->m_type == T::D);
+            ++e;
             break;
 
         case 'e':
             pass = (e->m_type == T::E);
+            ++e;
             break;
 
         case 'h':
             pass = (e->m_type == T::H);
+            ++e;
             break;
 
         case 'l':
             pass = (e->m_type == T::L);
+            ++e;
             break;
 
         case 'i':
             pass = (e->m_type == T::I);
+            ++e;
             break;
 
         case 'r':
             pass = (e->m_type == T::R);
+            ++e;
             break;
 
         case 'A':
             pass = (e->m_type == T::AF);
+            ++e;
             break;
 
         case 'B':
             pass = (e->m_type == T::BC);
+            ++e;
             break;
 
         case 'D':
             pass = (e->m_type == T::DE);
+            ++e;
             break;
 
         case 'H':
             pass = (e->m_type == T::HL);
+            ++e;
             break;
 
         case 'S':
             pass = (e->m_type == T::SP);
+            ++e;
             break;
 
         case 'X':
             pass = (e->m_type == T::IX);
+            ++e;
             break;
 
         case 'Y':
             pass = (e->m_type == T::IY);
+            ++e;
             break;
 
         case '*':
-            pass = expectExpression(lex, e, outE);
+            {
+                const Lex::Element* ee;
+                pass = expectExpression(lex, e, &ee);
+                e = pass ? ee : e + 1;
+            }
             break;
 
         case '%':
@@ -566,24 +592,24 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
             if (mode == Mode::OneOf)
             {
                 while (c != '}') c = *format++;
+                --format;
             }
             // If we're in an optional group, we need to skip to the end
             if (mode == Mode::Optional)
             {
                 while (c != ']') c = *format++;
+                --format;
             }
             mode = Mode::Normal;
         }
         else
         {
             // If we're in an optional group, it doesn't matter if we pass or not.  Otherwise we fail here.
-            if (mode != Mode::Optional)
+            if (mode == Mode::Normal)
             {
                 return false;
             }
         }
-
-        ++e;
     }
 
     if (outE) *outE = e;
@@ -665,6 +691,7 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
             default:
                 goto expr_failed;
             }
+            break;
 
         case 2:
             switch (e->m_type)
@@ -679,6 +706,7 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
             default:
                 goto expr_failed;
             }
+            break;
         }
 
         ++e;
