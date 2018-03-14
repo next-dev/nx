@@ -682,8 +682,38 @@ void Nx::run()
             switch (event.type)
             {
             case sf::Event::Closed:
-                m_quit = true;
-                m_window.close();
+                if (m_editor.getWindow().needToSave())
+                {
+                    int result = tinyfd_messageBox(
+                        "Unsaved files detected",
+                        "There are some unsaved changes in some edited files.  Do you wish to save "
+                        "these files before continuing?",
+                        "yesnocancel", "question", 0);
+                    bool skipThisFile = false;
+                    switch (result)
+                    {
+                    case 0:     // Cancel - stop everything!
+                        m_quit = false;
+                        break;
+
+                    case 1:     // Yes - trigger save of unnamed/unsaved files
+                        m_editor.getWindow().saveAll();
+                        // continue
+
+                    case 2:     // No - do not save
+                        m_quit = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    m_quit = true;
+                }
+
+                if (m_quit)
+                {
+                    m_window.close();
+                }
                 break;
 
             case sf::Event::KeyPressed:

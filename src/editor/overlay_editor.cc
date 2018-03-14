@@ -47,7 +47,7 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
         if (key == K::B)
         {
             // Ensure that all files are saved
-            if (m_window.saveAll())
+            if (m_window.saveAll() && m_window.hasData())
             {
                 vector<u8> data = m_window.getEditor().getData().getData();
                 string sourceName = m_window.getEditor().getFileName();

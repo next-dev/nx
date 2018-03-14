@@ -201,6 +201,8 @@ public:
 
     Editor& getEditor() { assert(!m_editors.empty()); return m_editors[m_editorOrder[0]]; }
     bool saveAll();
+    bool hasData() const { return m_editors.size() > 0; }
+    bool needToSave() const;
 
 private:
     void newFile();

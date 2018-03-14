@@ -20,6 +20,8 @@ public:
     void text(char ch) override;
     const vector<string>& commands() const override;
 
+    EditorWindow& getWindow() { return m_window; }
+
 private:
     EditorWindow    m_window;
     vector<string>  m_commands;

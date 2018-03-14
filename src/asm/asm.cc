@@ -466,102 +466,102 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
 
         case ',':
             pass = (e->m_type == T::Comma);
-            ++e;
+            if (pass) ++e;
             break;
 
         case '(':
             pass = (e->m_type == T::OpenParen);
-            ++e;
+            if (pass) ++e;
             break;
 
         case ')':
             pass = (e->m_type == T::CloseParen);
-            ++e;
+            if (pass) ++e;
             break;
 
         case '\'':
             pass = (e->m_type == T::AF_);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'a':
             pass = (e->m_type == T::A);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'b':
             pass = (e->m_type == T::B);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'c':
             pass = (e->m_type == T::C);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'd':
             pass = (e->m_type == T::D);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'e':
             pass = (e->m_type == T::E);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'h':
             pass = (e->m_type == T::H);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'l':
             pass = (e->m_type == T::L);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'i':
             pass = (e->m_type == T::I);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'r':
             pass = (e->m_type == T::R);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'A':
             pass = (e->m_type == T::AF);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'B':
             pass = (e->m_type == T::BC);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'D':
             pass = (e->m_type == T::DE);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'H':
             pass = (e->m_type == T::HL);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'S':
             pass = (e->m_type == T::SP);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'X':
             pass = (e->m_type == T::IX);
-            ++e;
+            if (pass) ++e;
             break;
 
         case 'Y':
             pass = (e->m_type == T::IY);
-            ++e;
+            if (pass) ++e;
             break;
 
         case '*':
@@ -679,7 +679,6 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
 
             case T::Comma:
             case T::Newline:
-                ++e;
                 if (parenDepth != 0) goto expr_failed;
                 goto finish_expr;
 
@@ -734,6 +733,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
     i64 symbol = 0;
     bool symbolToAdd = false;
     bool buildResult = true;
+    int symAddress = 0;
 
     while (e->m_type != T::EndOfFile)
     {
@@ -743,6 +743,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         {
             // Possible label
             symbol = e->m_symbol;
+            symAddress = m_address;
             if ((++e)->m_type == T::Colon) ++e;
         }
 
@@ -780,7 +781,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 
         if (symbolToAdd && symbol)
         {
-            if (!addSymbol(symbol, m_mmap.getAddress(m_address)))
+            if (!addSymbol(symbol, m_mmap.getAddress(symAddress)))
             {
                 // #todo: Output the original line where it is defined.
                 error(lex, *e, "Symbol already defined.");

@@ -1223,7 +1223,7 @@ bool EditorWindow::saveAll()
     bool asked = false;
     bool saveUnnamedFiles = false;
 
-    if (m_editors.empty()) return false;
+    if (m_editors.empty()) return true;
 
     for (auto& editor : m_editors)
     {
@@ -1259,6 +1259,16 @@ bool EditorWindow::saveAll()
     }
 
     return true;
+}
+
+bool EditorWindow::needToSave() const
+{
+    for (auto& editor : m_editors)
+    {
+        if (editor.getData().hasChanged()) return true;
+    }
+
+    return false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
