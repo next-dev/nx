@@ -200,14 +200,18 @@ public:
     EditorWindow(Nx& nx, string title);
 
     Editor& getEditor() { assert(!m_editors.empty()); return m_editors[m_editorOrder[0]]; }
+    Editor& getEditor(int i) { assert(i < int(m_editors.size())); return m_editors[m_editorOrder[i]]; }
+    int getNumEditors() const { return int(m_editors.size()); }
+
     bool saveAll();
     bool hasData() const { return m_editors.size() > 0; }
     bool needToSave() const;
 
+    void openFile(const string& fileName = string());
+
 private:
     void newFile();
     void closeFile();
-    void openFile();
     void switchTo(const Editor& editor);
 
 protected:

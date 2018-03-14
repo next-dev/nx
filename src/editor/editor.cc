@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include <editor/editor.h>
+#include <utils/format.h>
 #include <utils/tinyfiledialogs.h>
 
 #include <fstream>
@@ -1120,23 +1121,33 @@ void EditorWindow::closeFile()
 #endif
 }
 
-void EditorWindow::openFile()
+void EditorWindow::openFile(const string& fileName /* = string() */)
 {
     newFile();
 
-    const char* filters[] = { "*.asm", "*.s" };
-    const char* fileName = tinyfd_openFileDialog("Load source code", 0, sizeof(filters) / sizeof(filters[0]),
-        filters, "Source code", 0);
-    if (fileName)
+    const char* fn = 0;
+    if (fileName.empty())
+    {
+        const char* filters[] = { "*.asm", "*.s" };
+        fn = tinyfd_openFileDialog("Load source code", 0, sizeof(filters) / sizeof(filters[0]),
+            filters, "Source code", 0);
+    }
+    else
+    {
+        fn = fileName.c_str();
+    }
+
+    if (fn)
     {
         Editor& thisEditor = getEditor();
-        if (thisEditor.getData().load(fileName))
+        if (thisEditor.getData().load(fn))
         {
-            thisEditor.setFileName(fileName);
+            thisEditor.setFileName(fn);
         }
         else
         {
-            tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
+            string msg = stringFormat("Unable to open file '{0}'.", fileName);
+            tinyfd_messageBox("ERROR", msg.c_str(), "ok", "warning", 0);
         }
     }
 

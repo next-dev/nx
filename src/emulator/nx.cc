@@ -532,7 +532,7 @@ bool Nx::saveFile(string fileName)
     }
     else if (ext == ".nx")
     {
-        return saveNxSnapshot(fileName);
+        return saveNxSnapshot(fileName, false);
     }
 
     return false;
@@ -770,7 +770,7 @@ void Nx::run()
     }
 
     // Shutdown
-    saveNxSnapshot((m_tempPath / "cache.nx").string());
+    saveNxSnapshot((m_tempPath / "cache.nx").string(), true);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1116,13 +1116,43 @@ bool Nx::loadNxSnapshot(string fileName)
             break;
         }
 
+        if (f.checkSection('EMUL', 0))
+        {
+            const BlockSection& emul = f['EMUL'];
+            if (emul.peek16(0) == 0)
+            {
+                int numFiles = int(emul.peek16(2));
+                int fnIndex = 4;
+                for (int i = 0; i < numFiles; ++i)
+                {
+                    string fn = emul.peekString(fnIndex);
+                    fnIndex += int(fn.size()) + 1;
+
+                    // Check to see if we don't already have it loaded
+                    int numEditors = m_editor.getWindow().getNumEditors();
+                    bool addEditor = true;
+                    for (int ed = 0; ed < numEditors; ++ed)
+                    {
+                        if (m_editor.getWindow().getEditor(ed).getFileName() == fn)
+                        {
+                            addEditor = false;
+                            break;
+                        }
+                    }
+
+                    // Attempt to load it.
+                    m_editor.getWindow().openFile(fn);
+                }
+            }
+        }
+
         return true;
-    }
+    } // if (f.load(...
 
     return false;
 }
 
-bool Nx::saveNxSnapshot(string fileName)
+bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
 {
     NxFile f;
     Z80& z80 = m_machine->getZ80();
@@ -1198,6 +1228,29 @@ bool Nx::saveNxSnapshot(string fileName)
             rm48.poke8(m_machine->peek(a));
         }
         f.addSection(rm48, 49152);
+    }
+
+    // Write out the 'EMUL' section
+    if (saveEmulatorSettings)
+    {
+        BlockSection emul('EMUL');
+
+        u16 count = u16(m_editor.getWindow().getNumEditors());
+        emul.poke16(0);
+        u16 realCount = count;
+        for (u16 i = 0; i < count; ++i)
+        {
+            Editor& ed = m_editor.getWindow().getEditor(i);
+            if (ed.getFileName().empty()) --realCount;
+        }
+        emul.poke16(realCount);
+        for (u16 i = count; i > 0; --i)
+        {
+            Editor& ed = m_editor.getWindow().getEditor(i-1);
+            string fn = ed.getFileName();
+            if (!fn.empty()) emul.pokeString(fn);
+        }
+        f.addSection(emul, 0);
     }
 
     return f.save(fileName);

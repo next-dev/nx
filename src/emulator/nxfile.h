@@ -69,7 +69,15 @@
 //      R128 (length = 131072)
 //          Offset  Length  Description
 //          0       131072  Contents of all banks (0-7)
-//          
+//
+//      EMUL
+//          Offset  Length  Description
+//          0       2       Version (always 0 for now)
+//          2       2       Number of files opened
+//
+//          Data follows:
+//              Null-terminated strings of the filenames of open files.
+//
 //----------------------------------------------------------------------------------------------------------------------
 
 #pragma once
@@ -116,11 +124,13 @@ public:
     u8 peek8(int i) const;
     u16 peek16(int i) const;
     u32 peek32(int i) const;
+    string peekString(int i) const;
 
     // Used for writing
     void poke8(u8 byte);
     void poke16(u16 word);
     void poke32(u32 dword);
+    void pokeString(const string& s);
     void checkSize(u32 expectedSize) const;
 
     void write(vector<u8>& data) const;

@@ -103,6 +103,14 @@ u32 BlockSection::peek32(int i) const
     return u32(peek16(i)) + (u32(peek16(i + 2)) << 16);
 }
 
+string BlockSection::peekString(int i) const
+{
+    const char* start = (const char *)m_data.data() + i;
+    const char* end = start;
+    while (*end != 0) ++end;
+    return string(start, end);
+}
+
 void BlockSection::poke8(u8 byte)
 {
     m_data.emplace_back(byte);
@@ -120,9 +128,18 @@ void BlockSection::poke32(u32 dword)
     poke16(dword >> 16);
 }
 
+void BlockSection::pokeString(const string& s)
+{
+    for (const auto c : s)
+    {
+        m_data.emplace_back(u8(c));
+    }
+    m_data.emplace_back(0);
+}
+
 void BlockSection::checkSize(u32 expectedSize) const
 {
-    NX_ASSERT(m_data.size() == (size_t)expectedSize);
+    NX_ASSERT((expectedSize == 0) || (m_data.size() == (size_t)expectedSize));
 }
 
 void BlockSection::write(vector<u8>& data) const
@@ -252,7 +269,9 @@ u32 NxFile::sizeSection(FourCC fcc)
 
 bool NxFile::checkSection(FourCC fcc, u32 expectedSize)
 {
-    bool check = sizeSection(fcc) == expectedSize;
+    bool check = expectedSize
+        ? sizeSection(fcc) == expectedSize
+        : sizeSection(fcc) != -1;
     return check;
 }
 

@@ -155,7 +155,7 @@ private:
 
     // Saving
     bool saveSnaSnapshot(string fileName);
-    bool saveNxSnapshot(string fileName);
+    bool saveNxSnapshot(string fileName, bool saveEmulatorSettings);
     
     // Debugging helper functions
     u16 nextInstructionAt(u16 address);
