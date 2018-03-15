@@ -876,11 +876,18 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 
         if (symbolToAdd && symbol)
         {
-            if (!addSymbol(symbol, m_mmap.getAddress(symAddress)))
+            if (m_mmap.isValidAddress(symAddress))
             {
-                // #todo: Output the original line where it is defined.
-                error(lex, *e, "Symbol already defined.");
-                buildResult = false;
+                if (!addSymbol(symbol, m_mmap.getAddress(symAddress)))
+                {
+                    // #todo: Output the original line where it is defined.
+                    error(lex, *e, "Symbol already defined.");
+                    buildResult = false;
+                }
+            }
+            else
+            {
+                error(lex, *e, "Address space overrun.  There is not enough space to assemble in this area section.");
             }
         }
     }
@@ -1142,6 +1149,20 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e)
 bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 {
     output("Pass 2...");
+
+    using T = Lex::Element::Type;
+    const Lex::Element* e = elems.data();
+    i64 symbol = 0;
+    bool buildResult = true;
+    m_mmap.resetRange();
+    m_mmap.addZ80Range(0x8000, 0xffff);
+    m_address = 0;
+
+    while (e->m_type != T::EndOfFile)
+    {
+
+    }
+
     return true;
 }
 

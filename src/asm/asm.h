@@ -47,7 +47,8 @@ public:
     bool poke8(int address, u8 byte);
     bool poke16(int address, u16 word);
     void upload(Spectrum& speccy);
-    Address getAddress(int i) const { return m_addresses[i]; }
+    bool isValidAddress(int i) const { return i >= 0 && i < int(m_addresses.size()); }
+    Address getAddress(int i) const { assert(isValidAddress(i)); return m_addresses[i]; }
 
 private:
     class Byte
