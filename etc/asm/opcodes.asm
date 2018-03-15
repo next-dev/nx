@@ -5,6 +5,7 @@
 NN      EQU     $1234           ; a sixteen bit number
 N       EQU     $56             ; an eight bit number
 
+Start:
         NOP                     ; 00
         LD BC,NN                ; 01 XX XX
         LD (BC),A               ; 02

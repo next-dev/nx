@@ -724,6 +724,14 @@ expr_failed:
 // Pass 1
 //----------------------------------------------------------------------------------------------------------------------
 
+#define FAIL(msg) \
+    do { \
+    error(lex, *e, (msg)); \
+    while (e->m_type != T::Newline) ++e; \
+    ++e; \
+    buildResult = false; \
+    } while (0)
+
 bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 {
     output("Pass 1...");
@@ -754,24 +762,55 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             m_address += assembleInstruction1(lex, e);
             symbolToAdd = true;
 
-            while (e->m_type != T::Newline) ++e;
+            buildResult = (e->m_type == T::Newline);
+            if (!buildResult)
+            {
+                while (e->m_type != T::Newline) ++e;
+            }
             ++e;
-            buildResult = false;
         }
         else if (e->m_type > T::_END_OPCODES && e->m_type < T::_END_DIRECTIVES)
         {
             // It's a possible directive
-            error(lex, *e, "Unimplemented directive.");
-            while (e->m_type != T::Newline) ++e;
-            ++e;
-            buildResult = false;
+            switch (e->m_type)
+            {
+            case T::ORG:
+                // #todo: Allow expressions for ORG statements (requires expression evaluation)
+                if ((++e)->m_type == T::Integer)
+                {
+                    if (e->m_integer >= 0x4000 && e->m_integer <= 0xffff)
+                    {
+                        u16 addr = u16(e->m_integer);
+                        if ((++e)->m_type == T::Newline)
+                        {
+                            m_mmap.resetRange();
+                            m_mmap.addZ80Range(addr, 0xffff);
+                            m_address = 0;
+                            ++e;
+                        }
+                        else
+                        {
+                            FAIL("Invalid syntax for ORG directive.  Extraneous tokens found.");
+                        }
+                    }
+                    else
+                    {
+                        FAIL("ORG address out of range.  Must be between $4000-$ffff.");
+                    }
+                }
+                else
+                {
+                    FAIL("Invalid syntax for ORG directive.  Expected an address.");
+                }
+                break;
+
+            default:
+                FAIL("Unimplemented directive.");
+            }
         }
         else if (e->m_type != T::Newline)
         {
-            error(lex, *e, "Invalid instruction or directive.");
-            while (e->m_type != T::Newline) ++e;
-            ++e;
-            buildResult = false;
+            FAIL("Invalid instruction or directive.");
         }
         else
         {
@@ -785,11 +824,12 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             {
                 // #todo: Output the original line where it is defined.
                 error(lex, *e, "Symbol already defined.");
+                buildResult = false;
             }
         }
     }
 
-    return true;
+    return buildResult;
 }
 
 #define PARSE(n, format) if (expect(lex, e, (format))) return (n)
