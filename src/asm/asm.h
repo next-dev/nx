@@ -127,6 +127,8 @@ private:
     //  (   open parentheses
     //  )   close parentheses
     //  '   AF'
+    //  f   NZ,Z,NC,C
+    //  F   NZ,Z,NC,C,PO,PE,P,M
     //
     //  Specific 8-bit registers: abcdehlir
     //  Specific 16-bit registers: ABDHSXY       (AF, BC, DE, HL, SP, IX, IY)

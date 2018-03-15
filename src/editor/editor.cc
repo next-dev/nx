@@ -1150,6 +1150,10 @@ void EditorWindow::openFile(const string& fileName /* = string() */)
             tinyfd_messageBox("ERROR", msg.c_str(), "ok", "warning", 0);
         }
     }
+    else
+    {
+        closeFile();
+    }
 
 #if NX_DEBUG_CONSOLE
     cout << "NEW -------------------------------\n\n";
@@ -1238,6 +1242,8 @@ bool EditorWindow::saveAll()
 
     for (auto& editor : m_editors)
     {
+        if (!editor.getData().hasChanged()) continue;
+
         const string& fileName = editor.getFileName();
 
         if (!asked && fileName.empty())

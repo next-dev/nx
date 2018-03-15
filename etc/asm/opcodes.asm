@@ -22,7 +22,7 @@ Start:
         DEC C                   ; 0D
         LD C,N                  ; 0E XX
         RRCA                    ; 0F
-        DJNZ $+2                ; 10
+        DJNZ $+2                ; 10 00
         LD DE,NN                ; 11 XX XX
         LD (DE),A               ; 12
         INC DE                  ; 13
@@ -30,7 +30,7 @@ Start:
         DEC D                   ; 15
         LD D,N                  ; 16 XX
         RLA                     ; 17
-        JR $+2                  ; 18 02
+        JR $+2                  ; 18 00
         ADD HL,DE               ; 19
         LD A,(DE)               ; 1A
         DEC DE                  ; 1B
@@ -38,7 +38,7 @@ Start:
         DEC E                   ; 1D
         LD E,N                  ; 1E XX
         RRA                     ; 1F
-        JR NZ,$+2               ; 20
+        JR NZ,$+2               ; 20 00
         LD HL,NN                ; 21 XX XX
         LD (NN),HL              ; 22 XX XX
         INC HL                  ; 23
@@ -46,7 +46,7 @@ Start:
         DEC H                   ; 25
         LD H,N                  ; 26 XX
         DAA                     ; 27
-        JR Z,$+2                ; 28
+        JR Z,$+2                ; 28 00
         ADD HL,HL               ; 29
         LD HL,(NN)              ; 2A XX XX
         DEC HL                  ; 2B
@@ -54,7 +54,7 @@ Start:
         DEC L                   ; 2D
         LD L,N                  ; 2E XX
         CPL                     ; 2F
-        JR NC,$+2               ; 30
+        JR NC,$+2               ; 30 00
         LD SP,NN                ; 31 XX XX
         LD (NN),A               ; 32 XX XX
         INC SP                  ; 33
@@ -62,7 +62,7 @@ Start:
         DEC (HL)                ; 35
         LD (HL),N               ; 36 XX
         SCF                     ; 37
-        JR C,$+2                ; 38
+        JR C,$+2                ; 38 00
         ADD HL,SP               ; 39
         LD A,(NN)               ; 3A XX XX
         DEC SP                  ; 3B

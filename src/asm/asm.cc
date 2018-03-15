@@ -564,6 +564,28 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
             if (pass) ++e;
             break;
 
+        case 'f':
+            pass =
+                (e->m_type == T::NZ ||
+                 e->m_type == T::Z ||
+                 e->m_type == T::NC ||
+                 e->m_type == T::C);
+            if (pass) ++e;
+            break;
+
+        case 'F':
+            pass =
+                (e->m_type == T::NZ ||
+                 e->m_type == T::Z ||
+                 e->m_type == T::NC ||
+                 e->m_type == T::C ||
+                 e->m_type == T::PO ||
+                 e->m_type == T::PE ||
+                 e->m_type == T::P ||
+                 e->m_type == T::M);
+            if (pass) ++e;
+            break;
+
         case '*':
             {
                 const Lex::Element* ee;
@@ -580,7 +602,6 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
                 if (e->m_type == T::Plus || e->m_type == T::Minus)
                 {
                     pass = expectExpression(lex, e, &e);
-                    --e;
                 }
             }
             break;
@@ -683,8 +704,14 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
                 goto finish_expr;
 
             case T::CloseParen:
-                ++e;
-                if (parenDepth-- == 0) goto expr_failed;
+                if (parenDepth > 0)
+                {
+                    --parenDepth;
+                }
+                else
+                {
+                    goto finish_expr;
+                }
                 break;
 
             default:
@@ -745,8 +772,11 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 
     while (e->m_type != T::EndOfFile)
     {
+        // Set if symbol is found
         symbol = 0;
+        // Set to true if this is a symbol to add to the symbol table (and symbol must be non-zero).
         symbolToAdd = false;
+
         if (e->m_type == T::Symbol)
         {
             // Possible label
@@ -804,6 +834,32 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 }
                 break;
 
+            case T::EQU:
+                if (symbol)
+                {
+                    // #todo: Allow expressions for EQU statements (requires expression evaluation)
+                    if ((++e)->m_type == T::Integer)
+                    {
+                        if ((++e)->m_type == T::Newline)
+                        {
+                            // Do nothing in pass 1.  Everything's ok!
+                        }
+                        else
+                        {
+                            FAIL("Invalid syntax for EQU directive.  Extraneous tokens found.");
+                        }
+                    }
+                    else
+                    {
+                        FAIL("EQU not fully implemented.  Only integers are allowed.");
+                    }
+                }
+                else
+                {
+                    FAIL("Missing label in EQU directive.");
+                }
+                break;
+
             default:
                 FAIL("Unimplemented directive.");
             }
@@ -842,12 +898,205 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e)
 
     switch (e->m_type)
     {
+    case T::ADC:
+        ++e;
+        PARSE(1, "a,{abcdehl}");
+        PARSE(2, "a,*");
+        PARSE(1, "a,(H)");
+        PARSE(2, "H,{BDHS}");
+        CHECK_PARSE(3, "a,(%)");
+        break;
+
+    case T::ADD:
+        ++e;
+        PARSE(1, "a,{abcdehl}");
+        PARSE(1, "a,(H)");
+        PARSE(2, "a,*");
+        PARSE(1, "H,{BDHS}");
+        PARSE(2, "X,{BDXS}");
+        PARSE(2, "Y,{BDYS}");
+        CHECK_PARSE(3, "a,(%)");
+        break;
+
+    case T::BIT:
+    case T::RES:
+    case T::SET:
+        ++e;
+        PARSE(2, "*,{abcdehl}");
+        PARSE(2, "*,(H)");
+        CHECK_PARSE(4, "*,(%)");
+        break;
+
+    case T::AND:
+    case T::CP:
+    case T::OR:
+    case T::XOR:
+        ++e;
+        PARSE(1, "a,{abcdehl}");
+        PARSE(1, "{abcdehl}");
+        PARSE(1, "a,(H)");
+        PARSE(1, "(H)");
+        PARSE(2, "*");
+        PARSE(2, "a,*");
+        PARSE(3, "a,(%)");
+        CHECK_PARSE(3, "(%)");
+        break;
+
+    case T::CALL:
+    case T::JP:
+        ++e;
+        PARSE(1, "(H)");
+        PARSE(2, "({XY})");
+        PARSE(3, "*");
+        CHECK_PARSE(3, "F,*");
+        break;
+
+    case T::CCF:
+    case T::CPD:
+    case T::CPDR:
+    case T::CPI:
+    case T::CPIR:
+    case T::CPL:
+    case T::DAA:
+    case T::DI:
+    case T::EI:
+    case T::EXX:
+    case T::HALT:
+    case T::IND:
+    case T::INDR:
+    case T::INI:
+    case T::INIR:
+    case T::LDD:
+    case T::LDDR:
+    case T::LDI:
+    case T::LDIR:
+    case T::NEG:
     case T::NOP:
+    case T::OTDR:
+    case T::OTIR:
+    case T::OUTD:
+    case T::OUTI:
+    case T::RETI:
+    case T::RETN:
+    case T::RLA:
+    case T::RLD:
+    case T::RRA:
+    case T::RRD:
+    case T::RLCA:
+    case T::RRCA:
+    case T::SCF:
         ++e;
         CHECK_PARSE(1, "");
 
+    case T::DEC:
+    case T::INC:
+        ++e;
+        PARSE(1, "{abcdehlBDHS}");
+        PARSE(1, "(H)");
+        PARSE(2, "{XY}");
+        CHECK_PARSE(3, "(%)");
+        break;
+
+    case T::DJNZ:
+        ++e;
+        CHECK_PARSE(2, "*");
+        break;
+
+    case T::EX:
+        ++e;
+        PARSE(1, "A,'");
+        PARSE(1, "D,H");
+        PARSE(1, "(S),H");
+        CHECK_PARSE(2, "(S),{XY}");
+        break;
+
+    case T::IM:
+        ++e;
+        CHECK_PARSE(2, "*");
+        break;
+
+    case T::IN:
+        ++e;
+        PARSE(2, "{abcdehl},(c)");
+        CHECK_PARSE(2, "a,(*)");
+        break;
+
+    case T::JR:
+        ++e;
+        PARSE(2, "*");
+        CHECK_PARSE(2, "f,*");
+        break;
+
     case T::LD:
         return assembleLoad1(lex, ++e);
+
+    case T::OUT:
+        ++e;
+        PARSE(2, "(c),{abcdehl}");
+        CHECK_PARSE(2, "(*),a");
+        break;
+
+    case T::POP:
+    case T::PUSH:
+        ++e;
+        PARSE(1, "{ABDH}");
+        CHECK_PARSE(2, "{XY}");
+        break;
+
+    case T::RET:
+        ++e;
+        PARSE(1, "");
+        CHECK_PARSE(1, "F");
+        break;
+
+    case T::RLC:
+    case T::RL:
+    case T::RR:
+    case T::RRC:
+    case T::SLA:
+    case T::SRA:
+        ++e;
+        PARSE(2, "{abcdehl}");
+        PARSE(2, "(H)");
+        CHECK_PARSE(4, "(%)");
+        break;
+
+    case T::SLL:
+    case T::SRL:
+        ++e;
+        PARSE(2, "{abcdehl}");
+        CHECK_PARSE(2, "(H)");
+        break;
+
+    case T::RST:
+        ++e;
+        CHECK_PARSE(1, "*");
+        break;
+
+    case T::SBC:
+        ++e;
+        PARSE(1, "a,{abcdehl}");
+        PARSE(1, "{abcdehl}");
+        PARSE(1, "a,(H)");
+        PARSE(1, "(H)");
+        PARSE(2, "a,*");
+        PARSE(2, "*");
+        PARSE(2, "H,{BDHS}");
+        PARSE(3, "a,(%)");
+        CHECK_PARSE(3, "(%)");
+        break;
+
+    case T::SUB:
+        ++e;
+        PARSE(1, "a,{abcdehl}");
+        PARSE(1, "{abcdehl}");
+        PARSE(1, "a,(H)");
+        PARSE(1, "(H)");
+        PARSE(2, "a,*");
+        PARSE(2, "*");
+        PARSE(3, "a,(%)");
+        CHECK_PARSE(3, "(%)");
+        break;
 
     default:
         error(lex, *e, "Unimplemented instruction.");
@@ -874,8 +1123,8 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e)
     PARSE(2, "i,a");                    // LD I,A
     PARSE(3, "a,(%)");                  // LD A,(IX+nn)
     PARSE(3, "a,(*)");                  // LD A,(nnnn)
-    PARSE(3, "(*),a");                  // LD (nnnn),A
-    PARSE(4, "(*),{BDHXYS}");           // LD (nnnn),BC/DE/HL/IX/IY/SP
+    PARSE(3, "(*),{aH}");                  // LD (nnnn),A/HL
+    PARSE(4, "(*),{BDXYS}");            // LD (nnnn),BC/DE/IX/IY/SP
     PARSE(4, "{BDHXYS},(*)");           // LD BC/DE/HL/IX/IY/SP,(nnnn)
     PARSE(3, "(%),{abcdehl}");          // LD (IX/IY+nn),A/B/C/D/E/H/L
     PARSE(3, "{abcdehl},(%)");          // LD A/B/C/D/E/H/L,(IX/IY+nn)
