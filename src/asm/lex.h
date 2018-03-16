@@ -170,6 +170,10 @@ public:
             Z,
 
             COUNT,
+
+            Unary_Plus,
+            Unary_Minus,
+            Unary_Tilde,
         };
 
         struct Pos

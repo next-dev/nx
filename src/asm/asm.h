@@ -155,8 +155,79 @@ private:
     // Evaluates variable expressions and generates the opcodes
     //------------------------------------------------------------------------------------------------------------------
 
+    enum class OperandType
+    {
+        None,                   // No operand exists
+        Expression,             // A valid expression
+        AddressedExpression,    // A valid address expression (i.e. (nnnn)).
+        IX_Expression,
+        IY_Expression,
+
+        A,
+        B,
+        C,
+        D,
+        E,
+        H,
+        L,
+        I,
+        R,
+        Address_HL,
+        AF,
+        AF_,
+        BC,
+        DE,
+        HL,
+        IX,
+        IY,
+        SP,
+        NC,
+        Z,
+        NZ,
+        PO,
+        PE,
+        M,
+        P
+    };
+
+    class Expression
+    {
+    public:
+        Expression();
+
+        enum class ValueType
+        {
+            UnaryOp,
+            BinaryOp,
+            Integer,
+            Symbol,
+            Char,
+            Dollar,
+        };
+
+        struct Value
+        {
+            ValueType   type;
+            i64         value;
+        };
+
+        void addValue(ValueType type, i64 value);
+        void addUnaryOp(Lex::Element::Type op);
+        void addBinaryOp(Lex::Element::Type op);
+
+        bool eval();
+    };
+
+    struct Operand
+    {
+        OperandType     type;       // Type of operand
+        Expression      expr;       // Expression (if necessary)
+    };
+
     bool pass2(Lex& lex, const vector<Lex::Element>& elems);
-    Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
+    const Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
+    bool buildExpression(const Lex::Element*& e, Expression& expr);
+    bool buildOperand(const Lex::Element*& e, Operand& op);
 
 private:
     //------------------------------------------------------------------------------------------------------------------

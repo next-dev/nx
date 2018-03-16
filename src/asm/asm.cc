@@ -1150,7 +1150,7 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e)
     PARSE(2, "i,a");                    // LD I,A
     PARSE(3, "a,(%)");                  // LD A,(IX+nn)
     PARSE(3, "a,(*)");                  // LD A,(nnnn)
-    PARSE(3, "(*),{aH}");                  // LD (nnnn),A/HL
+    PARSE(3, "(*),{aH}");               // LD (nnnn),A/HL
     PARSE(4, "(*),{BDXYS}");            // LD (nnnn),BC/DE/IX/IY/SP
     PARSE(4, "{BDHXYS},(*)");           // LD BC/DE/HL/IX/IY/SP,(nnnn)
     PARSE(3, "(%),{abcdehl}");          // LD (IX/IY+nn),A/B/C/D/E/H/L
@@ -1160,6 +1160,35 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e)
     PARSE(2, "S,{XY}");                 // LD SP,IX/IY
 
     return invalidInstruction(lex, start);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Expression evaluator
+//----------------------------------------------------------------------------------------------------------------------
+
+Assembler::Expression::Expression()
+{
+
+}
+
+void Assembler::Expression::addValue(ValueType type, i64 value)
+{
+
+}
+
+void Assembler::Expression::addUnaryOp(Lex::Element::Type op)
+{
+
+}
+
+void Assembler::Expression::addBinaryOp(Lex::Element::Type op)
+{
+
+}
+
+bool Assembler::Expression::eval()
+{
+    return false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1241,10 +1270,215 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
     return buildResult;
 }
 
-Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element* e)
+const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element* e)
 {
-    return 0;
+    using T = Lex::Element::Type;
+
+    // Process the instruction and break it down to the constituent parts.
+    Operand srcOp, dstOp;
+    T opCode;
+
+    srcOp.type = OperandType::None;
+    dstOp.type = OperandType::None;
+
+    //
+    // Step 1 - Get the opcode
+    //
+    opCode = e->m_type;
+    ++e;
+
+    //
+    // Step 2 - Get destination operand (if exists)
+    //
+    if (e->m_type == T::Newline) return ++e;
+
+    if (!buildOperand(e, dstOp))
+    {
+        while (e->m_type != T::Newline) ++e;
+        ++e;
+        return 0;
+    }
+
+    if (e->m_type != T::Comma) return ++e;
+
+    // Step 3 - Get source operand (if exists)
+    if (!buildOperand(e, srcOp))
+    {
+        while(e->m_type != T::Newline) ++e;
+        ++e;
+        return 0;
+    }
+
+    return e;
 }
+
+bool Assembler::buildOperand(const Lex::Element*& e, Operand& op)
+{
+    using T = Lex::Element::Type;
+
+    switch (e->m_type)
+    {
+    case T::Symbol:
+    case T::Integer:
+    case T::Char:
+    case T::Dollar:
+    case T::Plus:
+    case T::Minus:
+    case T::Tilde:
+        // Start of an expression.
+        if (!buildExpression(++e, op.expr)) return 0;
+        if (!op.expr.eval()) return 0;
+        break;
+
+    case T::OpenParen:
+        // Addressed expression or (HL) or (IX/Y...)
+        ++e;
+        switch (e->m_type)
+        {
+        case T::HL:
+            op.type = OperandType::Address_HL;
+            break;
+
+        case T::IX:
+            op.type = OperandType::IX_Expression;
+            break;
+
+        case T::IY:
+            op.type = OperandType::IY_Expression;
+            break;
+
+        default:
+            // Must be an address expression
+            op.type = OperandType::AddressedExpression;
+            --e; // decreased to include token in expression later on
+            break;
+        }
+        if (e->m_type != T::HL)
+        {
+            if (!buildExpression(++e, op.expr)) return 0;
+            if (!op.expr.eval()) return 0;
+        }
+
+        assert(e->m_type == T::CloseParen);
+        ++e;
+        break;
+
+    case T::A:      op.type = OperandType::A;           break;
+    case T::AF:     op.type = OperandType::AF;          break;
+    case T::AF_:    op.type = OperandType::AF_;         break;
+    case T::B:      op.type = OperandType::B;           break;
+    case T::BC:     op.type = OperandType::BC;          break;
+    case T::C:      op.type = OperandType::C;           break;
+    case T::D:      op.type = OperandType::D;           break;
+    case T::DE:     op.type = OperandType::DE;          break;
+    case T::E:      op.type = OperandType::E;           break;
+    case T::H:      op.type = OperandType::H;           break;
+    case T::HL:     op.type = OperandType::HL;          break;
+    case T::I:      op.type = OperandType::I;           break;
+    case T::IX:     op.type = OperandType::IX;          break;
+    case T::IY:     op.type = OperandType::IY;          break;
+    case T::L:      op.type = OperandType::L;           break;
+    case T::M:      op.type = OperandType::M;           break;
+    case T::NC:     op.type = OperandType::NC;          break;
+    case T::NZ:     op.type = OperandType::NZ;          break;
+    case T::P:      op.type = OperandType::P;           break;
+    case T::PE:     op.type = OperandType::PE;          break;
+    case T::PO:     op.type = OperandType::PO;          break;
+    case T::R:      op.type = OperandType::R;           break;
+    case T::SP:     op.type = OperandType::SP;          break;
+    case T::Z:      op.type = OperandType::Z;           break;
+
+    default:
+        // We should never reach here - pass 1 should ensure good syntax.
+        assert(0);
+    }
+
+    return true;
+}
+
+bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
+{
+    using T = Lex::Element::Type;
+
+    int parenDepth = 0;
+    int state = 0;
+
+    for (;;)
+    {
+        switch (state)
+        {
+        case 0:
+            switch (e->m_type)
+            {
+            case T::OpenParen:
+                ++parenDepth;
+                break;
+
+            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0);                state = 1;  break;
+            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol);      state = 1;  break;
+            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer);    state = 1;  break;
+            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer);       state = 1;  break;
+
+            case T::Plus:       expr.addUnaryOp(Lex::Element::Type::Unary_Plus);                state = 2;  break;
+            case T::Minus:      expr.addUnaryOp(Lex::Element::Type::Unary_Minus);               state = 2;  break;
+            case T::Tilde:      expr.addUnaryOp(Lex::Element::Type::Unary_Tilde);               state = 2;  break;
+
+            default:
+                // Should never reach here!
+                assert(0);
+            }
+            break;
+
+        case 1:
+            switch (e->m_type)
+            {
+            case T::Plus:
+            case T::Minus:
+            case T::LogicOr:
+            case T::LogicAnd:
+            case T::LogicXor:
+            case T::ShiftLeft:
+            case T::ShiftRight:
+            case T::Multiply:
+            case T::Divide:
+            case T::Mod:
+                expr.addBinaryOp(e->m_type);
+                state = 0;
+                break;
+
+            case T::Comma:
+            case T::Newline:
+                assert(parenDepth == 0);
+                return true;
+
+            case T::CloseParen:
+                if (parenDepth > 0)
+                {
+                    --parenDepth;
+                }
+                else
+                {
+                    return true;
+                }
+                break;
+            }
+
+        case 2:
+            switch (e->m_type)
+            {
+            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0);                state = 1;  break;
+            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol);      state = 1;  break;
+            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer);    state = 1;  break;
+            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer);       state = 1;  break;
+            default:
+                assert(0);
+            }
+        }
+
+        ++e;
+    }
+}
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
