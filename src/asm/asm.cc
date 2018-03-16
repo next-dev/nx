@@ -353,10 +353,13 @@ void Assembler::assemble(const vector<u8>& data, string sourceName)
     //
     // We store the index since passes may add new lexes.
     size_t index = m_sessions.size() - 1;
-    pass1(m_sessions[index], m_sessions[index].elements());
-    pass2(m_sessions[index], m_sessions[index].elements());
-
-    dumpSymbolTable();
+    if (pass1(m_sessions[index], m_sessions[index].elements()))
+    {
+        if (pass2(m_sessions[index], m_sessions[index].elements()))
+        {
+            dumpSymbolTable();
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -424,8 +427,25 @@ bool Assembler::addSymbol(i64 symbol, MemoryMap::Address address)
     }
 }
 
+bool Assembler::addValue(i64 symbol, i64 value)
+{
+    auto symIt = m_symbolTable.find(symbol);
+    bool result = false;
+    if (symIt == m_symbolTable.end())
+    {
+        auto it = m_values.find(symbol);
+        if (it == m_values.end())
+        {
+            m_values[symbol] = value;
+            result = true;
+        }
+    }
+
+    return result;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
-// Parsing utilties
+// Parsing utilities
 //----------------------------------------------------------------------------------------------------------------------
 
 bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE /* = nullptr */)
@@ -1153,6 +1173,7 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
     using T = Lex::Element::Type;
     const Lex::Element* e = elems.data();
     i64 symbol = 0;
+    const Lex::Element* symE = 0;
     bool buildResult = true;
     m_mmap.resetRange();
     m_mmap.addZ80Range(0x8000, 0xffff);
@@ -1160,10 +1181,69 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 
     while (e->m_type != T::EndOfFile)
     {
+        if (e->m_type == T::Symbol)
+        {
+            symbol = e->m_symbol;
+            symE = e;
+            if ((++e)->m_type == T::Colon) ++e;
+        }
 
+        // Figure out if the next token is an opcode or directive
+        if (e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES)
+        {
+            // It's an instruction. The syntax has already been checked.  We don't even have to worry about
+            // address ranges.
+#if _DEBUG
+            int count = assembleInstruction1(lex, e);
+            int oldAddress = m_address;
+#endif
+            e = assembleInstruction2(lex, e);
+#if _DEBUG
+            assert((oldAddress + count) == m_address);
+#endif
+            if (!e)
+            {
+                buildResult = false;
+                while (e->m_type != T::Newline) ++e;
+            }
+        }
+        else if (e->m_type > T::_END_OPCODES && e->m_type < T::_END_DIRECTIVES)
+        {
+            switch (e->m_type)
+            {
+            case T::ORG:
+                // #todo: Allow expressions for ORG statements (requires expression evaluation)
+                {
+                    u16 addr = u16((++e)->m_integer);
+                    e += 2;
+                    m_mmap.resetRange();
+                    m_mmap.addZ80Range(addr, 0xffff);
+                    m_address = 0;
+                }
+                break;
+
+            case T::EQU:
+                if (!addValue(symbol, (++e)->m_integer))
+                {
+                    error(lex, *symE, "Variable name already used.");
+                    while (e->m_type != T::Newline) ++e;
+                    ++e;
+                    buildResult = false;
+                }
+                break;
+
+            default:
+                FAIL("Unimplemented directive");
+            }
+        }
     }
 
-    return true;
+    return buildResult;
+}
+
+Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element* e)
+{
+    return 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

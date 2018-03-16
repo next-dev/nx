@@ -108,6 +108,7 @@ private:
     void assembleFile(string fileName);
 
     bool addSymbol(i64 symbol, MemoryMap::Address address);
+    bool addValue(i64 symbol, i64 value);
 
     void dumpLex(const Lex& l);
     void dumpSymbolTable();
@@ -155,6 +156,7 @@ private:
     //------------------------------------------------------------------------------------------------------------------
 
     bool pass2(Lex& lex, const vector<Lex::Element>& elems);
+    Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
 
 private:
     //------------------------------------------------------------------------------------------------------------------
@@ -176,6 +178,7 @@ private:
 
     // Symbols (labels)
     map<i64, SymbolInfo>        m_symbolTable;
+    map<i64, i64>               m_values;
     StringTable                 m_lexSymbols;   // Symbols shared by all Lex instances
 
     // Variables
