@@ -41,15 +41,17 @@ public:
             Integer,
             String,
             Char,
+            Dollar,
 
-            // Operators
+            // Punctuation
             Comma,
             OpenParen,
             CloseParen,
-            Dollar,
+            Colon,
+
+            // Operators
             Plus,
             Minus,
-            Colon,
             LogicOr,
             LogicAnd,
             LogicXor,
@@ -59,6 +61,9 @@ public:
             Multiply,
             Divide,
             Mod,
+
+            Unary_Plus,
+            Unary_Minus,
 
             _KEYWORDS,
 
@@ -171,9 +176,6 @@ public:
 
             COUNT,
 
-            Unary_Plus,
-            Unary_Minus,
-            Unary_Tilde,
         };
 
         struct Pos

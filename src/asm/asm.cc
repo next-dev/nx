@@ -161,14 +161,15 @@ void Assembler::dumpLex(const Lex& l)
         "INTEGER",
         "STRING",
         "CHAR",
+        "DOLLAR",
 
         "COMMA",
         "OPEN-PAREN",
         "CLOSE-PAREN",
-        "DOLLAR",
+        "COLON",
+
         "PLUS",
         "MINUS",
-        "COLON",
         "LOGIC-OR",
         "LOGIC-AND",
         "LOGIC-XOR",
@@ -178,6 +179,9 @@ void Assembler::dumpLex(const Lex& l)
         "MULTIPLY",
         "DIVIDE",
         "MOD",
+
+        "UNARY_PLUS",
+        "UNARY_MINUS",
     };
 
     using T = Lex::Element::Type;
@@ -809,9 +813,11 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         if (e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES)
         {
             // It's a possible instruction
-            m_address += assembleInstruction1(lex, e);
+            const Lex::Element* outE;
+            m_address += assembleInstruction1(lex, e, &outE);
             symbolToAdd = true;
 
+            e = outE;
             buildResult = (e->m_type == T::Newline);
             if (!buildResult)
             {
@@ -915,10 +921,10 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
     return buildResult;
 }
 
-#define PARSE(n, format) if (expect(lex, e, (format))) return (n)
+#define PARSE(n, format) if (expect(lex, e, (format), outE)) return (n)
 #define CHECK_PARSE(n, format) PARSE(n, format); return invalidInstruction(lex, e)
 
-int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e)
+int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::Element** outE)
 {
     using T = Lex::Element::Type;
     assert(e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES);
@@ -1055,7 +1061,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e)
         break;
 
     case T::LD:
-        return assembleLoad1(lex, ++e);
+        return assembleLoad1(lex, ++e, outE);
 
     case T::OUT:
         ++e;
@@ -1132,7 +1138,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e)
 }
 
 
-int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e)
+int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e, const Lex::Element** outE)
 {
     using T = Lex::Element::Type;
     const Lex::Element* start = e;
@@ -1171,23 +1177,133 @@ Assembler::Expression::Expression()
 
 }
 
-void Assembler::Expression::addValue(ValueType type, i64 value)
+void Assembler::Expression::addValue(ValueType type, i64 value, const Lex::Element* e)
 {
-
+    assert(type == ValueType::Integer ||
+           type == ValueType::Symbol ||
+           type == ValueType::Char ||
+           type == ValueType::Dollar);
+    m_queue.emplace_back(type, value, e);
 }
 
-void Assembler::Expression::addUnaryOp(Lex::Element::Type op)
+void Assembler::Expression::addUnaryOp(Lex::Element::Type op, const Lex::Element* e)
 {
-
+    m_queue.emplace_back(ValueType::UnaryOp, (i64)op, e);
 }
 
-void Assembler::Expression::addBinaryOp(Lex::Element::Type op)
+void Assembler::Expression::addBinaryOp(Lex::Element::Type op, const Lex::Element* e)
 {
-
+    m_queue.emplace_back(ValueType::BinaryOp, (i64)op, e);
 }
 
-bool Assembler::Expression::eval()
+void Assembler::Expression::addOpen(const Lex::Element* e)
 {
+    m_queue.emplace_back(ValueType::OpenParen, 0, e);
+}
+
+void Assembler::Expression::addClose(const Lex::Element* e)
+{
+    m_queue.emplace_back(ValueType::CloseParen, 0, e);
+}
+
+bool Assembler::Expression::eval(Lex& lex)
+{
+    using T = Lex::Element::Type;
+
+    //
+    // Step 1 - convert to reverse polish notation using the Shunting Yard algorithm
+    //
+    vector<Value>   output;
+    vector<Value>   opStack;
+
+    enum class Assoc
+    {
+        Left,
+        Right,
+    };
+
+    struct OpInfo
+    {
+        int     level;
+        Assoc   assoc;
+    };
+
+    // Operator precedence:
+    //
+    //      0:  - + ~ (unary ops)
+    //      1:  * / %
+    //      2:  + -
+    //      3:  << >>
+    //      4:  &
+    //      5:  | ^
+
+    OpInfo opInfo[] = {
+        { 2, Assoc::Left },         // Plus
+        { 2, Assoc::Left },         // Minus
+        { 5, Assoc::Left },         // LogicOr
+        { 4, Assoc::Left },         // LogicAnd
+        { 5, Assoc::Left },         // LogicXor
+        { 3, Assoc::Left },         // ShiftLeft,
+        { 3, Assoc::Left },         // ShiftRight,
+        { 0, Assoc::Right },        // Unary tilde
+        { 1, Assoc::Left },         // Multiply
+        { 1, Assoc::Left },         // Divide
+        { 1, Assoc::Left },         // Mod
+        { 0, Assoc::Right },        // Unary plus
+        { 0, Assoc::Right },        // Unary minus
+    };
+
+    for (const auto& v : m_queue)
+    {
+        switch (v.type)
+        {
+        case ValueType::UnaryOp:
+        case ValueType::BinaryOp:
+            // Operator
+            while (
+                !opStack.empty() &&
+                (((opInfo[(int)v.elem->m_type - (int)T::Plus].assoc == Assoc::Left) &&
+                    (opInfo[(int)v.elem->m_type - (int)T::Plus].level == opInfo[(int)opStack.back().elem->m_type - (int)T::Plus].level)) ||
+                    ((opInfo[(int)v.elem->m_type - (int)T::Plus].level > opInfo[(int)opStack.back().elem->m_type - (int)T::Plus].level))))
+            {
+                output.emplace_back(opStack.back());
+                opStack.pop_back();
+            }
+            // continue...
+
+        case ValueType::OpenParen:
+            opStack.emplace_back(v);
+            break;
+
+        case ValueType::Integer:
+        case ValueType::Symbol:
+        case ValueType::Char:
+        case ValueType::Dollar:
+            output.emplace_back(v);
+            break;
+
+        case ValueType::CloseParen:
+            while (opStack.back().type != ValueType::OpenParen)
+            {
+                output.emplace_back(opStack.back());
+                opStack.pop_back();
+            }
+            opStack.pop_back();
+            break;
+        }
+
+    }
+
+    while (!opStack.empty())
+    {
+        output.emplace_back(opStack.back());
+        opStack.pop_back();
+    }
+
+    //
+    // Step 2 - Execute the RPN expression
+    // If this fails, the expression cannot be evaluated yet return false after outputting a message
+    //
     return false;
 }
 
@@ -1223,12 +1339,12 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
             // It's an instruction. The syntax has already been checked.  We don't even have to worry about
             // address ranges.
 #if _DEBUG
-            int count = assembleInstruction1(lex, e);
+            int count = assembleInstruction1(lex, e, nullptr);
             int oldAddress = m_address;
 #endif
             e = assembleInstruction2(lex, e);
 #if _DEBUG
-            assert((oldAddress + count) == m_address);
+            assert(!count || ((oldAddress + count) == m_address));
 #endif
             if (!e)
             {
@@ -1265,6 +1381,10 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
                 FAIL("Unimplemented directive");
             }
         }
+        else
+        {
+            ++e;
+        }
     }
 
     return buildResult;
@@ -1292,17 +1412,17 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     //
     if (e->m_type == T::Newline) return ++e;
 
-    if (!buildOperand(e, dstOp))
+    if (!buildOperand(lex, e, dstOp))
     {
         while (e->m_type != T::Newline) ++e;
         ++e;
         return 0;
     }
 
-    if (e->m_type != T::Comma) return ++e;
+    if ((e++)->m_type != T::Comma) return e;
 
     // Step 3 - Get source operand (if exists)
-    if (!buildOperand(e, srcOp))
+    if (!buildOperand(lex, e, srcOp))
     {
         while(e->m_type != T::Newline) ++e;
         ++e;
@@ -1312,11 +1432,11 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     return e;
 }
 
-bool Assembler::buildOperand(const Lex::Element*& e, Operand& op)
+bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
 {
     using T = Lex::Element::Type;
 
-    switch (e->m_type)
+    switch ((e)->m_type)
     {
     case T::Symbol:
     case T::Integer:
@@ -1326,8 +1446,8 @@ bool Assembler::buildOperand(const Lex::Element*& e, Operand& op)
     case T::Minus:
     case T::Tilde:
         // Start of an expression.
-        if (!buildExpression(++e, op.expr)) return 0;
-        if (!op.expr.eval()) return 0;
+        if (!buildExpression(e, op.expr)) return 0;
+        if (!op.expr.eval(lex)) return 0;
         break;
 
     case T::OpenParen:
@@ -1356,37 +1476,37 @@ bool Assembler::buildOperand(const Lex::Element*& e, Operand& op)
         if (e->m_type != T::HL)
         {
             if (!buildExpression(++e, op.expr)) return 0;
-            if (!op.expr.eval()) return 0;
+            if (!op.expr.eval(lex)) return 0;
         }
 
         assert(e->m_type == T::CloseParen);
         ++e;
         break;
 
-    case T::A:      op.type = OperandType::A;           break;
-    case T::AF:     op.type = OperandType::AF;          break;
-    case T::AF_:    op.type = OperandType::AF_;         break;
-    case T::B:      op.type = OperandType::B;           break;
-    case T::BC:     op.type = OperandType::BC;          break;
-    case T::C:      op.type = OperandType::C;           break;
-    case T::D:      op.type = OperandType::D;           break;
-    case T::DE:     op.type = OperandType::DE;          break;
-    case T::E:      op.type = OperandType::E;           break;
-    case T::H:      op.type = OperandType::H;           break;
-    case T::HL:     op.type = OperandType::HL;          break;
-    case T::I:      op.type = OperandType::I;           break;
-    case T::IX:     op.type = OperandType::IX;          break;
-    case T::IY:     op.type = OperandType::IY;          break;
-    case T::L:      op.type = OperandType::L;           break;
-    case T::M:      op.type = OperandType::M;           break;
-    case T::NC:     op.type = OperandType::NC;          break;
-    case T::NZ:     op.type = OperandType::NZ;          break;
-    case T::P:      op.type = OperandType::P;           break;
-    case T::PE:     op.type = OperandType::PE;          break;
-    case T::PO:     op.type = OperandType::PO;          break;
-    case T::R:      op.type = OperandType::R;           break;
-    case T::SP:     op.type = OperandType::SP;          break;
-    case T::Z:      op.type = OperandType::Z;           break;
+    case T::A:      op.type = OperandType::A;           ++e; break;
+    case T::AF:     op.type = OperandType::AF;          ++e; break;
+    case T::AF_:    op.type = OperandType::AF_;         ++e; break;
+    case T::B:      op.type = OperandType::B;           ++e; break;
+    case T::BC:     op.type = OperandType::BC;          ++e; break;
+    case T::C:      op.type = OperandType::C;           ++e; break;
+    case T::D:      op.type = OperandType::D;           ++e; break;
+    case T::DE:     op.type = OperandType::DE;          ++e; break;
+    case T::E:      op.type = OperandType::E;           ++e; break;
+    case T::H:      op.type = OperandType::H;           ++e; break;
+    case T::HL:     op.type = OperandType::HL;          ++e; break;
+    case T::I:      op.type = OperandType::I;           ++e; break;
+    case T::IX:     op.type = OperandType::IX;          ++e; break;
+    case T::IY:     op.type = OperandType::IY;          ++e; break;
+    case T::L:      op.type = OperandType::L;           ++e; break;
+    case T::M:      op.type = OperandType::M;           ++e; break;
+    case T::NC:     op.type = OperandType::NC;          ++e; break;
+    case T::NZ:     op.type = OperandType::NZ;          ++e; break;
+    case T::P:      op.type = OperandType::P;           ++e; break;
+    case T::PE:     op.type = OperandType::PE;          ++e; break;
+    case T::PO:     op.type = OperandType::PO;          ++e; break;
+    case T::R:      op.type = OperandType::R;           ++e; break;
+    case T::SP:     op.type = OperandType::SP;          ++e; break;
+    case T::Z:      op.type = OperandType::Z;           ++e; break;
 
     default:
         // We should never reach here - pass 1 should ensure good syntax.
@@ -1411,17 +1531,18 @@ bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
             switch (e->m_type)
             {
             case T::OpenParen:
+                expr.addOpen(e);
                 ++parenDepth;
                 break;
 
-            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0);                state = 1;  break;
-            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol);      state = 1;  break;
-            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer);    state = 1;  break;
-            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer);       state = 1;  break;
+            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0, e);                 state = 1;  break;
+            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);       state = 1;  break;
+            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);     state = 1;  break;
+            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);        state = 1;  break;
 
-            case T::Plus:       expr.addUnaryOp(Lex::Element::Type::Unary_Plus);                state = 2;  break;
-            case T::Minus:      expr.addUnaryOp(Lex::Element::Type::Unary_Minus);               state = 2;  break;
-            case T::Tilde:      expr.addUnaryOp(Lex::Element::Type::Unary_Tilde);               state = 2;  break;
+            case T::Plus:       expr.addUnaryOp(Lex::Element::Type::Unary_Plus, e);                 state = 2;  break;
+            case T::Minus:      expr.addUnaryOp(Lex::Element::Type::Unary_Minus, e);                state = 2;  break;
+            case T::Tilde:      expr.addUnaryOp(Lex::Element::Type::Tilde, e);                      state = 2;  break;
 
             default:
                 // Should never reach here!
@@ -1442,7 +1563,7 @@ bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
             case T::Multiply:
             case T::Divide:
             case T::Mod:
-                expr.addBinaryOp(e->m_type);
+                expr.addBinaryOp(e->m_type, e);
                 state = 0;
                 break;
 
@@ -1455,6 +1576,7 @@ bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
                 if (parenDepth > 0)
                 {
                     --parenDepth;
+                    expr.addClose(e);
                 }
                 else
                 {
@@ -1462,14 +1584,15 @@ bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
                 }
                 break;
             }
+            break;
 
         case 2:
             switch (e->m_type)
             {
-            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0);                state = 1;  break;
-            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol);      state = 1;  break;
-            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer);    state = 1;  break;
-            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer);       state = 1;  break;
+            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0, e);              state = 1;  break;
+            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);    state = 1;  break;
+            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);  state = 1;  break;
+            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);     state = 1;  break;
             default:
                 assert(0);
             }

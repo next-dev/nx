@@ -147,8 +147,8 @@ private:
     //------------------------------------------------------------------------------------------------------------------
 
     bool pass1(Lex& lex, const vector<Lex::Element>& elems);
-    int assembleInstruction1(Lex& lex, const Lex::Element* e);
-    int assembleLoad1(Lex& lex, const Lex::Element* e);
+    int assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
+    int assembleLoad1(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
 
     //------------------------------------------------------------------------------------------------------------------
     // Pass 2
@@ -199,6 +199,8 @@ private:
         {
             UnaryOp,
             BinaryOp,
+            OpenParen,
+            CloseParen,
             Integer,
             Symbol,
             Char,
@@ -207,15 +209,23 @@ private:
 
         struct Value
         {
-            ValueType   type;
-            i64         value;
+            ValueType               type;
+            i64                     value;
+            const Lex::Element*     elem;       // The element that described the operand
+
+            Value(ValueType type, i64 value, const Lex::Element* e) : type(type), value(value), elem(e) {}
         };
 
-        void addValue(ValueType type, i64 value);
-        void addUnaryOp(Lex::Element::Type op);
-        void addBinaryOp(Lex::Element::Type op);
+        void addValue(ValueType type, i64 value, const Lex::Element* e);
+        void addUnaryOp(Lex::Element::Type op, const Lex::Element* e);
+        void addBinaryOp(Lex::Element::Type op, const Lex::Element* e);
+        void addOpen(const Lex::Element* e);
+        void addClose(const Lex::Element* e);
 
-        bool eval();
+        bool eval(Lex& lex);
+
+    private:
+        vector<Value>   m_queue;
     };
 
     struct Operand
@@ -227,7 +237,7 @@ private:
     bool pass2(Lex& lex, const vector<Lex::Element>& elems);
     const Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
     bool buildExpression(const Lex::Element*& e, Expression& expr);
-    bool buildOperand(const Lex::Element*& e, Operand& op);
+    bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
 
 private:
     //------------------------------------------------------------------------------------------------------------------
