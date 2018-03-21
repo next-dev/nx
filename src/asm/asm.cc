@@ -1206,7 +1206,7 @@ void Assembler::Expression::addClose(const Lex::Element* e)
     m_queue.emplace_back(ValueType::CloseParen, 0, e);
 }
 
-bool Assembler::Expression::eval(Lex& lex)
+bool Assembler::Expression::eval(Lex& lex, MemoryMap::Address currentAddress)
 {
     using T = Lex::Element::Type;
 
@@ -1304,6 +1304,42 @@ bool Assembler::Expression::eval(Lex& lex)
     // Step 2 - Execute the RPN expression
     // If this fails, the expression cannot be evaluated yet return false after outputting a message
     //
+    vector<i64> stack;
+    for (const auto& v : output)
+    {
+        switch (v.type)
+        {
+        case ValueType::Integer:
+        case ValueType::Symbol:
+        case ValueType::Char:
+            stack.emplace_back(v.value);
+            break;
+
+        case ValueType::Dollar:
+            stack.emplace_back(currentAddress);
+            break;
+
+        case ValueType::UnaryOp:
+            switch ((T)v.value)
+            {
+            case T::Unary_Plus:
+                break;
+
+            case T::Unary_Minus:
+                break;
+
+            case T::Tilde:
+                break;
+
+            default:
+            }
+            break;
+
+        case ValueType::BinaryOp:
+            break;
+        }
+    }
+
     return false;
 }
 

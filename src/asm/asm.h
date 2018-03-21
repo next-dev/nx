@@ -222,10 +222,11 @@ private:
         void addOpen(const Lex::Element* e);
         void addClose(const Lex::Element* e);
 
-        bool eval(Lex& lex);
+        bool eval(Lex& lex, MemoryMap::Address currentAddress);
 
     private:
         vector<Value>   m_queue;
+        i64             m_result;
     };
 
     struct Operand
