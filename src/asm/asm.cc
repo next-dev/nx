@@ -1570,6 +1570,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
         // Start of an expression.
         if (!buildExpression(e, op.expr)) return 0;
         if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+        op.type = OperandType::Expression;
         break;
 
     case T::OpenParen:
@@ -1582,10 +1583,14 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
             break;
 
         case T::IX:
+            if (!buildExpression(e, op.expr)) return 0;
+            if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             op.type = OperandType::IX_Expression;
             break;
 
         case T::IY:
+            if (!buildExpression(e, op.expr)) return 0;
+            if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             op.type = OperandType::IY_Expression;
             break;
 
@@ -1599,6 +1604,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
         {
             if (!buildExpression(++e, op.expr)) return 0;
             if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+            op.type = OperandType::AddressedExpression;
         }
 
         assert(e->m_type == T::CloseParen);
