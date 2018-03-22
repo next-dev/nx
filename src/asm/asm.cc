@@ -448,6 +448,19 @@ bool Assembler::addValue(i64 symbol, i64 value)
     return result;
 }
 
+optional<i64> Assembler::lookUpLabel(i64 symbol)
+{
+    auto it = m_symbolTable.find(symbol);
+    return it == m_symbolTable.end() ? optional<i64>{} : it->second.m_addr;
+}
+
+optional<i64> Assembler::lookUpValue(i64 symbol)
+{
+    auto it = m_values.find(symbol);
+    return it == m_values.end() ? optional<i64>{} : it->second;
+}
+
+
 //----------------------------------------------------------------------------------------------------------------------
 // Parsing utilities
 //----------------------------------------------------------------------------------------------------------------------
@@ -775,12 +788,12 @@ expr_failed:
 // Pass 1
 //----------------------------------------------------------------------------------------------------------------------
 
-#define FAIL(msg) \
-    do { \
-    error(lex, *e, (msg)); \
-    while (e->m_type != T::Newline) ++e; \
-    ++e; \
-    buildResult = false; \
+#define FAIL(msg)                               \
+    do {                                        \
+    error(lex, *e, (msg));                      \
+    while (e->m_type != T::Newline) ++e;        \
+    ++e;                                        \
+    buildResult = false;                        \
     } while (0)
 
 bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
@@ -920,6 +933,8 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 
     return buildResult;
 }
+
+#undef FAIL
 
 #define PARSE(n, format) if (expect(lex, e, (format), outE)) return (n)
 #define CHECK_PARSE(n, format) PARSE(n, format); return invalidInstruction(lex, e)
@@ -1168,6 +1183,9 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e, const Lex::Element
     return invalidInstruction(lex, start);
 }
 
+#undef PARSE
+#undef CHECK_PARSE
+
 //----------------------------------------------------------------------------------------------------------------------
 // Expression evaluator
 //----------------------------------------------------------------------------------------------------------------------
@@ -1206,7 +1224,7 @@ void Assembler::Expression::addClose(const Lex::Element* e)
     m_queue.emplace_back(ValueType::CloseParen, 0, e);
 }
 
-bool Assembler::Expression::eval(Lex& lex, MemoryMap::Address currentAddress)
+bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Address currentAddress)
 {
     using T = Lex::Element::Type;
 
@@ -1304,15 +1322,46 @@ bool Assembler::Expression::eval(Lex& lex, MemoryMap::Address currentAddress)
     // Step 2 - Execute the RPN expression
     // If this fails, the expression cannot be evaluated yet return false after outputting a message
     //
+
+#define FAIL()                                                          \
+    do {                                                                \
+        assembler.error(lex, *v.elem, "Syntax error in expression.");   \
+        return false;                                                   \
+    } while(0)
+
     vector<i64> stack;
+    i64 a, b;
+
     for (const auto& v : output)
     {
         switch (v.type)
         {
         case ValueType::Integer:
-        case ValueType::Symbol:
         case ValueType::Char:
             stack.emplace_back(v.value);
+            break;
+
+        case ValueType::Symbol:
+            {
+                optional<i64> value = assembler.lookUpLabel(v.value);
+                if (value)
+                {
+                    stack.emplace_back(*value);
+                }
+                else
+                {
+                    value = assembler.lookUpValue(v.value);
+                    if (value)
+                    {
+                        stack.emplace_back(*value);
+                    }
+                    else
+                    {
+                        assembler.error(lex, *v.elem, "Unknown symbol.");
+                        return false;
+                    }
+                }
+            }
             break;
 
         case ValueType::Dollar:
@@ -1320,32 +1369,67 @@ bool Assembler::Expression::eval(Lex& lex, MemoryMap::Address currentAddress)
             break;
 
         case ValueType::UnaryOp:
+            if (stack.size() < 1) FAIL();
             switch ((T)v.value)
             {
             case T::Unary_Plus:
+                // Do nothing
                 break;
 
             case T::Unary_Minus:
+                stack.back() = -stack.back();
                 break;
 
             case T::Tilde:
+                stack.back() = ~stack.back();
                 break;
 
             default:
+                FAIL();
             }
             break;
 
         case ValueType::BinaryOp:
+            if (stack.size() < 2) FAIL();
+            b = stack.back();   stack.pop_back();
+            a = stack.back();   stack.pop_back();
+            switch ((T)v.value)
+            {
+            case T::Plus:       stack.emplace_back(a + b);      break;
+            case T::Minus:      stack.emplace_back(a - b);      break;
+            case T::LogicOr:    stack.emplace_back(a | b);      break;
+            case T::LogicAnd:   stack.emplace_back(a & b);      break;
+            case T::LogicXor:   stack.emplace_back(a ^ b);      break;
+            case T::ShiftLeft:  stack.emplace_back(a << b);     break;
+            case T::ShiftRight: stack.emplace_back(a >> b);     break;
+            case T::Multiply:   stack.emplace_back(a * b);      break;
+            case T::Divide:     stack.emplace_back(a / b);      break;
+            case T::Mod:        stack.emplace_back(a % b);      break;
+            default:
+                FAIL();
+            }
             break;
         }
     }
 
-    return false;
+#undef FAIL
+
+    assert(stack.size() == 1);
+    m_result = stack[0];
+    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 // Pass 2
 //----------------------------------------------------------------------------------------------------------------------
+
+#define FAIL(msg)                                   \
+    do {                                            \
+        error(lex, *e, (msg));                      \
+        while (e->m_type != T::Newline) ++e;        \
+        ++e;                                        \
+        buildResult = false;                        \
+    } while (0)
 
 bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 {
@@ -1426,6 +1510,8 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
     return buildResult;
 }
 
+#undef FAIL
+
 const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element* e)
 {
     using T = Lex::Element::Type;
@@ -1483,7 +1569,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     case T::Tilde:
         // Start of an expression.
         if (!buildExpression(e, op.expr)) return 0;
-        if (!op.expr.eval(lex)) return 0;
+        if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
         break;
 
     case T::OpenParen:
@@ -1512,7 +1598,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
         if (e->m_type != T::HL)
         {
             if (!buildExpression(++e, op.expr)) return 0;
-            if (!op.expr.eval(lex)) return 0;
+            if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
         }
 
         assert(e->m_type == T::CloseParen);

@@ -10,6 +10,7 @@
 
 #include <array>
 #include <map>
+#include <optional>
 #include <vector>
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -96,6 +97,9 @@ public:
     int numErrors() const { return m_numErrors; }
     void error(const Lex& l, const Lex::Element& el, const string& message);
     i64 getSymbol(const u8* start, const u8* end) { return m_lexSymbols.add((const char*)start, (const char *)end); }
+
+    optional<i64> lookUpLabel(i64 symbol);
+    optional<i64> lookUpValue(i64 symbol);
 
 private:
     //------------------------------------------------------------------------------------------------------------------
@@ -222,7 +226,7 @@ private:
         void addOpen(const Lex::Element* e);
         void addClose(const Lex::Element* e);
 
-        bool eval(Lex& lex, MemoryMap::Address currentAddress);
+        bool eval(Assembler& assembler, Lex& lex, MemoryMap::Address currentAddress);
 
     private:
         vector<Value>   m_queue;

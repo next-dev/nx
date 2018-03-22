@@ -105,6 +105,7 @@ solution "nx"
 		configuration "Win*"
 			defines {
 				"WIN32",
+                "_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING",
 			}
 			flags {
 				--"StaticRuntime",
@@ -114,3 +115,5 @@ solution "nx"
             linkoptions {
                 "/ignore:4099"
             }
+            buildoptions { "/std:c++17" }
+
