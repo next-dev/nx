@@ -1504,6 +1504,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     // Step 1 - Get the opcode
     //
     opCode = e->m_type;
+    const Lex::Element* s = e;
     ++e;
 
     //
@@ -1527,6 +1528,40 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         ++e;
         return 0;
     }
+
+    //
+    // Step 4 - Assemble!
+    //
+
+#define UNDEFINED()                             \
+    error(lex, *s, "Unimplemented opcode.");    \
+    return false;
+
+    switch (opCode)
+    {
+    case T::LD:
+        switch (dstOp.type)
+        {
+        case OperandType::A:
+        case OperandType::B:
+        case OperandType::C:
+        case OperandType::D:
+        case OperandType::E:
+        case OperandType::H:
+        case OperandType::L:
+            // CONTINUE HERE!
+            break;
+
+        default:
+            UNDEFINED();
+        } // dstOp.type
+        break;
+
+    default:
+        UNDEFINED();
+    }
+
+#undef UNDEFINED
 
     return e;
 }
@@ -1709,6 +1744,88 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e)
 
         ++e;
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Emission utilities
+//----------------------------------------------------------------------------------------------------------------------
+
+u8 Assembler::r(OperandType ot) const
+{
+    switch (ot)
+    {
+    case OperandType::B:            return 0;
+    case OperandType::C:            return 1;
+    case OperandType::D:            return 2;
+    case OperandType::E:            return 3;
+    case OperandType::H:            return 4;
+    case OperandType::L:            return 5;
+    case OperandType::Address_HL:   return 6;
+    case OperandType::A:            return 7;
+
+    default:
+        assert(0);
+    }
+    return 0;
+}
+
+u8 Assembler::rp(OperandType ot) const
+{
+    switch (ot)
+    {
+    case OperandType::BC:       return 0;
+    case OperandType::DE:       return 1;
+    case OperandType::HL:       return 2;
+    case OperandType::SP:       return 3;
+
+    default:
+        assert(0);
+    }
+
+    return 0;
+}
+
+u8 Assembler::rp2(OperandType ot) const
+{
+    switch (ot)
+    {
+    case OperandType::BC:       return 0;
+    case OperandType::DE:       return 1;
+    case OperandType::HL:       return 2;
+    case OperandType::AF:       return 3;
+
+    default:
+        assert(0);
+    }
+
+    return 0;
+}
+
+void Assembler::emit8(u8 b)
+{
+    m_mmap.poke8(m_address++, b);
+}
+
+void Assembler::emit16(u16 w)
+{
+    m_mmap.poke16(m_address++, w);
+}
+
+void Assembler::emitXYZ(u8 x, u8 y, u8 z)
+{
+    assert(x < 4);
+    assert(y < 8);
+    assert(z < 8);
+    emit8((x << 6) | (y << 3) | z);
+}
+
+void Assembler::emitXPQZ(u8 x, u8 p, u8 q, u8 z)
+{
+    assert(x < 4);
+    assert(p < 4);
+    assert(q < 2);
+    assert(z < 8);
+    emit8((x << 6) | (p << 4) | (q << 3) | z);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

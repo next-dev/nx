@@ -246,8 +246,23 @@ private:
     Expression buildExpression(const Lex::Element*& e);
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
 
+    //
+    // Directives
+    //
     bool doOrg(Lex& lex, const Lex::Element*& e);
     bool doEqu(Lex& lex, i64 symbol, const Lex::Element*& e);
+
+    //
+    // Emission utilities
+    //
+    u8 r(OperandType ot) const;
+    u8 rp(OperandType ot) const;
+    u8 rp2(OperandType ot) const;
+
+    void emit8(u8 b);
+    void emit16(u16 w);
+    void emitXYZ(u8 x, u8 y, u8 z);
+    void emitXPQZ(u8 x, u8 p, u8 q, u8 z);
 
 private:
     //------------------------------------------------------------------------------------------------------------------
