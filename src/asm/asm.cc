@@ -876,21 +876,9 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             case T::EQU:
                 if (symbol)
                 {
-                    // #todo: Allow expressions for EQU statements (requires expression evaluation)
-                    if ((++e)->m_type == T::Integer)
+                    if (!expect(lex, ++e, "*"))
                     {
-                        if ((++e)->m_type == T::Newline)
-                        {
-                            // Do nothing in pass 1.  Everything's ok!
-                        }
-                        else
-                        {
-                            FAIL("Invalid syntax for EQU directive.  Extraneous tokens found.");
-                        }
-                    }
-                    else
-                    {
-                        FAIL("EQU not fully implemented.  Only integers are allowed.");
+                        FAIL("Invalid syntax for EQU directive.");
                     }
                 }
                 else
@@ -1477,24 +1465,11 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
             switch (e->m_type)
             {
             case T::ORG:
-                // #todo: Allow expressions for ORG statements (requires expression evaluation)
-                {
-                    u16 addr = u16((++e)->m_integer);
-                    e += 2;
-                    m_mmap.resetRange();
-                    m_mmap.addZ80Range(addr, 0xffff);
-                    m_address = 0;
-                }
+                buildResult = doOrg(lex, ++e);
                 break;
 
             case T::EQU:
-                if (!addValue(symbol, (++e)->m_integer))
-                {
-                    error(lex, *symE, "Variable name already used.");
-                    while (e->m_type != T::Newline) ++e;
-                    ++e;
-                    buildResult = false;
-                }
+                buildResult = doEqu(lex, symbol, ++e);
                 break;
 
             default:
@@ -1511,6 +1486,8 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 }
 
 #undef FAIL
+
+
 
 const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element* e)
 {
@@ -1568,7 +1545,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     case T::Minus:
     case T::Tilde:
         // Start of an expression.
-        if (!buildExpression(e, op.expr)) return 0;
+        op.expr = buildExpression(e);
         if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
         op.type = OperandType::Expression;
         break;
@@ -1583,13 +1560,13 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
             break;
 
         case T::IX:
-            if (!buildExpression(e, op.expr)) return 0;
+            op.expr = buildExpression(e);
             if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             op.type = OperandType::IX_Expression;
             break;
 
         case T::IY:
-            if (!buildExpression(e, op.expr)) return 0;
+            op.expr = buildExpression(e);
             if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             op.type = OperandType::IY_Expression;
             break;
@@ -1602,7 +1579,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
         }
         if (e->m_type != T::HL)
         {
-            if (!buildExpression(++e, op.expr)) return 0;
+            op.expr = buildExpression(e);
             if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             op.type = OperandType::AddressedExpression;
         }
@@ -1644,12 +1621,13 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     return true;
 }
 
-bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
+Assembler::Expression Assembler::buildExpression(const Lex::Element*& e)
 {
     using T = Lex::Element::Type;
 
     int parenDepth = 0;
     int state = 0;
+    Expression expr;
 
     for (;;)
     {
@@ -1698,7 +1676,7 @@ bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
             case T::Comma:
             case T::Newline:
                 assert(parenDepth == 0);
-                return true;
+                return expr;
 
             case T::CloseParen:
                 if (parenDepth > 0)
@@ -1708,9 +1686,12 @@ bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
                 }
                 else
                 {
-                    return true;
+                    return expr;
                 }
                 break;
+
+            default:
+                assert(0);
             }
             break;
 
@@ -1730,6 +1711,48 @@ bool Assembler::buildExpression(const Lex::Element*& e, Expression& expr)
     }
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+// Directives
+//----------------------------------------------------------------------------------------------------------------------
+
+bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    Expression addr = buildExpression(e);
+    if (!addr.eval(*this, lex, m_address)) return false;
+    if (addr.result() < 0 || addr.result() > 0xffff)
+    {
+        error(lex, *e, "Address out of range.");
+        while (e->m_type != T::Newline) ++e;
+        ++e;
+        return false;
+    }
+    
+    u16 p = u16(addr.result());
+    m_mmap.resetRange();
+    m_mmap.addZ80Range(p, 0xffff);
+    m_address = 0;
+    return true;
+}
+
+bool Assembler::doEqu(Lex& lex, i64 symbol, const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    Expression expr = buildExpression(e);
+    if (!expr.eval(*this, lex, m_address)) return false;
+
+    if (!addValue(symbol, expr.result()))
+    {
+        error(lex, *e, "Variable name already used.");
+        while (e->m_type != T::Newline) ++e;
+        ++e;
+        return false;
+    }
+
+    return true;
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------

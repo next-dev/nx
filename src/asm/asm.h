@@ -228,6 +228,8 @@ private:
 
         bool eval(Assembler& assembler, Lex& lex, MemoryMap::Address currentAddress);
 
+        i64 result() const { return m_result; }
+
     private:
         vector<Value>   m_queue;
         i64             m_result;
@@ -241,8 +243,11 @@ private:
 
     bool pass2(Lex& lex, const vector<Lex::Element>& elems);
     const Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
-    bool buildExpression(const Lex::Element*& e, Expression& expr);
+    Expression buildExpression(const Lex::Element*& e);
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
+
+    bool doOrg(Lex& lex, const Lex::Element*& e);
+    bool doEqu(Lex& lex, i64 symbol, const Lex::Element*& e);
 
 private:
     //------------------------------------------------------------------------------------------------------------------
