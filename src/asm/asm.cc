@@ -26,6 +26,7 @@ bool MemoryMap::Byte::poke(u8 b, u8 currentPass)
     if (currentPass > m_pass)
     {
         m_byte = b;
+        m_pass = currentPass;
         return true;
     }
     else
@@ -53,13 +54,18 @@ MemoryMap::MemoryMap(Spectrum& speccy)
     case Model::ZX48:
         ramSize = KB(48);
         m_slots = { 0, 1, 2, 3 };
+        m_offset = 16384;
         break;
 
     case Model::ZX128:
     case Model::ZXPlus2:
         ramSize = KB(128);
         m_slots = { 0, 5, 2, 0 };
+        m_offset = 0;
         break;
+
+    default:
+        assert(0);
     }
 
     for (int i = 0; i < kNumSlots; ++i)
@@ -115,18 +121,26 @@ void MemoryMap::addZ80Range(u16 start, u16 end)
 
 bool MemoryMap::poke8(int address, u8 byte)
 {
-    return m_memory[m_addresses[address]].poke(byte, m_currentPass);
+    return m_memory[m_addresses[address]-m_offset].poke(byte, m_currentPass);
 }
 
 bool MemoryMap::poke16(int address, u16 word)
 {
-    if (!m_memory[m_addresses[address]].poke(word % 256, m_currentPass)) return false;
-    return m_memory[m_addresses[address + 1]].poke(word / 256, m_currentPass);
+    if (!m_memory[m_addresses[address]-m_offset].poke(word % 256, m_currentPass)) return false;
+    return m_memory[m_addresses[address + 1]-m_offset].poke(word / 256, m_currentPass);
 }
 
 void MemoryMap::upload(Spectrum& speccy)
 {
-    // #todo: uploading memory to speccy
+    MemoryMap::Address a = m_offset;
+    for (const auto& b : m_memory)
+    {
+        if (b.written())
+        {
+            speccy.pagePoke(a / kPageSize, a % kPageSize, b);
+        }
+        ++a;
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -807,6 +821,8 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
     bool buildResult = true;
     int symAddress = 0;
 
+    m_mmap.setPass(1);
+
     while (e->m_type != T::EndOfFile)
     {
         // Set if symbol is found
@@ -1428,6 +1444,7 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
     i64 symbol = 0;
     const Lex::Element* symE = 0;
     bool buildResult = true;
+    m_mmap.setPass(2);
     m_mmap.resetRange();
     m_mmap.addZ80Range(0x8000, 0xffff);
     m_address = 0;
@@ -1510,6 +1527,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     opCode = e->m_type;
     const Lex::Element* s = e;
     const Lex::Element* srcE = nullptr;
+    const Lex::Element* dstE = nullptr;
     ++e;
 
     //
@@ -1522,6 +1540,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     }
     else
     {
+        dstE = e;
         if (!buildOperand(lex, e, dstOp))
         {
             return 0;
@@ -1551,9 +1570,15 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     error(lex, *s, "Unimplemented opcode.");    \
     return false;
 
-#define CHECK8()                                                      \
-    if (srcOp.expr.result() < 0 || srcOp.expr.result() > 255) {               \
+#define CHECK8()                                                        \
+    if (srcOp.expr.result() < 0 || srcOp.expr.result() > 255) {         \
         error(lex, *srcE, "Expression out of range.  Must be 0-255.");  \
+        return false;                                                   \
+    }
+
+#define CHECK8_DST()                                                    \
+    if (dstOp.expr.result() < 0 || dstOp.expr.result() > 255) {         \
+        error(lex, *dstE, "Expression out of range.  Must be 0-255.");  \
         return false;                                                   \
     }
 
@@ -1586,6 +1611,26 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         } // dstOp.type
         break;
 
+    case T::OUT:
+        switch (dstOp.type)
+        {
+        case OperandType::AddressedExpression:
+            switch (srcOp.type)
+            {
+            case OperandType::A:
+                CHECK8_DST();
+                emitXYZ(3, 2, 3);
+                emit8(u8(dstOp.expr.result()));
+                break;
+
+            default: UNDEFINED();
+            }
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
     case T::RET:
         emit8(0xc9);
         break;
@@ -1595,6 +1640,11 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 #undef UNDEFINED
 #undef CHECK8
+
+    //
+    // Step 5 - Write to memory
+    //
+    m_mmap.upload(m_speccy);
 
     return e;
 }
@@ -1642,7 +1692,6 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
         default:
             // Must be an address expression
             op.type = OperandType::AddressedExpression;
-            --e; // decreased to include token in expression later on
             break;
         }
         if (e->m_type != T::HL)

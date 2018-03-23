@@ -71,6 +71,7 @@ private:
     vector<Byte>            m_memory;
     vector<Address>         m_addresses;
     u8                      m_currentPass;
+    u16                     m_offset;
 };
 
 
