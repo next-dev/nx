@@ -876,7 +876,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             case T::EQU:
                 if (symbol)
                 {
-                    if (!expect(lex, ++e, "*"))
+                    if (!expect(lex, ++e, "*", &e))
                     {
                         FAIL("Invalid syntax for EQU directive.");
                     }
@@ -1450,14 +1450,18 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
             int count = assembleInstruction1(lex, e, nullptr);
             int oldAddress = m_address;
 #endif
-            e = assembleInstruction2(lex, e);
+            const Lex::Element* outE = assembleInstruction2(lex, e);
 #if _DEBUG
             assert(!count || ((oldAddress + count) == m_address));
 #endif
-            if (!e)
+            if (!outE)
             {
                 buildResult = false;
                 while (e->m_type != T::Newline) ++e;
+            }
+            else
+            {
+                e = outE;
             }
         }
         else if (e->m_type > T::_END_OPCODES && e->m_type < T::_END_DIRECTIVES)
@@ -1505,28 +1509,38 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     //
     opCode = e->m_type;
     const Lex::Element* s = e;
+    const Lex::Element* srcE = nullptr;
     ++e;
 
     //
     // Step 2 - Get destination operand (if exists)
     //
-    if (e->m_type == T::Newline) return ++e;
-
-    if (!buildOperand(lex, e, dstOp))
+    if (e->m_type == T::Newline)
     {
-        while (e->m_type != T::Newline) ++e;
+        // Advance past newline
         ++e;
-        return 0;
     }
-
-    if ((e++)->m_type != T::Comma) return e;
-
-    // Step 3 - Get source operand (if exists)
-    if (!buildOperand(lex, e, srcOp))
+    else
     {
-        while(e->m_type != T::Newline) ++e;
-        ++e;
-        return 0;
+        if (!buildOperand(lex, e, dstOp))
+        {
+            return 0;
+        }
+
+        if ((e++)->m_type == T::Comma)
+        {
+            // Step 3 - Get source operand (if exists)
+            srcE = e;
+            if (!buildOperand(lex, e, srcOp))
+            {
+                return 0;
+            }
+        }
+        else
+        {
+            // Advance past comma
+            ++e;
+        }
     }
 
     //
@@ -1536,6 +1550,12 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 #define UNDEFINED()                             \
     error(lex, *s, "Unimplemented opcode.");    \
     return false;
+
+#define CHECK8()                                                      \
+    if (srcOp.expr.result() < 0 || srcOp.expr.result() > 255) {               \
+        error(lex, *srcE, "Expression out of range.  Must be 0-255.");  \
+        return false;                                                   \
+    }
 
     switch (opCode)
     {
@@ -1549,19 +1569,32 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         case OperandType::E:
         case OperandType::H:
         case OperandType::L:
-            // CONTINUE HERE!
+        case OperandType::Address_HL:
+            switch (srcOp.type)
+            {
+            case OperandType::Expression:       // LD R,nn
+                CHECK8();
+                emitXYZ(0, r(dstOp.type), 6);
+                emit8(u8(srcOp.expr.result()));
+                break;
+
+            default: UNDEFINED();
+            }
             break;
 
-        default:
-            UNDEFINED();
+        default: UNDEFINED();
         } // dstOp.type
         break;
 
-    default:
-        UNDEFINED();
+    case T::RET:
+        emit8(0xc9);
+        break;
+
+    default: UNDEFINED();
     }
 
 #undef UNDEFINED
+#undef CHECK8
 
     return e;
 }
@@ -1711,6 +1744,7 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e)
             case T::Comma:
             case T::Newline:
                 assert(parenDepth == 0);
+                ++e;
                 return expr;
 
             case T::CloseParen:
