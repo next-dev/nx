@@ -268,6 +268,8 @@ private:
     u8 rp(OperandType ot) const;
     u8 rp2(OperandType ot) const;
     u8 cc(OperandType ot) const;
+    u8 rot(Lex::Element::Type opCode) const;
+    u8 alu(Lex::Element::Type opCode) const;
 
     void emit8(u8 b);
     void emit16(u16 w);

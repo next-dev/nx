@@ -954,8 +954,11 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
     {
     case T::ADC:
         ++e;
+        PARSE(1, "{abcdehl}");
         PARSE(1, "a,{abcdehl}");
+        PARSE(2, "*");
         PARSE(2, "a,*");
+        PARSE(1, "(H)");
         PARSE(1, "a,(H)");
         PARSE(2, "H,{BDHS}");
         CHECK_PARSE(3, "a,(%)");
@@ -963,9 +966,12 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
 
     case T::ADD:
         ++e;
+        PARSE(1, "{abcdehl}");
         PARSE(1, "a,{abcdehl}");
-        PARSE(1, "a,(H)");
+        PARSE(2, "*");
         PARSE(2, "a,*");
+        PARSE(1, "(H)");
+        PARSE(1, "a,(H)");
         PARSE(1, "H,{BDHS}");
         PARSE(2, "X,{BDXS}");
         PARSE(2, "Y,{BDYS}");
@@ -1663,17 +1669,32 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     } while(0)
 
     // Check for IX/IY
-
     switch (dstOp.type)
     {
     case OperandType::IX_Expression:
+        CHECK8_DST_SIGNED();
+        indexPrefix = 0xdd;
+        dstOp.type = OperandType::Address_HL;
+        opSize = 1;
+        op8 = dstOp.expr.r8();
+        break;
+
     case OperandType::IX:
         indexPrefix = 0xdd;
+        dstOp.type = OperandType::HL;
         break;
 
     case OperandType::IY_Expression:
+        CHECK8_DST_SIGNED();
+        indexPrefix = 0xfd;
+        dstOp.type = OperandType::Address_HL;
+        opSize = 1;
+        op8 = dstOp.expr.r8();
+        break;
+
     case OperandType::IY:
         indexPrefix = 0xfd;
+        dstOp.type = OperandType::HL;
         break;
 
     default:
@@ -1683,15 +1704,29 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     switch (srcOp.type)
     {
     case OperandType::IX_Expression:
-    case OperandType::IX:
-        assert(indexPrefix != 0xfd);
+        CHECK8_SIGNED();
         indexPrefix = 0xdd;
+        srcOp.type = OperandType::Address_HL;
+        opSize = 1;
+        op8 = srcOp.expr.r8();
+        break;
+
+    case OperandType::IX:
+        indexPrefix = 0xdd;
+        srcOp.type = OperandType::HL;
         break;
 
     case OperandType::IY_Expression:
-    case OperandType::IY:
-        assert(indexPrefix != 0xdd);
+        CHECK8_SIGNED();
         indexPrefix = 0xfd;
+        srcOp.type = OperandType::Address_HL;
+        opSize = 1;
+        op8 = srcOp.expr.r8();
+        break;
+
+    case OperandType::IY:
+        indexPrefix = 0xfd;
+        srcOp.type = OperandType::HL;
         break;
 
     default:
@@ -1701,7 +1736,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     switch (opCode)
     {
         //--------------------------------------------------------------------------------------------------------------
-        // ADD/SUB
+        // ALU
 
     case T::ADD:
         switch (dstOp.type)
@@ -1720,8 +1755,97 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             }
             break;
 
+        case OperandType::A:
+            // ADD A,... or ADD A
+            switch (srcOp.type)
+            {
+            case OperandType::None:
+                XYZ(2, 0, 7);
+                break;
+
+            case OperandType::B:
+            case OperandType::C:
+            case OperandType::D:
+            case OperandType::E:
+            case OperandType::H:
+            case OperandType::L:
+            case OperandType::Address_HL:
+                XYZ(2, 0, r(dstOp.type));
+                break;
+
+            default: UNDEFINED();
+            }
+            break;
+
+        case OperandType::B:
+        case OperandType::C:
+        case OperandType::D:
+        case OperandType::E:
+        case OperandType::H:
+        case OperandType::L:
+        case OperandType::Address_HL:
+            assert(srcOp.type == OperandType::None);
+            XYZ(2, 0, r(dstOp.type));
+            break;
+
         default: UNDEFINED();
         }
+        break;
+
+    case T::ADC:
+    case T::SBC:
+    case T::SUB:
+    case T::AND:
+    case T::XOR:
+    case T::OR:
+    case T::CP:
+        switch (dstOp.type)
+        {
+        case OperandType::A:
+            // <ALU> A,... or <ALU> A
+            switch (srcOp.type)
+            {
+            case OperandType::None:
+                XYZ(2, alu(opCode), 7);
+                break;
+
+            case OperandType::Expression:
+                UNDEFINED();
+                break;
+
+            default:
+                break;
+            }
+            break;
+
+        case OperandType::B:
+        case OperandType::C:
+        case OperandType::D:
+        case OperandType::E:
+        case OperandType::H:
+        case OperandType::L:
+        case OperandType::Address_HL:
+            assert(srcOp.type == OperandType::None);
+            XYZ(2, alu(opCode), r(dstOp.type));
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
+        //--------------------------------------------------------------------------------------------------------------
+        // ROTATION AND SHIFTING
+
+    case T::RLC:
+    case T::RRC:
+    case T::RL:
+    case T::RR:
+    case T::SLA:
+    case T::SRA:
+    case T::SLL:
+    case T::SRL:
+        prefix = 0xcb;
+        XYZ(0, rot(opCode), r(dstOp.type));
         break;
 
         //--------------------------------------------------------------------------------------------------------------
@@ -2397,6 +2521,46 @@ u8 Assembler::cc(OperandType ot) const
     case OperandType::PE:       return 5;
     case OperandType::P:        return 6;
     case OperandType::M:        return 7;
+
+    default:
+        assert(0);
+    }
+
+    return 0;
+}
+
+u8 Assembler::rot(Lex::Element::Type opCode) const
+{
+    switch (opCode)
+    {
+    case Lex::Element::Type::RLC:   return 0;
+    case Lex::Element::Type::RRC:   return 1;
+    case Lex::Element::Type::RL:    return 2;
+    case Lex::Element::Type::RR:    return 3;
+    case Lex::Element::Type::SLA:   return 4;
+    case Lex::Element::Type::SRA:   return 5;
+    case Lex::Element::Type::SLL:   return 6;
+    case Lex::Element::Type::SRL:   return 7;
+
+    default:
+        assert(0);
+    }
+
+    return 0;
+}
+
+u8 Assembler::alu(Lex::Element::Type opCode) const
+{
+    switch (opCode)
+    {
+    case Lex::Element::Type::ADD:   return 0;
+    case Lex::Element::Type::ADC:   return 1;
+    case Lex::Element::Type::SUB:   return 2;
+    case Lex::Element::Type::SBC:   return 3;
+    case Lex::Element::Type::AND:   return 4;
+    case Lex::Element::Type::XOR:   return 5;
+    case Lex::Element::Type::OR:    return 6;
+    case Lex::Element::Type::CP:    return 7;
 
     default:
         assert(0);
