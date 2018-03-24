@@ -1856,6 +1856,17 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 SRC_OP16();
                 break;
 
+            case OperandType::B:
+            case OperandType::C:
+            case OperandType::D:
+            case OperandType::E:
+            case OperandType::H:
+            case OperandType::L:
+            case OperandType::Address_HL:
+            case OperandType::A:
+                XYZ(1, 7, r(srcOp.type));
+                break;
+
             default: UNDEFINED();
             }
             break;
@@ -1873,6 +1884,19 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 CHECK8();
                 XYZ(0, r(dstOp.type), 6);
                 SRC_OP8();
+                break;
+
+            case OperandType::B:
+            case OperandType::C:
+            case OperandType::D:
+            case OperandType::E:
+            case OperandType::H:
+            case OperandType::L:
+            case OperandType::Address_HL:
+            case OperandType::A:
+                // This is to check for LD (HL),(HL) combination, which doesn't exist.
+                assert(dstOp.type != OperandType::Address_HL || srcOp.type != OperandType::Address_HL);
+                XYZ(1, r(dstOp.type), r(srcOp.type));
                 break;
 
             default: UNDEFINED();
@@ -2001,6 +2025,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case T::CCF:    XYZ(0, 7, 7);       break;
     case T::CPL:    XYZ(0, 5, 7);       break;
     case T::DAA:    XYZ(0, 4, 7);       break;
+    case T::HALT:   XYZ(1, 6, 6);       break;
     case T::NOP:    XYZ(0, 0, 0);       break;
     case T::RLA:    XYZ(0, 2, 7);       break;
     case T::RLCA:   XYZ(0, 0, 7);       break;
