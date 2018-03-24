@@ -253,6 +253,7 @@ private:
     const Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
     Expression buildExpression(const Lex::Element*& e);
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
+    optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr);
 
     //
     // Directives
@@ -266,6 +267,7 @@ private:
     u8 r(OperandType ot) const;
     u8 rp(OperandType ot) const;
     u8 rp2(OperandType ot) const;
+    u8 cc(OperandType ot) const;
 
     void emit8(u8 b);
     void emit16(u16 w);

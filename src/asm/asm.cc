@@ -860,32 +860,34 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             switch (e->m_type)
             {
             case T::ORG:
-                // #todo: Allow expressions for ORG statements (requires expression evaluation)
-                if ((++e)->m_type == T::Integer)
                 {
-                    if (e->m_integer >= 0x4000 && e->m_integer <= 0xffff)
+                    const Lex::Element* endE;
+                    if (expect(lex, ++e, "*", &endE))
                     {
-                        u16 addr = u16(e->m_integer);
-                        if ((++e)->m_type == T::Newline)
+                        Expression expr = buildExpression(e);
+                        if (expr.eval(*this, lex, m_address))
                         {
-                            m_mmap.resetRange();
-                            m_mmap.addZ80Range(addr, 0xffff);
-                            m_address = 0;
-                            ++e;
+                            if (expr.result() >= 0x4000 && expr.result() <= 0xffff)
+                            {
+                                m_mmap.resetRange();
+                                m_mmap.addZ80Range(expr.r16(), 0xffff);
+                                m_address = 0;
+                                ++e;
+                            }
+                            else
+                            {
+                                FAIL("ORG address out of range.  Must be between $4000-$ffff.");
+                            }
                         }
                         else
                         {
-                            FAIL("Invalid syntax for ORG directive.  Extraneous tokens found.");
+                            buildResult = false;
                         }
                     }
                     else
                     {
-                        FAIL("ORG address out of range.  Must be between $4000-$ffff.");
+                        FAIL("Invalid syntax for ORG directive.");
                     }
-                }
-                else
-                {
-                    FAIL("Invalid syntax for ORG directive.  Expected an address.");
                 }
                 break;
 
@@ -1231,6 +1233,8 @@ void Assembler::Expression::addClose(const Lex::Element* e)
 
 bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Address currentAddress)
 {
+    // #todo: introduce types (value, address, page, offset etc) into expressions.
+
     using T = Lex::Element::Type;
 
     //
@@ -1583,10 +1587,34 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         return false;                                                   \
     }
 
+#define CHECK16()                                                           \
+    if (srcOp.expr.result() < 0 || srcOp.expr.result() > 65535) {           \
+        error(lex, *srcE, "Expression out of range.  Must be 0-65535.");    \
+        return false;                                                       \
+    }
+
+#define CHECK8_SIGNED()                                                         \
+    if (srcOp.expr.result() < -128 || srcOp.expr.result() > 127) {              \
+        error(lex, *srcE, "Expression out of range.  Must be -128 to +127.");   \
+        return false;                                                           \
+    }
+
 #define CHECK8_DST()                                                    \
     if (dstOp.expr.result() < 0 || dstOp.expr.result() > 255) {         \
         error(lex, *dstE, "Expression out of range.  Must be 0-255.");  \
         return false;                                                   \
+    }
+
+#define CHECK16_DST()                                                       \
+    if (dstOp.expr.result() < 0 || dstOp.expr.result() > 65535) {           \
+        error(lex, *dstE, "Expression out of range.  Must be 0-65535.");    \
+        return false;                                                       \
+    }
+
+#define CHECK8_DST_SIGNED()                                                     \
+    if (dstOp.expr.result() < -128 || dstOp.expr.result() > 127) {              \
+        error(lex, *dstE, "Expression out of range.  Must be -128 to +127.");   \
+        return false;                                                           \
     }
 
     // These values are used to generate the machine code for the instruction
@@ -1672,10 +1700,166 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
     switch (opCode)
     {
+        //--------------------------------------------------------------------------------------------------------------
+        // ADD/SUB
+
+    case T::ADD:
+        switch (dstOp.type)
+        {
+        case OperandType::HL:
+            switch (srcOp.type)
+            {
+            case OperandType::BC:
+            case OperandType::DE:
+            case OperandType::HL:
+            case OperandType::SP:
+                XPQZ(0, rp(srcOp.type), 1, 1);
+                break;
+
+            default: UNDEFINED();
+            }
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
+        //--------------------------------------------------------------------------------------------------------------
+        // BRANCHES
+
+    case T::DJNZ:
+        if (optional<u8> d = calculateDisplacement(lex, dstE, dstOp.expr); d)
+        {
+            XYZ(0, 2, 0);
+            op8 = *d;
+            opSize = 1;
+        }
+        break;
+
+    case T::JR:
+        switch (dstOp.type)
+        {
+        case OperandType::Expression:
+            // JR d
+            if (optional<u8> d = calculateDisplacement(lex, dstE, dstOp.expr); d)
+            {
+                XYZ(0, 3, 0);
+                op8 = *d;
+                opSize = 1;
+            }
+            break;
+
+        case OperandType::NZ:
+        case OperandType::Z:
+        case OperandType::NC:
+        case OperandType::C:
+            // JR cc,d
+            if (optional<u8> d = calculateDisplacement(lex, srcE, srcOp.expr); d)
+            {
+                XYZ(0, cc(dstOp.type) + 4, 0);
+                op8 = *d;
+                opSize = 1;
+            }
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
+    case T::RET:
+        if (dstOp.type == OperandType::None)
+        {
+            XPQZ(3, 0, 1, 1);
+        }
+        else
+        {
+            UNDEFINED();
+        }
+        break;
+
+        //--------------------------------------------------------------------------------------------------------------
+        // INC/DEC
+
+    case T::DEC:
+        switch (dstOp.type)
+        {
+        case OperandType::BC:
+        case OperandType::DE:
+        case OperandType::HL:
+        case OperandType::SP:
+            XPQZ(0, rp(dstOp.type), 1, 3);
+            break;
+
+        case OperandType::B:
+        case OperandType::C:
+        case OperandType::D:
+        case OperandType::E:
+        case OperandType::H:
+        case OperandType::L:
+        case OperandType::Address_HL:
+        case OperandType::A:
+            XYZ(0, r(dstOp.type), 5);
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
+    case T::INC:
+        switch (dstOp.type)
+        {
+        case OperandType::BC:
+        case OperandType::DE:
+        case OperandType::HL:
+        case OperandType::SP:
+            XPQZ(0, rp(dstOp.type), 0, 3);
+            break;
+
+        case OperandType::B:
+        case OperandType::C:
+        case OperandType::D:
+        case OperandType::E:
+        case OperandType::H:
+        case OperandType::L:
+        case OperandType::Address_HL:
+        case OperandType::A:
+            XYZ(0, r(dstOp.type), 4);
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
+        //--------------------------------------------------------------------------------------------------------------
+        // LD
+
     case T::LD:
         switch (dstOp.type)
         {
         case OperandType::A:
+            switch (srcOp.type)
+            {
+            case OperandType::Expression:                       // LD A,nn
+                CHECK8();
+                XYZ(0, 7, 6);
+                SRC_OP8();
+                break;
+
+            case OperandType::Address_BC:                       // LD A,(BC)
+            case OperandType::Address_DE:
+                XPQZ(0, rp(srcOp.type), 1, 2);
+                break;
+
+            case OperandType::AddressedExpression:              // LD A,(nnnn)
+                CHECK16();
+                XPQZ(0, 3, 1, 2);
+                SRC_OP16();
+                break;
+
+            default: UNDEFINED();
+            }
+            break;
+
         case OperandType::B:
         case OperandType::C:
         case OperandType::D:
@@ -1731,25 +1915,51 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 
         case OperandType::HL:
-            if (srcOp.type == OperandType::Expression)
+            switch (srcOp.type)
             {
+            case OperandType::Expression:               // LD HL,nnnn
                 XPQZ(0, 2, 0, 1);
-            }
-            else if (srcOp.type == OperandType::AddressedExpression)
-            {
+                SRC_OP16();
+                break;
+
+            case OperandType::AddressedExpression:      // LD HL,(nnnn)
                 XPQZ(0, 2, 1, 2);
+                SRC_OP16();
+                break;
+
+            default: UNDEFINED();
             }
-            else assert(0);
-            SRC_OP16();
+            break;
+
+        case OperandType::Address_BC:
+        case OperandType::Address_DE:
+            assert(srcOp.type == OperandType::A);       // LD (BC/DE),A
+            XPQZ(0, rp(dstOp.type), 0, 2);
+            break;
+
+        case OperandType::AddressedExpression:
+            switch (srcOp.type)
+            {
+            case OperandType::HL:                       // LD (nnnn),HL
+                XPQZ(0, 2, 0, 2);
+                DST_OP16();
+                break;
+
+            case OperandType::A:                        // LD (nnnn),A
+                XPQZ(0, 3, 0, 2);
+                DST_OP16();
+                break;
+
+            default: UNDEFINED();
+            }
             break;
 
         default: UNDEFINED();
         } // dstOp.type
         break;
 
-    case T::NOP:
-        XPQZ(0, 0, 0, 0);
-        break;
+        //--------------------------------------------------------------------------------------------------------------
+        // IN/OUT
 
     case T::OUT:
         switch (dstOp.type)
@@ -1771,15 +1981,50 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         }
         break;
 
-    case T::RET:
-        XPQZ(3, 0, 1, 1);
+        //--------------------------------------------------------------------------------------------------------------
+        // Other opcodes
+
+    case T::EX:
+        if (dstOp.type == OperandType::AF && srcOp.type == OperandType::AF_)
+        {
+            XYZ(0, 1, 0);
+        }
+        else
+        {
+            UNDEFINED();
+        }
         break;
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Single opcodes
+
+    case T::CCF:    XYZ(0, 7, 7);       break;
+    case T::CPL:    XYZ(0, 5, 7);       break;
+    case T::DAA:    XYZ(0, 4, 7);       break;
+    case T::NOP:    XYZ(0, 0, 0);       break;
+    case T::RLA:    XYZ(0, 2, 7);       break;
+    case T::RLCA:   XYZ(0, 0, 7);       break;
+    case T::RRA:    XYZ(0, 3, 7);       break;
+    case T::RRCA:   XYZ(0, 1, 7);       break;
+    case T::SCF:    XYZ(0, 6, 7);       break;
 
     default: UNDEFINED();
     }
 
 #undef UNDEFINED
 #undef CHECK8
+#undef CHECK16
+#undef CHECK8_SIGNED
+#undef CHECK8_DST
+#undef CHECK16_DST
+#undef CHECK8_DST_SIGNED
+
+#undef XPQZ
+#undef XYZ
+#undef SRC_OP8
+#undef SRC_OP16
+#undef DST_OP8
+#undef DST_OP16
 
     //
     // Step 5 - Figure out the machine code
@@ -2043,6 +2288,21 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e)
     }
 }
 
+optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr)
+{
+    // #todo: Handle pages
+    MemoryMap::Address a0 = m_mmap.getAddress(m_address);           // Current address
+    MemoryMap::Address a1 = MemoryMap::Address(expr.result());      // Address we want to go to
+    i64 d = a1 - a0;
+    if (d < -128 || d > 127)
+    {
+        error(lex, *e, stringFormat("Relative jump of {0} is too far.  Distance must be between -128 and +127.", int(d)));
+        return {};
+    }
+
+    return u8(d);
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Emission utilities
 //----------------------------------------------------------------------------------------------------------------------
@@ -2070,7 +2330,9 @@ u8 Assembler::rp(OperandType ot) const
 {
     switch (ot)
     {
+    case OperandType::Address_BC:
     case OperandType::BC:       return 0;
+    case OperandType::Address_DE:
     case OperandType::DE:       return 1;
     case OperandType::HL:       return 2;
     case OperandType::SP:       return 3;
@@ -2090,6 +2352,26 @@ u8 Assembler::rp2(OperandType ot) const
     case OperandType::DE:       return 1;
     case OperandType::HL:       return 2;
     case OperandType::AF:       return 3;
+
+    default:
+        assert(0);
+    }
+
+    return 0;
+}
+
+u8 Assembler::cc(OperandType ot) const
+{
+    switch (ot)
+    {
+    case OperandType::NZ:       return 0;
+    case OperandType::Z:        return 1;
+    case OperandType::NC:       return 2;
+    case OperandType::C:        return 3;
+    case OperandType::PO:       return 4;
+    case OperandType::PE:       return 5;
+    case OperandType::P:        return 6;
+    case OperandType::M:        return 7;
 
     default:
         assert(0);
