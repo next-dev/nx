@@ -143,7 +143,7 @@ private:
     bool expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE = nullptr);
     bool expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
 
-    int invalidInstruction(Lex& lex, const Lex::Element* e);
+    int invalidInstruction(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
 
     //------------------------------------------------------------------------------------------------------------------
     // Pass 1

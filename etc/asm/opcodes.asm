@@ -579,6 +579,7 @@ Start:
         ADC HL,BC               ; ED 4A
         LD BC,(NN)              ; ED 4B XX XX
         RETI                    ; ED 4D
+        LD R,A                  ; ED 4F
         IN D,(C)                ; ED 50
         OUT (C),D               ; ED 51
         SBC HL,DE               ; ED 52
@@ -590,6 +591,7 @@ Start:
         ADC HL,DE               ; ED 5A
         LD DE,(NN)              ; ED 5B XX XX
         IM 2                    ; ED 5E
+        LD A,R                  ; ED 5F
         IN H,(C)                ; ED 60
         OUT (C),H               ; ED 61
         SBC HL,HL               ; ED 62
