@@ -15,8 +15,8 @@
 
 DisassemblyWindow::DisassemblyWindow(Nx& nx)
     : SelectableWindow(nx, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
-    , m_address(0x0000)
-    , m_topAddress(0x0000)
+    , m_address(0x8000)
+    , m_topAddress(0x8000)
     , m_gotoEditor(6, 23, 37, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 40, 0)
     , m_enableGoto(0)
 {
