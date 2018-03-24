@@ -177,7 +177,6 @@ private:
         L,
         I,
         R,
-        Address_HL,
         AF,
         AF_,
         BC,
@@ -192,7 +191,12 @@ private:
         PO,
         PE,
         M,
-        P
+        P,
+        Address_BC,
+        Address_DE,
+        Address_HL,
+        Address_SP,
+        Address_C,
     };
 
     class Expression
@@ -226,6 +230,7 @@ private:
         void addBinaryOp(Lex::Element::Type op, const Lex::Element* e);
         void addOpen(const Lex::Element* e);
         void addClose(const Lex::Element* e);
+        void set(i64 result) { m_result = result; }
 
         bool eval(Assembler& assembler, Lex& lex, MemoryMap::Address currentAddress);
 

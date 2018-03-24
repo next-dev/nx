@@ -1469,7 +1469,7 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 #endif
             const Lex::Element* outE = assembleInstruction2(lex, e);
 #if _DEBUG
-            assert(!count || ((oldAddress + count) == m_address));
+            assert(!outE || !count || ((oldAddress + count) == m_address));
 #endif
             if (!outE)
             {
@@ -1671,34 +1671,62 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     case T::OpenParen:
         // Addressed expression or (HL) or (IX/Y...)
         ++e;
-        switch (e->m_type)
+        switch ((e++)->m_type)
         {
+        case T::C:
+            op.type = OperandType::Address_C;
+            break;
+
+        case T::BC:
+            op.type = OperandType::Address_BC;
+            break;
+
+        case T::DE:
+            op.type = OperandType::Address_DE;
+            break;
+
         case T::HL:
             op.type = OperandType::Address_HL;
             break;
 
+        case T::SP:
+            op.type = OperandType::Address_SP;
+            break;
+
         case T::IX:
-            op.expr = buildExpression(e);
-            if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+            if (e->m_type == T::CloseParen)
+            {
+                // This is just (IX), no expression
+                op.expr.set(0);
+            }
+            else
+            {
+                op.expr = buildExpression(++e);
+                if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+            }
             op.type = OperandType::IX_Expression;
             break;
 
         case T::IY:
-            op.expr = buildExpression(e);
-            if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+            if (e->m_type == T::CloseParen)
+            {
+                // This is just (IY), no expression
+                op.expr.set(0);
+            }
+            else
+            {
+                op.expr = buildExpression(++e);
+                if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+            }
             op.type = OperandType::IY_Expression;
             break;
 
         default:
             // Must be an address expression
             op.type = OperandType::AddressedExpression;
-            break;
-        }
-        if (e->m_type != T::HL)
-        {
-            op.expr = buildExpression(e);
+            op.expr = buildExpression(--e);
             if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
-            op.type = OperandType::AddressedExpression;
+            break;
         }
 
         assert(e->m_type == T::CloseParen);
