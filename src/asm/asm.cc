@@ -1770,6 +1770,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             case OperandType::H:
             case OperandType::L:
             case OperandType::Address_HL:
+            case OperandType::A:
                 XYZ(2, 0, r(dstOp.type));
                 break;
 
@@ -1810,7 +1811,9 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 break;
 
             case OperandType::Expression:
-                UNDEFINED();
+                CHECK8();
+                XYZ(3, alu(opCode), 6);
+                SRC_OP8();
                 break;
 
             default:
@@ -1829,10 +1832,34 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             XYZ(2, alu(opCode), r(dstOp.type));
             break;
 
+        case OperandType::Expression:
+            CHECK8_DST();
+            XYZ(3, alu(opCode), 6);
+            DST_OP8();
+            break;
+
         default: UNDEFINED();
         }
         break;
 
+        //--------------------------------------------------------------------------------------------------------------
+        // BIT OPERATIONS
+
+    case T::BIT:
+    case T::RES:
+    case T::SET:
+        {
+            if (dstOp.expr.result() < 0 || dstOp.expr.result() > 7)
+            {
+                error(lex, *dstE, "Invalid bit index.  Must be 0-7.");
+                return false;
+            }
+            prefix = 0xcb;
+            u8 y = (opCode == T::BIT ? 1 : opCode == T::RES ? 2 : 3);
+            XYZ(1, dstOp.expr.r8(), r(srcOp.type));
+        }
+        break;
+        
         //--------------------------------------------------------------------------------------------------------------
         // ROTATION AND SHIFTING
 
@@ -1851,12 +1878,69 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         //--------------------------------------------------------------------------------------------------------------
         // BRANCHES
 
+    case T::CALL:
+        switch (dstOp.type)
+        {
+        case OperandType::NZ:               // JP cc,NNNN
+        case OperandType::Z:
+        case OperandType::NC:
+        case OperandType::C:
+        case OperandType::PO:
+        case OperandType::PE:
+        case OperandType::P:
+        case OperandType::M:
+            CHECK16();
+            XYZ(3, cc(dstOp.type), 4);
+            SRC_OP16();
+            break;
+
+        case OperandType::Expression:
+            CHECK16_DST();
+            XPQZ(3, 0, 1, 5);
+            SRC_OP16();
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
     case T::DJNZ:
         if (optional<u8> d = calculateDisplacement(lex, dstE, dstOp.expr); d)
         {
             XYZ(0, 2, 0);
             op8 = *d;
             opSize = 1;
+        }
+        break;
+
+    case T::JP:
+        switch (dstOp.type)
+        {
+        case OperandType::HL:               // JP HL
+        case OperandType::Address_HL:       // JP (HL)
+            XPQZ(3, 2, 1, 1);
+            break;
+
+        case OperandType::NZ:               // JP cc,NNNN
+        case OperandType::Z:
+        case OperandType::NC:
+        case OperandType::C:
+        case OperandType::PO:
+        case OperandType::PE:
+        case OperandType::P:
+        case OperandType::M:
+            CHECK16();
+            XYZ(3, cc(dstOp.type), 4);
+            SRC_OP16();
+            break;
+
+        case OperandType::Expression:
+            CHECK16_DST();
+            XYZ(3, 0, 3);
+            SRC_OP16();
+            break;
+
+        default: UNDEFINED();
         }
         break;
 
@@ -1897,8 +1981,19 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         }
         else
         {
-            UNDEFINED();
+            XYZ(3, cc(dstOp.type), 0);
         }
+        break;
+
+    case T::RST:
+        if (dstOp.expr.result() < 0 ||
+            dstOp.expr.result() > 0x56 ||
+            (dstOp.expr.result() % 8) != 0)
+        {
+            error(lex, *dstE, "Invalid value for RST opcode.");
+            return false;
+        }
+        XYZ(3, u8(dstOp.expr.result() / 8), 7);
         break;
 
         //--------------------------------------------------------------------------------------------------------------
@@ -2055,6 +2150,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 break;
 
             case OperandType::HL:
+                XPQZ(3, 3, 1, 1);
                 break;
 
             default: UNDEFINED();
@@ -2109,6 +2205,39 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         //--------------------------------------------------------------------------------------------------------------
         // IN/OUT
 
+    case T::IN:
+        switch (dstOp.type)
+        {
+        case OperandType::A:
+            if (srcOp.type == OperandType::AddressedExpression)     // IN A,(nn)
+            {
+                CHECK8();
+                XYZ(3, 3, 3);
+                SRC_OP8();
+                break;
+            }
+            // continue
+        case OperandType::B:
+        case OperandType::C:
+        case OperandType::D:
+        case OperandType::E:
+        case OperandType::H:
+        case OperandType::L:
+            assert(srcOp.type == OperandType::Address_C);
+            prefix = 0xed;
+            XYZ(1, r(dstOp.type), 0);
+            break;
+
+        case OperandType::None:
+            assert(srcOp.type == OperandType::Address_C);
+            prefix = 0xed;
+            XYZ(1, 6, 0);
+            break;
+
+        default: UNDEFINED();
+        }
+        break;
+
     case T::OUT:
         switch (dstOp.type)
         {
@@ -2125,6 +2254,34 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             }
             break;
 
+        case OperandType::Address_C:
+            switch (srcOp.type)
+            {
+            case OperandType::B:
+            case OperandType::C:
+            case OperandType::D:
+            case OperandType::E:
+            case OperandType::H:
+            case OperandType::L:
+            case OperandType::A:
+                prefix = 0xed;
+                XYZ(1, r(srcOp.type), 1);
+                break;
+
+            case OperandType::Expression:
+                if (srcOp.expr.result() != 0)
+                {
+                    error(lex, *srcE, "Invalid expression for OUT instruction.  Must be 0 or 8-bit register.");
+                    return false;
+                }
+                prefix = 0xed;
+                XYZ(1, 6, 1);
+                break;
+
+            default: UNDEFINED();
+            }
+            break;
+
         default: UNDEFINED();
         }
         break;
@@ -2133,14 +2290,32 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         // Other opcodes
 
     case T::EX:
-        if (dstOp.type == OperandType::AF && srcOp.type == OperandType::AF_)
+        switch (dstOp.type)
         {
+        case OperandType::AF:
             XYZ(0, 1, 0);
+            break;
+
+        case OperandType::Address_SP:
+            assert(srcOp.type == OperandType::HL);
+            XYZ(3, 4, 3);
+            break;
+
+        case OperandType::DE:
+            assert(srcOp.type == OperandType::HL);
+            XYZ(3, 5, 3);
+            break;
+
+        default: UNDEFINED();
         }
-        else
-        {
-            UNDEFINED();
-        }
+        break;
+
+    case T::POP:
+        XPQZ(3, rp2(dstOp.type), 0, 1);
+        break;
+
+    case T::PUSH:
+        XPQZ(3, rp2(dstOp.type), 0, 5);
         break;
 
         //--------------------------------------------------------------------------------------------------------------
@@ -2149,6 +2324,9 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case T::CCF:    XYZ(0, 7, 7);       break;
     case T::CPL:    XYZ(0, 5, 7);       break;
     case T::DAA:    XYZ(0, 4, 7);       break;
+    case T::DI:     XYZ(3, 6, 3);       break;
+    case T::EI:     XYZ(3, 7, 3);       break;
+    case T::EXX:    XPQZ(3, 1, 1, 1);   break;
     case T::HALT:   XYZ(1, 6, 6);       break;
     case T::NOP:    XYZ(0, 0, 0);       break;
     case T::RLA:    XYZ(0, 2, 7);       break;
@@ -2399,6 +2577,9 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e)
                 break;
 
             case T::Comma:
+                assert(parenDepth == 0);
+                return expr;
+
             case T::Newline:
                 assert(parenDepth == 0);
                 ++e;
