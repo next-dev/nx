@@ -235,6 +235,8 @@ private:
         bool eval(Assembler& assembler, Lex& lex, MemoryMap::Address currentAddress);
 
         i64 result() const { return m_result; }
+        u8 r8() const { return u8(m_result); }
+        u16 r16() const { return u16(m_result); }
 
     private:
         vector<Value>   m_queue;

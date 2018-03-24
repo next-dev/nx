@@ -1167,19 +1167,20 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e, const Lex::Element
     PARSE(1, "(H),{bcdehl}");           // LD (HL),B/C/D/E/H/L
     PARSE(1, "{bcdehl},(H)");           // LD B/C/D/E/H/L,(HL)
     PARSE(1, "a,({BDH})");              // LD A,(BC/DE/HL)
+    PARSE(3, "{abcdehl},(%)");          // LD A/B/C/D/E/H/L,(IX/IY+nn)
+    PARSE(3, "a,(*)");                  // LD A,(nnnn)
     PARSE(2, "{abcdehl},*");            // LD A/B/C/D/E/H/L,nn
+    PARSE(3, "H,(*)");                  // LD HL,(nnnn)
+    PARSE(4, "{BDXYS},(*)");            // LD BC/DE/IX/IY/SP,(nnnn)
     PARSE(3, "{BDHS},*");               // LD BC/DE/HL/SP,nnnn
     PARSE(4, "{XY},*");                 // LD IX/IY,nnnn
     PARSE(2, "(H),*");                  // LD (HL),nn
     PARSE(2, "a,i");                    // LD A,I
     PARSE(2, "i,a");                    // LD I,A
     PARSE(3, "a,(%)");                  // LD A,(IX+nn)
-    PARSE(3, "a,(*)");                  // LD A,(nnnn)
     PARSE(3, "(*),{aH}");               // LD (nnnn),A/HL
     PARSE(4, "(*),{BDXYS}");            // LD (nnnn),BC/DE/IX/IY/SP
-    PARSE(4, "{BDHXYS},(*)");           // LD BC/DE/HL/IX/IY/SP,(nnnn)
     PARSE(3, "(%),{abcdehl}");          // LD (IX/IY+nn),A/B/C/D/E/H/L
-    PARSE(3, "{abcdehl},(%)");          // LD A/B/C/D/E/H/L,(IX/IY+nn)
     PARSE(4, "(%),*");                  // LD (IX/IY+nn),nn
     PARSE(1, "S,H");                    // LD SP,HL
     PARSE(2, "S,{XY}");                 // LD SP,IX/IY
@@ -1469,7 +1470,8 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 #endif
             const Lex::Element* outE = assembleInstruction2(lex, e);
 #if _DEBUG
-            assert(!outE || !count || ((oldAddress + count) == m_address));
+            int actualCount = m_address - oldAddress;
+            assert(!outE || !count || (count == actualCount));
 #endif
             if (!outE)
             {
@@ -1501,6 +1503,11 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
         {
             ++e;
         }
+    }
+
+    if (buildResult)
+    {
+        m_mmap.upload(m_speccy);
     }
 
     return buildResult;
@@ -1582,6 +1589,87 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         return false;                                                   \
     }
 
+    // These values are used to generate the machine code for the instruction
+    u8 indexPrefix = 0;
+    u8 prefix = 0;
+    u8 x = 0;
+    u8 p = 0;
+    u8 q = 0;
+    u8 z = 0;
+    u8 op8 = 0;
+    u16 op16 = 0;
+    int opSize = 0;
+
+#define XPQZ(xx, pp, qq, zz) do {                                       \
+        x = (xx);                                                       \
+        p = (pp);                                                       \
+        q = (qq);                                                       \
+        z = (zz);                                                       \
+    } while(0)
+
+#define XYZ(xx, yy, zz) do {                                            \
+        x = (xx);                                                       \
+        p = (yy) >> 1;                                                  \
+        q = (yy) & 1;                                                   \
+        z = (zz);                                                       \
+    } while(0)
+
+#define SRC_OP8() do {                                                  \
+        opSize = 1;                                                     \
+        op8 = (srcOp.expr.r8());                                        \
+    } while(0)
+
+#define SRC_OP16() do {                                                 \
+        opSize = 2;                                                     \
+        op16 = (srcOp.expr.r16());                                      \
+    } while(0)
+
+#define DST_OP8() do {                                                  \
+        opSize = 1;                                                     \
+        op8 = (dstOp.expr.r8());                                        \
+    } while(0)
+
+#define DST_OP16() do {                                                 \
+        opSize = 2;                                                     \
+        op16 = (dstOp.expr.r16());                                      \
+    } while(0)
+
+    // Check for IX/IY
+
+    switch (dstOp.type)
+    {
+    case OperandType::IX_Expression:
+    case OperandType::IX:
+        indexPrefix = 0xdd;
+        break;
+
+    case OperandType::IY_Expression:
+    case OperandType::IY:
+        indexPrefix = 0xfd;
+        break;
+
+    default:
+        break;
+    }
+
+    switch (srcOp.type)
+    {
+    case OperandType::IX_Expression:
+    case OperandType::IX:
+        assert(indexPrefix != 0xfd);
+        indexPrefix = 0xdd;
+        break;
+
+    case OperandType::IY_Expression:
+    case OperandType::IY:
+        assert(indexPrefix != 0xdd);
+        indexPrefix = 0xfd;
+        break;
+
+    default:
+        break;
+    }
+
     switch (opCode)
     {
     case T::LD:
@@ -1599,16 +1687,68 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             {
             case OperandType::Expression:       // LD R,nn
                 CHECK8();
-                emitXYZ(0, r(dstOp.type), 6);
-                emit8(u8(srcOp.expr.result()));
+                XYZ(0, r(dstOp.type), 6);
+                SRC_OP8();
                 break;
 
             default: UNDEFINED();
             }
             break;
 
+        case OperandType::BC:
+        case OperandType::DE:
+            switch (srcOp.type)
+            {
+            case OperandType::Expression:
+                XPQZ(0, rp(dstOp.type), 0, 1);
+                SRC_OP16();
+                break;
+
+            case OperandType::AddressedExpression:
+                prefix = 0xed;
+                XPQZ(1, rp(dstOp.type), 1, 3);
+                SRC_OP16();
+                break;
+
+            default: UNDEFINED();
+            }
+            break;
+
+        case OperandType::SP:
+            switch (srcOp.type)
+            {
+            case OperandType::Expression:
+                XPQZ(0, 3, 0, 1);
+                SRC_OP16();
+                break;
+
+            case OperandType::HL:
+                break;
+
+            default: UNDEFINED();
+            }
+            break;
+
+
+        case OperandType::HL:
+            if (srcOp.type == OperandType::Expression)
+            {
+                XPQZ(0, 2, 0, 1);
+            }
+            else if (srcOp.type == OperandType::AddressedExpression)
+            {
+                XPQZ(0, 2, 1, 2);
+            }
+            else assert(0);
+            SRC_OP16();
+            break;
+
         default: UNDEFINED();
         } // dstOp.type
+        break;
+
+    case T::NOP:
+        XPQZ(0, 0, 0, 0);
         break;
 
     case T::OUT:
@@ -1619,8 +1759,8 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             {
             case OperandType::A:
                 CHECK8_DST();
-                emitXYZ(3, 2, 3);
-                emit8(u8(dstOp.expr.result()));
+                XYZ(3, 2, 3);
+                DST_OP8();
                 break;
 
             default: UNDEFINED();
@@ -1632,7 +1772,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         break;
 
     case T::RET:
-        emit8(0xc9);
+        XPQZ(3, 0, 1, 1);
         break;
 
     default: UNDEFINED();
@@ -1642,9 +1782,55 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 #undef CHECK8
 
     //
-    // Step 5 - Write to memory
+    // Step 5 - Figure out the machine code
     //
-    m_mmap.upload(m_speccy);
+    // Possibilities
+    //                                                              Indexed     Prefixed    opSize
+    //  O           Single opcodes                                    NO          NO          0
+    //  ON          8-bit operands with an opcode                     NO          NO          1
+    //  ONN         16-bit operand with an opcode                     NO          NO          2
+    //  PO          Prefixed opcode (0xCB, 0xED)                      NO          YES         0
+    //  PONN        16-bit operand with prefixed opcode               NO          YES         2
+    //  XO          Indexed opcode (0xDD, 0xFD)                       YES         NO          0
+    //  XON         8-bit operands with indexed opcode                YES         NO          1
+    //  XONN        16-bit operands with indexed opcode               YES         NO          2
+    //  XPNO        8-bit operands with prefixed indexed opcode       YES         YES         1
+    //  
+
+    if (indexPrefix)
+    {
+        emit8(indexPrefix);
+        if (prefix)
+        {
+            assert(opSize == 1);
+            emit8(prefix);
+            emit8(op8);
+            emitXPQZ(x, p, q, z);
+        }
+        else
+        {
+            emitXPQZ(x, p, q, z);
+            switch (opSize)
+            {
+            case 0:                 break;
+            case 1: emit8(op8);     break;
+            case 2: emit16(op16);   break;
+            default: assert(0);
+            }
+        }
+    }
+    else
+    {
+        if (prefix) emit8(prefix);
+        emitXPQZ(x, p, q, z);
+        switch (opSize)
+        {
+        case 0:                                    break;
+        case 1: assert(!prefix);    emit8(op8);    break;
+        case 2:                     emit16(op16);  break;
+        default: assert(0);
+        }
+    }
 
     return e;
 }
@@ -1919,7 +2105,8 @@ void Assembler::emit8(u8 b)
 
 void Assembler::emit16(u16 w)
 {
-    m_mmap.poke16(m_address++, w);
+    m_mmap.poke16(m_address, w);
+    m_address += 2;
 }
 
 void Assembler::emitXYZ(u8 x, u8 y, u8 z)
