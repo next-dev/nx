@@ -257,14 +257,14 @@ Start:
         SRA L                   ; CB 2D
         SRA (HL)                ; CB 2E
         SRA A                   ; CB 2F
-        SLL B                   ; CB 30
-        SLL C                   ; CB 31
-        SLL D                   ; CB 32
-        SLL E                   ; CB 33
-        SLL H                   ; CB 34
-        SLL L                   ; CB 35
-        SLL (HL)                ; CB 36
-        SLL A                   ; CB 37
+        SL1 B                   ; CB 30
+        SL1 C                   ; CB 31
+        SL1 D                   ; CB 32
+        SL1 E                   ; CB 33
+        SL1 H                   ; CB 34
+        SL1 L                   ; CB 35
+        SL1 (HL)                ; CB 36
+        SL1 A                   ; CB 37
         SRL B                   ; CB 38
         SRL C                   ; CB 39
         SRL D                   ; CB 3A

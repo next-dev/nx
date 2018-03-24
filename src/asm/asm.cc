@@ -1132,6 +1132,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         break;
 
     case T::SLL:
+    case T::SL1:
     case T::SRL:
         ++e;
         PARSE(2, "{abcdehl}");
@@ -1170,6 +1171,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
 
     default:
         error(lex, *e, "Unimplemented instruction.");
+        *outE = 0;
         return 0;
     }
 }
@@ -1904,6 +1906,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case T::SLA:
     case T::SRA:
     case T::SLL:
+    case T::SL1:
     case T::SRL:
         prefix = 0xcb;
         XYZ(0, rot(opCode), r(dstOp.type));
@@ -2872,6 +2875,7 @@ u8 Assembler::rot(Lex::Element::Type opCode) const
     case Lex::Element::Type::RR:    return 3;
     case Lex::Element::Type::SLA:   return 4;
     case Lex::Element::Type::SRA:   return 5;
+    case Lex::Element::Type::SL1:
     case Lex::Element::Type::SLL:   return 6;
     case Lex::Element::Type::SRL:   return 7;
 

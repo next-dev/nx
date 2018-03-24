@@ -136,6 +136,7 @@ public:
             SET,
             SLA,
             SLL,
+            SL1,
             SRA,
             SRL,
             SUB,
