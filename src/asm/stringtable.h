@@ -52,7 +52,7 @@ public:
         while (hdr != 0)
         {
             const char* s = m_strings.data() + m_headers[hdr].m_data;
-            if (strncmp(s, start, size_t(end - start)) == 0) return i64(hdr);
+            if (_strnicmp(s, start, size_t(end - start)) == 0) return i64(hdr);
             hdr = m_headers[hdr].m_next;
         }
 
