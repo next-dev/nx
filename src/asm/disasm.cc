@@ -455,7 +455,7 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
         }
         else
         {
-            result("ld", regs8_ix(y, ix, b3) + "," + regs8_ix(z, ix, b3), 3);
+            result("ld", regs8_ix(y, ix, b3) + "," + regs8_ix(z, ix, b3), 2);
         }
         break;
 

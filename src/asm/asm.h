@@ -137,8 +137,8 @@ private:
     //  f   NZ,Z,NC,C
     //  F   NZ,Z,NC,C,PO,PE,P,M
     //
-    //  Specific 8-bit registers: abcdehlir
-    //  Specific 16-bit registers: ABDHSXY       (AF, BC, DE, HL, SP, IX, IY)
+    //  Specific 8-bit registers: abcdehlirx        (x = IXH, IXL, IYH or IYL)
+    //  Specific 16-bit registers: ABDHSX           (AF, BC, DE, HL, SP, IX/IY)
     //
     bool expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE = nullptr);
     bool expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
@@ -184,6 +184,10 @@ private:
         HL,
         IX,
         IY,
+        IXH,
+        IXL,
+        IYH,
+        IYL,
         SP,
         NC,
         Z,

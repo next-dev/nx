@@ -378,6 +378,10 @@ void Assembler::assemble(const vector<u8>& data, string sourceName)
             dumpSymbolTable();
         }
     }
+    else
+    {
+        output("Pass 2 skipped due to errors.");
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -580,6 +584,14 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
             if (pass) ++e;
             break;
 
+        case 'x':
+            pass = (e->m_type == T::IXH ||
+                    e->m_type == T::IXL ||
+                    e->m_type == T::IYH ||
+                    e->m_type == T::IYL);
+            if (pass) ++e;
+            break;
+
         case 'A':
             pass = (e->m_type == T::AF);
             if (pass) ++e;
@@ -606,12 +618,7 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
             break;
 
         case 'X':
-            pass = (e->m_type == T::IX);
-            if (pass) ++e;
-            break;
-
-        case 'Y':
-            pass = (e->m_type == T::IY);
+            pass = (e->m_type == T::IX || e->m_type == T::IY);
             if (pass) ++e;
             break;
 
@@ -968,6 +975,8 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         PARSE(1, "(H)");
         PARSE(1, "a,(H)");
         PARSE(2, "H,{BDHS}");
+        PARSE(2, "a,x");
+        PARSE(2, "x");
         CHECK_PARSE(3, "a,(%)");
         break;
 
@@ -982,6 +991,8 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         PARSE(1, "H,{BDHS}");
         PARSE(2, "X,{BDXS}");
         PARSE(2, "Y,{BDYS}");
+        PARSE(2, "a,x");
+        PARSE(2, "x");
         CHECK_PARSE(3, "a,(%)");
         break;
 
@@ -1006,6 +1017,8 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         PARSE(2, "*");
         PARSE(2, "a,*");
         PARSE(3, "a,(%)");
+        PARSE(2, "a,x");
+        PARSE(2, "x");
         CHECK_PARSE(3, "(%)");
         break;
 
@@ -1013,7 +1026,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
     case T::JP:
         ++e;
         PARSE(1, "(H)");
-        PARSE(2, "({XY})");
+        PARSE(2, "({X})");
         PARSE(3, "*");
         CHECK_PARSE(3, "F,*");
         break;
@@ -1063,7 +1076,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         ++e;
         PARSE(1, "{abcdehlBDHS}");
         PARSE(1, "(H)");
-        PARSE(2, "{XY}");
+        PARSE(2, "{Xx}");
         CHECK_PARSE(3, "(%)");
         break;
 
@@ -1077,7 +1090,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         PARSE(1, "A,'");
         PARSE(1, "D,H");
         PARSE(1, "(S),H");
-        CHECK_PARSE(2, "(S),{XY}");
+        CHECK_PARSE(2, "(S),{X}");
         break;
 
     case T::IM:
@@ -1110,7 +1123,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
     case T::PUSH:
         ++e;
         PARSE(1, "{ABDH}");
-        CHECK_PARSE(2, "{XY}");
+        CHECK_PARSE(2, "{X}");
         break;
 
     case T::RET:
@@ -1154,6 +1167,8 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         PARSE(2, "*");
         PARSE(2, "H,{BDHS}");
         PARSE(3, "a,(%)");
+        PARSE(2, "a,x");
+        PARSE(2, "x");
         CHECK_PARSE(3, "(%)");
         break;
 
@@ -1166,6 +1181,8 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         PARSE(2, "a,*");
         PARSE(2, "*");
         PARSE(3, "a,(%)");
+        PARSE(2, "a,x");
+        PARSE(2, "x");
         CHECK_PARSE(3, "(%)");
         break;
 
@@ -1191,9 +1208,9 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e, const Lex::Element
     PARSE(3, "a,(*)");                  // LD A,(nnnn)
     PARSE(2, "{abcdehl},*");            // LD A/B/C/D/E/H/L,nn
     PARSE(3, "H,(*)");                  // LD HL,(nnnn)
-    PARSE(4, "{BDXYS},(*)");            // LD BC/DE/IX/IY/SP,(nnnn)
+    PARSE(4, "{BDXS},(*)");             // LD BC/DE/IX/IY/SP,(nnnn)
     PARSE(3, "{BDHS},*");               // LD BC/DE/HL/SP,nnnn
-    PARSE(4, "{XY},*");                 // LD IX/IY,nnnn
+    PARSE(4, "{X},*");                  // LD IX/IY,nnnn
     PARSE(2, "(H),*");                  // LD (HL),nn
     PARSE(2, "a,i");                    // LD A,I
     PARSE(2, "i,a");                    // LD I,A
@@ -1201,11 +1218,14 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e, const Lex::Element
     PARSE(2, "r,a");                    // LD R,A
     PARSE(3, "a,(%)");                  // LD A,(IX+nn)
     PARSE(3, "(*),{aH}");               // LD (nnnn),A/HL
-    PARSE(4, "(*),{BDXYS}");            // LD (nnnn),BC/DE/IX/IY/SP
+    PARSE(4, "(*),{BDXS}");             // LD (nnnn),BC/DE/IX/IY/SP
     PARSE(3, "(%),{abcdehl}");          // LD (IX/IY+nn),A/B/C/D/E/H/L
     PARSE(4, "(%),*");                  // LD (IX/IY+nn),nn
     PARSE(1, "S,H");                    // LD SP,HL
-    PARSE(2, "S,{XY}");                 // LD SP,IX/IY
+    PARSE(2, "S,{X}");                  // LD SP,IX/IY
+    PARSE(2, "x,{abcdex}");             // LD IXH/IXL/IYH/IYL,A/B/C/D/E/IXH/IXL/IYH/IYL
+    PARSE(2, "{abcdex},x");             // LD A/B/C/D/E/IXH/IXL/IYH/IYL,IXH/IXL/IYH/IYL
+    PARSE(3, "x,*");                    // LD IXH/IXL/IYH/IYL,nn
 
     return invalidInstruction(lex, start, outE);
 }
@@ -1680,7 +1700,10 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         op16 = (dstOp.expr.r16());                                      \
     } while(0)
 
+    //
     // Check for IX/IY
+    //
+
     switch (dstOp.type)
     {
     case OperandType::IX_Expression:
@@ -1707,6 +1730,55 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case OperandType::IY:
         indexPrefix = 0xfd;
         dstOp.type = OperandType::HL;
+        break;
+
+    case OperandType::IXH:
+        indexPrefix = 0xdd;
+        dstOp.type = OperandType::H;
+        break;
+
+    case OperandType::IXL:
+        indexPrefix = 0xdd;
+        dstOp.type = OperandType::L;
+        break;
+
+    case OperandType::IYH:
+        indexPrefix = 0xfd;
+        dstOp.type = OperandType::H;
+        break;
+
+    case OperandType::IYL:
+        indexPrefix = 0xfd;
+        dstOp.type = OperandType::L;
+        break;
+
+    default:
+        break;
+    }
+
+    // Check we don't have a mix:
+    switch (srcOp.type)
+    {
+    case OperandType::IX_Expression:
+    case OperandType::IX:
+    case OperandType::IXH:
+    case OperandType::IXL:
+        if (indexPrefix == 0xfd)
+        {
+            error(lex, *srcE, "Cannot have both IX and IY registers in same instruction.");
+            return 0;
+        }
+        break;
+
+    case OperandType::IY_Expression:
+    case OperandType::IY:
+    case OperandType::IYH:
+    case OperandType::IYL:
+        if (indexPrefix == 0xdd)
+        {
+            error(lex, *srcE, "Cannot have both IX and IY registers in same instruction.");
+            return 0;
+        }
         break;
 
     default:
@@ -1741,6 +1813,26 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case OperandType::IY:
         indexPrefix = 0xfd;
         srcOp.type = OperandType::HL;
+        break;
+
+    case OperandType::IXH:
+        indexPrefix = 0xdd;
+        srcOp.type = OperandType::H;
+        break;
+
+    case OperandType::IXL:
+        indexPrefix = 0xdd;
+        srcOp.type = OperandType::L;
+        break;
+
+    case OperandType::IYH:
+        indexPrefix = 0xfd;
+        srcOp.type = OperandType::H;
+        break;
+
+    case OperandType::IYL:
+        indexPrefix = 0xfd;
+        srcOp.type = OperandType::L;
         break;
 
     default:
@@ -2661,6 +2753,10 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     case T::I:      op.type = OperandType::I;           ++e; break;
     case T::IX:     op.type = OperandType::IX;          ++e; break;
     case T::IY:     op.type = OperandType::IY;          ++e; break;
+    case T::IXH:    op.type = OperandType::IXH;         ++e; break;
+    case T::IXL:    op.type = OperandType::IXL;         ++e; break;
+    case T::IYH:    op.type = OperandType::IYH;         ++e; break;
+    case T::IYL:    op.type = OperandType::IYL;         ++e; break;
     case T::L:      op.type = OperandType::L;           ++e; break;
     case T::M:      op.type = OperandType::M;           ++e; break;
     case T::NC:     op.type = OperandType::NC;          ++e; break;

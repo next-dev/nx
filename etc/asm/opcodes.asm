@@ -482,24 +482,53 @@ Start:
         JP C,$+3                ; DA
         IN A,(N)                ; DB XX
         CALL C,NN               ; DC XX XX
+
         ADD IX,BC               ; DD 09
         ADD IX,DE               ; DD 19
         LD IX,NN                ; DD 21 XX XX
         LD (NN),IX              ; DD 22 XX XX
         INC IX                  ; DD 23
+        INC IXH                 ; DD 24
+        DEC IXH                 ; DD 25
+        LD IXH,N                ; DD 26 XX
         ADD IX,IX               ; DD 29
         LD IX,(NN)              ; DD 2A XX XX
         DEC IX                  ; DD 2B
+        INC IXL                 ; DD 2C
+        DEC IXL                 ; DD 2D
+        LD IXL,N                ; DD 2E XX
         INC (IX+N)              ; DD 34 XX
         DEC (IX+N)              ; DD 35 XX
         LD (IX+N),N             ; DD 36 XX XX
         ADD IX,SP               ; DD 39
+        LD B,IXH                ; DD 44
+        LD B,IXL                ; DD 45
         LD B,(IX+N)             ; DD 46 XX
+        LD C,IXH                ; DD 4C
+        LD C,IXL                ; DD 4D
         LD C,(IX+N)             ; DD 4E XX
+        LD D,IXH                ; DD 54
+        LD D,IXL                ; DD 55
         LD D,(IX+N)             ; DD 56 XX
+        LD E,IXH                ; DD 5C
+        LD E,IXL                ; DD 5D
         LD E,(IX+N)             ; DD 5E XX
+        LD IXH,B                ; DD 60
+        LD IXH,C                ; DD 61
+        LD IXH,D                ; DD 62
+        LD IXH,E                ; DD 63
+        LD IXH,IXH              ; DD 64
+        LD IXH,IXL              ; DD 65
         LD H,(IX+N)             ; DD 66 XX
+        LD IXH,A                ; DD 67
+        LD IXL,B                ; DD 68
+        LD IXL,C                ; DD 69
+        LD IXL,D                ; DD 6A
+        LD IXL,E                ; DD 6B
+        LD IXL,IXH              ; DD 6C
+        LD IXL,IXL              ; DD 6D
         LD L,(IX+N)             ; DD 6E XX
+        LD IXL,A                ; DD 6F
         LD (IX+N),B             ; DD 70 XX
         LD (IX+N),C             ; DD 71 XX
         LD (IX+N),D             ; DD 72 XX
@@ -507,14 +536,32 @@ Start:
         LD (IX+N),H             ; DD 74 XX
         LD (IX+N),L             ; DD 75 XX
         LD (IX+N),A             ; DD 77 XX
+        LD A,IXH                ; DD 7C
+        LD A,IXL                ; DD 7D
         LD A,(IX+N)             ; DD 7E XX
+        ADD A,IXH               ; DD 84
+        ADD A,IXL               ; DD 85
         ADD A,(IX+N)            ; DD 86 XX
+        ADC A,IXH               ; DD 8C
+        ADC A,IXL               ; DD 8D
         ADC A,(IX+N)            ; DD 8E XX
+        SUB IXH                 ; DD 94
+        SUB IXL                 ; DD 95
         SUB (IX+N)              ; DD 96 XX
+        SBC A,IXH               ; DD 9C
+        SBC A,IXL               ; DD 9D
         SBC A,(IX+N)            ; DD 9E XX
+        AND IXH                 ; DD A4
+        AND IXL                 ; DD A5
         AND (IX+N)              ; DD A6 XX
+        XOR IXH                 ; DD AC
+        XOR IXL                 ; DD AD
         XOR (IX+N)              ; DD AE XX
+        OR IXH                  ; DD B4
+        OR IXL                  ; DD B5
         OR (IX+N)               ; DD B6 XX
+        CP IXH                  ; DD BC
+        CP IXL                  ; DD BD
         CP (IX+N)               ; DD BE XX
         RLC (IX+N)              ; DD CB XX 06
         RRC (IX+N)              ; DD CB XX 0E
@@ -551,6 +598,7 @@ Start:
         PUSH IX                 ; DD E5
         JP (IX)                 ; DD E9
         LD SP,IX                ; DD F9
+
         SBC A,N                 ; DE XX
         RST $18                 ; DF
         RET PO                  ; E0
@@ -637,24 +685,53 @@ Start:
         JP M,$+3                ; FA
         EI                      ; FB
         CALL M,NN               ; FC XX XX
+
         ADD IY,BC               ; FD 09
         ADD IY,DE               ; FD 19
         LD IY,NN                ; FD 21 XX XX
         LD (NN),IY              ; FD 22 XX XX
         INC IY                  ; FD 23
+        INC IYH                 ; FD 24
+        DEC IYH                 ; FD 25
+        LD IYH,N                ; FD 26 XX
         ADD IY,IY               ; FD 29
         LD IY,(NN)              ; FD 2A XX XX
         DEC IY                  ; FD 2B
+        INC IYL                 ; FD 2C
+        DEC IYL                 ; FD 2D
+        LD IYL,N                ; FD 2E XX
         INC (IY+N)              ; FD 34 XX
         DEC (IY+N)              ; FD 35 XX
         LD (IY+N),N             ; FD 36 XX XX
         ADD IY,SP               ; FD 39
+        LD B,IYH                ; FD 44
+        LD B,IYL                ; FD 45
         LD B,(IY+N)             ; FD 46 XX
+        LD C,IYH                ; FD 4C
+        LD C,IYL                ; FD 4D
         LD C,(IY+N)             ; FD 4E XX
+        LD D,IYH                ; FD 54
+        LD D,IYL                ; FD 55
         LD D,(IY+N)             ; FD 56 XX
+        LD E,IYH                ; FD 5C
+        LD E,IYL                ; FD 5D
         LD E,(IY+N)             ; FD 5E XX
+        LD IYH,B                ; FD 60
+        LD IYH,C                ; FD 61
+        LD IYH,D                ; FD 62
+        LD IYH,E                ; FD 63
+        LD IYH,IYH              ; FD 64
+        LD IYH,IYL              ; FD 65
         LD H,(IY+N)             ; FD 66 XX
+        LD IYH,A                ; FD 67
+        LD IYL,B                ; FD 68
+        LD IYL,C                ; FD 69
+        LD IYL,D                ; FD 6A
+        LD IYL,E                ; FD 6B
+        LD IYL,IYH              ; FD 6C
+        LD IYL,IYL              ; FD 6D
         LD L,(IY+N)             ; FD 6E XX
+        LD IYL,A                ; FD 6F
         LD (IY+N),B             ; FD 70 XX
         LD (IY+N),C             ; FD 71 XX
         LD (IY+N),D             ; FD 72 XX
@@ -662,14 +739,32 @@ Start:
         LD (IY+N),H             ; FD 74 XX
         LD (IY+N),L             ; FD 75 XX
         LD (IY+N),A             ; FD 77 XX
+        LD A,IYH                ; FD 7C
+        LD A,IYL                ; FD 7D
         LD A,(IY+N)             ; FD 7E XX
+        ADD A,IYH               ; FD 84
+        ADD A,IYL               ; FD 85
         ADD A,(IY+N)            ; FD 86 XX
+        ADC A,IYH               ; FD 8C
+        ADC A,IYL               ; FD 8D
         ADC A,(IY+N)            ; FD 8E XX
+        SUB IYH                 ; FD 94
+        SUB IYL                 ; FD 95
         SUB (IY+N)              ; FD 96 XX
+        SBC A,IYH               ; FD 9C
+        SBC A,IYL               ; FD 9D
         SBC A,(IY+N)            ; FD 9E XX
+        AND IYH                 ; FD A4
+        AND IYL                 ; FD A5
         AND (IY+N)              ; FD A6 XX
+        XOR IYH                 ; FD AC
+        XOR IYL                 ; FD AD
         XOR (IY+N)              ; FD AE XX
+        OR IYH                  ; FD B4
+        OR IYL                  ; FD B5
         OR (IY+N)               ; FD B6 XX
+        CP IYH                  ; FD BC
+        CP IYL                  ; FD BD
         CP (IY+N)               ; FD BE XX
         RLC (IY+N)              ; FD CB XX 06
         RRC (IY+N)              ; FD CB XX 0E
@@ -706,6 +801,7 @@ Start:
         PUSH IY                 ; FD E5
         JP (IY)                 ; FD E9
         LD SP,IY                ; FD F9
+
         CP N                    ; FE XX
         RST $38                 ; FF
 End:
