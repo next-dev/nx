@@ -27,6 +27,8 @@ protected:
 private:
     vector<string>      m_lines;
     int                 m_topLine;
+    int                 m_offset;
+    size_t              m_longestLine;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

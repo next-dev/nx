@@ -3129,11 +3129,12 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
         if (expectExpression(lex, e, &outE))
         {
             // Expression found
+            const Lex::Element* startE = e;
             Expression expr = buildExpression(e);
             if (!expr.eval(*this, lex, m_address)) return false;
             if (expr.result() < -128 || expr.result() > 255)
             {
-                error(lex, *e, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
+                error(lex, *startE, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
                 while (e->m_type != T::Newline) ++e;
                 ++e;
                 return false;

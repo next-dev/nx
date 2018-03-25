@@ -15,6 +15,7 @@
 AssemblerWindow::AssemblerWindow(Nx& nx)
     : Window(nx, 1, 1, 78, 60, "Assembler Results", Colour::Blue, Colour::Black, false)
     , m_topLine(0)
+    , m_offset(0)
 {
 }
 
@@ -22,6 +23,7 @@ void AssemblerWindow::clear()
 {
     m_lines.clear();
     m_topLine = 0;
+    m_offset = 0;
 }
 
 void AssemblerWindow::output(const std::string& msg)
@@ -38,6 +40,7 @@ void AssemblerWindow::onDraw(Draw& draw)
     u8 normal = colour;
     u8 error = draw.attr(Colour::Red, Colour::Black, false);
     u8 ok = draw.attr(Colour::Green, Colour::Black, false);
+    m_longestLine = 0;
 
     enum class LineType
     {
@@ -51,7 +54,8 @@ void AssemblerWindow::onDraw(Draw& draw)
         const string& msg = m_lines[line];
         int i = 0;
         int x = m_x + 1;
-        int endX = min(int(x + msg.size()), m_x + m_width - 1);
+        if (msg.size() > m_longestLine) m_longestLine = msg.size();
+        int endX = min(int(x + msg.size() - m_offset), m_x + m_width - 1);
         LineType lineType = LineType::Normal;
 
         if (!msg.empty())
@@ -68,19 +72,28 @@ void AssemblerWindow::onDraw(Draw& draw)
             }
         }
 
+        x -= m_offset;
         while (x < endX)
         {
             if (lineType == LineType::Error && msg[i] == '^') colour = error;
-            draw.printChar(x++, y, msg[i], colour);
+            if (x >= (m_x + 1))
+            {
+                draw.printChar(x, y, msg[i], colour);
+            }
+            ++x;
             if (lineType == LineType::Error)
             {
                 if (msg[i] == ':' && msg[i-1] == ')') colour = error;
             }
             ++i;
         }
-        while (x < (m_x + m_height - 1))
+        while (x < (m_x + m_width - 1))
         {
-            draw.printChar(x++, y, ' ', colour);
+            if (x >= (m_x + 1))
+            {
+                draw.printChar(x, y, ' ', colour);
+            }
+            ++x;
         }
     }
     while (y < endY)
@@ -108,6 +121,14 @@ void AssemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool c
             m_topLine = max(0, min(m_topLine + 1, int(m_lines.size() - 1)));
             break;
 
+        case K::Left:
+            m_offset = max(0, m_offset - 1);
+            break;
+
+        case K::Right:
+            m_offset = min(max(0, int(m_longestLine - 2)), m_offset + 1);
+            break;
+
         case K::PageUp:
             m_topLine = max(0, m_topLine - (m_height - 2));
             break;
@@ -117,7 +138,14 @@ void AssemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool c
             break;
 
         case K::Home:
-            m_topLine = 0;
+            if (m_offset != 0)
+            {
+                m_offset = 0;
+            }
+            else
+            {
+                m_topLine = 0;
+            }
             break;
 
         case K::End:
@@ -129,6 +157,7 @@ void AssemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool c
             break;
         }
     }
+    if (m_offset > int(m_longestLine - 2)) m_offset = max(0, int(m_longestLine - 2));
 }
 
 void AssemblerWindow::onText(char ch)
