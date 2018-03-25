@@ -103,6 +103,8 @@ static const char* gKeywords[int(Lex::Element::Type::COUNT) - int(Lex::Element::
     "SUB",
     "XOR",
     0,
+    "DB",
+    "DW",
     "EQU",
     "OPT",
     "ORG",

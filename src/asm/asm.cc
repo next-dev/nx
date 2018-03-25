@@ -919,6 +919,48 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 }
                 break;
 
+            case T::DB:
+                ++e;
+                while (e->m_type != T::Newline)
+                {
+                    const Lex::Element* outE;
+                    if (expectExpression(lex, e, &outE))
+                    {
+                        // Expression found
+                        ++m_address;
+                        e = outE;
+                    }
+                    else if (e->m_type == T::String)
+                    {
+                        // String found
+                        m_address += int(e->m_s1 - e->m_s0);
+                        ++e;
+                    }
+                    else
+                    {
+                        FAIL("Invalid argument to a DB directive.");
+                        break;
+                    }
+
+                    // Check for a comma
+                    if (e->m_type == T::Comma)
+                    {
+                        if ((++e)->m_type == T::Newline)
+                        {
+                            FAIL("Invalid trailing comma.");
+                            break;
+                        }
+                    }
+                    else if (e->m_type != T::Newline)
+                    {
+                        FAIL("Comma expected.");
+                        break;
+                    }
+                }
+                ++e;
+                symbolToAdd = true;     // We allow symbols on this line
+                break;
+
             default:
                 FAIL("Unimplemented directive.");
             }
@@ -1539,8 +1581,12 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
                 buildResult = doEqu(lex, symbol, ++e);
                 break;
 
+            case T::DB:
+                buildResult = doDb(lex, ++e);
+                break;
+
             default:
-                FAIL("Unimplemented directive");
+                FAIL("Unimplemented directive.");
             }
         }
         else
@@ -3068,6 +3114,42 @@ bool Assembler::doEqu(Lex& lex, i64 symbol, const Lex::Element*& e)
         while (e->m_type != T::Newline) ++e;
         ++e;
         return false;
+    }
+
+    return true;
+}
+
+bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    while (e->m_type != T::Newline)
+    {
+        const Lex::Element* outE = nullptr;
+        if (expectExpression(lex, e, &outE))
+        {
+            // Expression found
+            Expression expr = buildExpression(e);
+            if (!expr.eval(*this, lex, m_address)) return false;
+            if (expr.result() < -128 || expr.result() > 255)
+            {
+                error(lex, *e, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
+                while (e->m_type != T::Newline) ++e;
+                ++e;
+                return false;
+            }
+
+            emit8(expr.r8());
+        }
+        else if (e->m_type == T::String)
+        {
+            for (const u8* c = e->m_s0; c < e->m_s1; ++c)
+            {
+                emit8(*c);
+            }
+        }
+
+        if ((++e)->m_type == T::Comma) ++e;
     }
 
     return true;

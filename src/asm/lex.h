@@ -144,6 +144,8 @@ public:
             _END_OPCODES,
 
             // Directives
+            DB,
+            DW,
             EQU,
             OPT,
             ORG,
