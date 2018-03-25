@@ -961,6 +961,41 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 symbolToAdd = true;     // We allow symbols on this line
                 break;
 
+            case T::DW:
+                ++e;
+                while (e->m_type != T::Newline)
+                {
+                    const Lex::Element* outE;
+                    if (expectExpression(lex, e, &outE))
+                    {
+                        m_address += 2;
+                        e = outE;
+                    }
+                    else
+                    {
+                        FAIL("Invalid argument to a DW directive.");
+                        break;
+                    }
+
+                    // Check for comma
+                    if (e->m_type == T::Comma)
+                    {
+                        if ((++e)->m_type == T::Newline)
+                        {
+                            FAIL("Invalid trailing comma.");
+                            break;
+                        }
+                    }
+                    else if (e->m_type != T::Newline)
+                    {
+                        FAIL("Comma expected.");
+                        break;
+                    }
+                }
+                ++e;
+                symbolToAdd = true;
+                break;
+
             default:
                 FAIL("Unimplemented directive.");
             }
@@ -1583,6 +1618,10 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 
             case T::DB:
                 buildResult = doDb(lex, ++e);
+                break;
+
+            case T::DW:
+                buildResult = doDw(lex, ++e);
                 break;
 
             default:
@@ -3148,9 +3187,40 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
             {
                 emit8(*c);
             }
+            ++e;
         }
 
-        if ((++e)->m_type == T::Comma) ++e;
+        if (e->m_type == T::Comma) ++e;
+    }
+
+    return true;
+}
+
+bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    while (e->m_type != T::Newline)
+    {
+        const Lex::Element* outE = nullptr;
+        if (expectExpression(lex, e, &outE))
+        {
+            // Expression found
+            const Lex::Element* startE = e;
+            Expression expr = buildExpression(e);
+            if (!expr.eval(*this, lex, m_address)) return false;
+            if (expr.result() < -32768 || expr.result() > 65535)
+            {
+                error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
+                while (e->m_type != T::Newline) ++e;
+                ++e;
+                return false;
+            }
+
+            emit16(expr.r16());
+        }
+
+        if (e->m_type == T::Comma) ++e;
     }
 
     return true;
