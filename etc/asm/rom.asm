@@ -1,0 +1,4 @@
+
+OPEN    EQU   5633
+PRINT   EQU   8252
+

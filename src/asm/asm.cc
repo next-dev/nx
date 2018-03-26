@@ -345,16 +345,50 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     }
 }
 
-void Assembler::assembleFile(string fileName)
+bool Assembler::assembleFile1(string fileName)
 {
     const vector<u8> data = NxFile::loadFile(fileName);
     if (!data.empty())
     {
-        assemble(data, fileName);
+        //
+        // Lexical analysis
+        //
+        m_sessions.emplace_back();
+        m_sessions.back().parse(*this, std::move(data), fileName);
+
+#if NX_DEBUG_LOG_LEX
+        dumpLex(m_sessions.back());
+#endif // NX_DEBUG_LOG_LEX
+
+        //
+        // Pass 1
+        //
+        if (!pass1(m_sessions.back(), m_sessions.back().elements()))
+        {
+            m_sessions.pop_back();
+            return false;
+        }
     }
+    else
+    {
+        output(stringFormat("!ERROR: Cannot open {0} for reading.", fileName));
+        return false;
+    }
+
+    return true;
 }
 
-void Assembler::assemble(const vector<u8>& data, string sourceName)
+bool Assembler::assembleFile2()
+{
+    //
+    // Pass 2
+    //
+    bool result = pass2(m_sessions.back(), m_sessions.back().elements());
+    m_sessions.pop_back();
+    return result;
+}
+
+bool Assembler::assemble(const vector<u8>& data, string sourceName)
 {
     //
     // Lexical Analysis
@@ -370,18 +404,22 @@ void Assembler::assemble(const vector<u8>& data, string sourceName)
     // Passes
     //
     // We store the index since passes may add new lexes.
-    size_t index = m_sessions.size() - 1;
-    if (pass1(m_sessions[index], m_sessions[index].elements()))
+    if (pass1(m_sessions.back(), m_sessions.back().elements()))
     {
-        if (pass2(m_sessions[index], m_sessions[index].elements()))
+        if (pass2(m_sessions.back(), m_sessions.back().elements()))
         {
             dumpSymbolTable();
+            m_sessions.pop_back();
+            return true;
         }
     }
     else
     {
         output("Pass 2 skipped due to errors.");
     }
+
+    m_sessions.pop_back();
+    return false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -994,6 +1032,22 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 }
                 ++e;
                 symbolToAdd = true;
+                break;
+
+            case T::LOAD:
+                ++e;
+                if (e->m_type == T::String)
+                {
+                    string fileName = string((char *)e->m_s0, (char *)e->m_s1);
+                    if (!assembleFile1(fileName))
+                    {
+                        FAIL(stringFormat("Failed to assemble '{0}'.", fileName));
+                    }
+                }
+                else
+                {
+                    FAIL("Invalid syntax for LOAD directive.  Expected a file name string.");
+                }
                 break;
 
             default:
@@ -1622,6 +1676,11 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 
             case T::DW:
                 buildResult = doDw(lex, ++e);
+                break;
+
+            case T::LOAD:
+                ++e;
+                buildResult = assembleFile2();
                 break;
 
             default:

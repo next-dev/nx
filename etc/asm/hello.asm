@@ -2,8 +2,7 @@
 
         org   $8000
         
-OPEN    equ   5633
-PRINT   equ   8252
+        load  "rom.asm"
         
 Start:
         ld    a,2               ; Open channel #2

@@ -147,6 +147,7 @@ public:
             DB,
             DW,
             EQU,
+            LOAD,
             OPT,
             ORG,
             _END_DIRECTIVES,

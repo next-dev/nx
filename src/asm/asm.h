@@ -109,8 +109,9 @@ private:
 
     // Generates a vector<Lex::Element> database from a file
     void startAssembly(const vector<u8>& data, string sourceName);
-    void assemble(const vector<u8>& data, string sourceName);
-    void assembleFile(string fileName);
+    bool assemble(const vector<u8>& data, string sourceName);
+    bool assembleFile1(string fileName);
+    bool assembleFile2();
 
     bool addSymbol(i64 symbol, MemoryMap::Address address);
     bool addValue(i64 symbol, i64 value);
