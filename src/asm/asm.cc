@@ -3018,7 +3018,7 @@ optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, E
     // #todo: Handle pages
     MemoryMap::Address a0 = m_mmap.getAddress(m_address) + 2;                   // Current address
     MemoryMap::Address a1 = MemoryMap::Address(expr.result());                  // Address we want to go to
-    i64 d = a1 - a0;
+    i64 d = i64(a1) - i64(a0);
     if (d < -128 || d > 127)
     {
         error(lex, *e, stringFormat("Relative jump of {0} is too far.  Distance must be between -128 and +127.", int(d)));
