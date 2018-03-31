@@ -409,8 +409,10 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                     break;
                 }
             }
-
-            s += c;
+            else
+            {
+                s += c;
+            }
             c = nextChar(false);
         }
         el.m_s1 = m_cursor - 1;
