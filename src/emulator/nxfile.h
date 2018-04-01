@@ -71,12 +71,14 @@
 //          0       131072  Contents of all banks (0-7)
 //
 //      EMUL
-//          Offset  Length  Description
-//          0       2       Version (always 0 for now)
-//          2       2       Number of files opened
+//          Offset  Length  Description                 Version exists
+//          0       2       Version                     0
+//          2       2       Number of files opened      0
+//          4       2       Number of labels            1
 //
-//          Data follows:
-//              Null-terminated strings of the filenames of open files.
+//          Data follows:                                                   Version exists
+//              Null-terminated strings of the filenames of open files.     0
+//              4-byte address, followed by null-terminated label name.     1
 //
 //----------------------------------------------------------------------------------------------------------------------
 

@@ -75,6 +75,8 @@ private:
     u16                     m_offset;
 };
 
+using Labels = vector<pair<string, MemoryMap::Address>>;
+
 
 //----------------------------------------------------------------------------------------------------------------------
 // Assembler
@@ -102,6 +104,8 @@ public:
 
     optional<i64> lookUpLabel(i64 symbol);
     optional<i64> lookUpValue(i64 symbol);
+
+    Labels getLabels() const;
 
 private:
     //------------------------------------------------------------------------------------------------------------------

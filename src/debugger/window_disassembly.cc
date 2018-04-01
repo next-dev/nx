@@ -5,6 +5,7 @@
 #include <asm/disasm.h>
 #include <debugger/overlay_debugger.h>
 #include <emulator/nx.h>
+#include <utils/format.h>
 
 #include <cassert>
 
@@ -15,8 +16,9 @@
 
 DisassemblyWindow::DisassemblyWindow(Nx& nx)
     : SelectableWindow(nx, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
-    , m_address(0x8000)
     , m_topAddress(0x8000)
+    , m_address(0x8000)
+    , m_firstLabel(0)
     , m_gotoEditor(6, 23, 37, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 40, 0)
     , m_enableGoto(0)
 {
@@ -76,6 +78,9 @@ void DisassemblyWindow::adjustBar()
     {
         // We need to adjust the bar
         m_topAddress = disassemble(d, m_topAddress);
+        m_firstLabel = 0;
+        MemoryMap::Address ta = MemoryMap::Address(m_topAddress);
+        while (m_firstLabel < m_labels.size() && m_labels[m_firstLabel].second < ta) ++m_firstLabel;
         if (index == m_viewedAddresses.size())
         {
             m_viewedAddresses.push_back(a);
@@ -101,6 +106,9 @@ void DisassemblyWindow::setView(u16 newTopAddress)
         m_viewedAddresses.push_back(newTopAddress);
     }
     m_topAddress = newTopAddress;
+    m_firstLabel = 0;
+    MemoryMap::Address ta = MemoryMap::Address(m_topAddress);
+    while (m_firstLabel < m_labels.size() && m_labels[m_firstLabel].second < ta) ++m_firstLabel;
 }
 
 void DisassemblyWindow::cursorDown()
@@ -160,37 +168,57 @@ void DisassemblyWindow::onDraw(Draw& draw)
     u8 selectColour = draw.attr(Colour::Black, Colour::Yellow, true);
     u8 breakpointColour = draw.attr(Colour::Yellow, Colour::Red, true);
     u8 pcColour = draw.attr(Colour::White, Colour::Green, true);
+    u8 labelColour = draw.attr(Colour::Black, Colour::Cyan, true);
     u16 pc = m_nx.getSpeccy().getZ80().PC();
 
     u8 bkg2 = m_bkgColour & ~0x40;
+    int labelIndex = m_firstLabel;
+
     for (int row = 1; row < m_height - 1; ++row)
     {
-        u16 next = disassemble(d, a);
-        u8 colour = (a == m_address)
-            ? selectColour
-            : (a == pc)
-                ? pcColour
-                : m_nx.getSpeccy().hasUserBreakpointAt(a)
-                    ? breakpointColour
-                    : row & 1
-                        ? m_bkgColour
-                        : bkg2;
+        bool printLabel = false;
 
-        draw.attrRect(m_x, m_y + row, m_width, 1, colour);
-        draw.printString(m_x + 2, m_y + row, d.addressAndBytes(a).c_str(), false, colour);
-        draw.printString(m_x + 21, m_y + row, d.opCode().c_str(), false, colour);
-        draw.printString(m_x + 26, m_y + row, d.operands().c_str(), false, colour);
-
-        if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(a))
+        // Check for a label first
+        if (labelIndex < m_labels.size() && MemoryMap::Address(a) == m_labels[labelIndex].second)
         {
-            draw.printChar(m_x + 1, m_y + row, ')', colour, gGfxFont);
-        }
-        if (a == pc)
-        {
-            draw.printChar(m_x + 1, m_y + row, '*', colour, gGfxFont);
-        }
+            printLabel = true;
 
-        a = next;
+            u8 colour = labelColour; // row & 1 ? m_bkgColour : bkg2;
+            draw.attrRect(m_x, m_y + row, m_width, 1, colour);
+            draw.printString(m_x + 1, m_y + row, stringFormat("{0}:", m_labels[labelIndex].first), false, colour);
+
+            ++labelIndex;
+        }
+        else
+        // Otherwise, it's an instruction
+        {
+            u8 colour = (a == m_address)
+                ? selectColour
+                : (a == pc)
+                    ? pcColour
+                    : m_nx.getSpeccy().hasUserBreakpointAt(a)
+                        ? breakpointColour
+                        : row & 1
+                            ? m_bkgColour
+                            : bkg2;
+            u16 next = disassemble(d, a);
+
+            draw.attrRect(m_x, m_y + row, m_width, 1, colour);
+            draw.printString(m_x + 2, m_y + row, d.addressAndBytes(a).c_str(), false, colour);
+            draw.printString(m_x + 21, m_y + row, d.opCode().c_str(), false, colour);
+            draw.printString(m_x + 26, m_y + row, d.operands().c_str(), false, colour);
+
+            if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(a))
+            {
+                draw.printChar(m_x + 1, m_y + row, ')', colour, gGfxFont);
+            }
+            if (a == pc)
+            {
+                draw.printChar(m_x + 1, m_y + row, '*', colour, gGfxFont);
+            }
+
+            a = next;
+        }
     }
 
     if (m_enableGoto)
@@ -360,3 +388,4 @@ void DisassemblyWindow::onUnselected()
 {
     m_enableGoto = 0;
 }
+

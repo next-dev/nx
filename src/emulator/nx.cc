@@ -1119,31 +1119,58 @@ bool Nx::loadNxSnapshot(string fileName)
         if (f.checkSection('EMUL', 0))
         {
             const BlockSection& emul = f['EMUL'];
-            if (emul.peek16(0) == 0)
+            int numFiles = 0;
+            int numLabels = 0;
+
+            int dataIndex;
+
+            u16 version = emul.peek16(0);
+
+            if (version >= 0)
             {
-                int numFiles = int(emul.peek16(2));
-                int fnIndex = 4;
-                for (int i = 0; i < numFiles; ++i)
-                {
-                    string fn = emul.peekString(fnIndex);
-                    fnIndex += int(fn.size()) + 1;
-
-                    // Check to see if we don't already have it loaded
-                    int numEditors = m_editor.getWindow().getNumEditors();
-                    bool addEditor = true;
-                    for (int ed = 0; ed < numEditors; ++ed)
-                    {
-                        if (m_editor.getWindow().getEditor(ed).getFileName() == fn)
-                        {
-                            addEditor = false;
-                            break;
-                        }
-                    }
-
-                    // Attempt to load it.
-                    m_editor.getWindow().openFile(fn);
-                }
+                numFiles = int(emul.peek16(2));
+                dataIndex = 4;
             }
+            if (version >= 1)
+            {
+                numLabels = int(emul.peek16(4));
+                dataIndex = 6;
+            }
+
+            // Dealing with version 0 data
+            for (int i = 0; i < numFiles; ++i)
+            {
+                string fn = emul.peekString(dataIndex);
+                dataIndex += int(fn.size()) + 1;
+
+                // Check to see if we don't already have it loaded
+                int numEditors = m_editor.getWindow().getNumEditors();
+                bool addEditor = true;
+                for (int ed = 0; ed < numEditors; ++ed)
+                {
+                    if (m_editor.getWindow().getEditor(ed).getFileName() == fn)
+                    {
+                        addEditor = false;
+                        break;
+                    }
+                }
+
+                // Attempt to load it.
+                m_editor.getWindow().openFile(fn);
+            }
+
+            // Dealing with version 1 data
+            Labels labels;
+            for (int i = 0; i < numLabels; ++i)
+            {
+                MemoryMap::Address addr = emul.peek32(dataIndex);
+                dataIndex += 4;
+                string label = emul.peekString(dataIndex);
+                dataIndex += int(label.size()) + 1;
+                labels.emplace_back(make_pair(label, addr));
+            }
+            m_debugger.getDisassemblyWindow().setLabels(labels);
+
         }
 
         return true;
@@ -1236,7 +1263,9 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
         BlockSection emul('EMUL');
 
         u16 count = u16(m_editor.getWindow().getNumEditors());
-        emul.poke16(0);
+        emul.poke16(1);
+
+        // Number of editor files
         u16 realCount = count;
         for (u16 i = 0; i < count; ++i)
         {
@@ -1244,12 +1273,26 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
             if (ed.getFileName().empty()) --realCount;
         }
         emul.poke16(realCount);
+
+        // Number of labels
+        const Labels& labels = m_debugger.getDisassemblyWindow().getLabels();
+        emul.poke16((u16)labels.size());
+
+        // Write out the editor file names
         for (u16 i = count; i > 0; --i)
         {
             Editor& ed = m_editor.getWindow().getEditor(i-1);
             string fn = ed.getFileName();
             if (!fn.empty()) emul.pokeString(fn);
         }
+
+        // Write out the label information
+        for (size_t i = 0; i < labels.size(); ++i)
+        {
+            emul.poke32(labels[i].second);
+            emul.pokeString(labels[i].first);
+        }
+
         f.addSection(emul, 0);
     }
 
@@ -1445,6 +1488,7 @@ void Nx::assemble(const vector<u8>& data, string sourceName)
 {
     m_assembler.select();
     Assembler assembler(m_assembler.getWindow(), getSpeccy(), data, sourceName);
+    m_debugger.getDisassemblyWindow().setLabels(assembler.getLabels());
 }
 
 //----------------------------------------------------------------------------------------------------------------------

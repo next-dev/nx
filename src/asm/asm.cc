@@ -3351,4 +3351,23 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Label management
+//----------------------------------------------------------------------------------------------------------------------
+
+Labels Assembler::getLabels() const
+{
+    Labels labels;
+    for (const auto& si : m_symbolTable)
+    {
+        labels.emplace_back(make_pair((const char *)m_lexSymbols.get(si.first), si.second.m_addr));
+    }
+
+    sort(labels.begin(), labels.end(), [](const auto& p1, const auto& p2) -> bool {
+        return p1.second < p2.second;
+    });
+
+    return labels;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
