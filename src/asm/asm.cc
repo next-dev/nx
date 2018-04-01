@@ -400,6 +400,17 @@ bool Assembler::assemble(const vector<u8>& data, string sourceName)
     return false;
 }
 
+Path Assembler::findFile(Path givenPath)
+{
+    Path p(currentFileName());
+    if (givenPath.isRelative() && p.valid())
+    {
+        givenPath = p.parent() / givenPath;
+    }
+
+    return givenPath;
+}
+
 //
 // This function is used to assemble files referenced in the source code (via LOAD directive).
 //
@@ -409,17 +420,12 @@ bool Assembler::assembleFile1(Path fileName)
     // Step 1 - Find the file we're referring to
     //
 
-    Path curfn(currentFileName());
-    if (fileName.isRelative() && curfn.valid())
-    {
-        fileName = curfn.parent() / fileName;
-    }
+    string fn = findFile(fileName).osPath();
 
     //
     // Step 2 - try to load it (if necessary)
     //
 
-    string fn = fileName.osPath();
     if (m_sessions.find(fn) != m_sessions.end())
     {
         // We've seen this file before - no need for lexical analysis
@@ -467,12 +473,7 @@ bool Assembler::assembleFile2(Path fileName)
     // Step 1 - Find the file we're referring to
     //
 
-    Path curfn(currentFileName());
-    if (fileName.isRelative() && curfn.valid())
-    {
-        fileName = curfn.parent() / fileName;
-    }
-    string fn = fileName.osPath();
+    string fn = findFile(fileName).osPath();
 
     //
     // Pass 2

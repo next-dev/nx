@@ -265,6 +265,7 @@ private:
     Expression buildExpression(const Lex::Element*& e);
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
     optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr);
+    Path findFile(Path givenPath);
 
     //
     // Directives
