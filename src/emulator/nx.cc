@@ -157,6 +157,7 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
 
         case K::R:
             getSpeccy().reset(getSpeccy().getModel());
+            getEmulator().getDebugger().getDisassemblyWindow().setLabels(Labels{});
             break;
 
         case K::O:

@@ -213,6 +213,7 @@ private:
     void newFile();
     void closeFile();
     void switchTo(const Editor& editor);
+    void setStatus(string str, u8 colour) { m_status = str; m_statusColour = colour; }
 
 protected:
     void onDraw(Draw& draw) override;
@@ -224,6 +225,8 @@ private:
     vector<int>         m_editorOrder;
 
     int                 m_selectedTab;      // Current tab index during selection window
+    string              m_status;
+    u8                  m_statusColour;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

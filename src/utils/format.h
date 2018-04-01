@@ -26,6 +26,7 @@ string decimalWord(u16 x);
 string decimalByte(u8 x);
 string hexWord(u16 x);
 string hexByte(u8 x);
+string intString(int x, int pad);
 
 bool parseNumber(const string& str, int& i);
 bool parseByte(const string& str, u8& out);

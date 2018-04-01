@@ -60,7 +60,7 @@ public:
 
     void zoomMode(bool flag);
 
-    void setLabels(const vector<pair<string, MemoryMap::Address>>& labels) { m_labels = labels; }
+    void setLabels(const Labels& labels) { m_labels = labels; }
     const Labels& getLabels() const { return m_labels; }
 
 private:

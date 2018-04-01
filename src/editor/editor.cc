@@ -1020,9 +1020,11 @@ void Editor::setPosition(int xCell, int yCell, int width, int height)
 //----------------------------------------------------------------------------------------------------------------------
 
 EditorWindow::EditorWindow(Nx& nx, string title)
-    : Window(nx, 1, 1, 78, 60, title, Colour::Blue, Colour::Black, false)
+    : Window(nx, 1, 1, 78, 59, title, Colour::Blue, Colour::Black, false)
     , m_editors()
     , m_selectedTab(-1)
+    , m_status("Line: {6l}, Column: {6c}")
+    , m_statusColour(Draw::attr(Colour::White, Colour::Blue, true))
 {
 }
 
@@ -1071,12 +1073,62 @@ void EditorWindow::onDraw(Draw& draw)
             }
         }
     }
+
+    // Draw status bar
+    draw.attrRect(m_x + 0, m_y + m_height, m_width, 1, m_statusColour);
+
+    string line;
+    for (const char* str = m_status.data(); *str != 0; ++str)
+    {
+        if (*str == '{')
+        {
+            // Special formatting
+            int pad = 0;
+            ++str;
+            while (*str != '}')
+            {
+                if (*str >= '0' && *str <= '9')
+                {
+                    pad = (pad * 10) + (*str - '0');
+                }
+                else switch(*str)
+                {
+                case 'l':
+                    // Line number
+                    {
+                        string x = intString(getEditor().getData().getCurrentLine() + 1, pad);
+                        line += x;
+                        pad = 0;
+                    }
+                    break;
+
+                case 'c':
+                    // Column number
+                    {
+                        string x = intString(getEditor().getData().getCurrentPosInLine() + 1, pad);
+                        line += x;
+                        pad = 0;
+                    }
+                    break;
+
+                default:
+                    break;
+                }
+                ++str;
+            }
+        }
+        else
+        {
+            line += *str;
+        }
+    }
+    draw.printSquashedString(m_x + 1, m_y + m_height, line, m_statusColour);
 }
 
 void EditorWindow::newFile()
 {
     int index = int(m_editors.size());
-    m_editors.emplace_back(2, 2, 76, 58, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
+    m_editors.emplace_back(2, 2, 76, 57, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
     m_editors.back().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
     m_editors.back().getData().setTabs({ 8, 14, 32 }, 4);
     m_editorOrder.insert(m_editorOrder.begin(), index);

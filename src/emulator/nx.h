@@ -102,6 +102,9 @@ public:
     // Obtain a reference to the current machine.
     Spectrum& getSpeccy() { return *m_machine; }
 
+    // Obtain a reference to the debugger.
+    Debugger& getDebugger() { return m_debugger; }
+
     // Render the currently generated display
     void render();
 

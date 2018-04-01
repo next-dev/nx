@@ -2,6 +2,7 @@
 // String generation, formatting and parsing routines
 //----------------------------------------------------------------------------------------------------------------------
 
+#include <algorithm>
 #include <utils/format.h>
 
 string decimalWord(u16 x)
@@ -95,3 +96,9 @@ bool parseByte(const string& str, u8& out)
     return result;
 }
 
+string intString(int x, int pad)
+{
+    string s = to_string(x);
+    s.insert(0, max(0, pad - int(s.size())), ' ');
+    return s;
+}
