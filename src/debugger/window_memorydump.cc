@@ -105,7 +105,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
             for (int b = 0; b < 8; ++b)
             {
                 char ch = m_nx.getSpeccy().peek(a + b);
-                draw.printChar(m_x + 31 + b, m_y + i, ch, (u8)0);
+                draw.printChar(m_x + 31 + b, m_y + i, (ch < 32 || ch > 127) ? '.' : ch, (u8)0);
             }
         }
 
