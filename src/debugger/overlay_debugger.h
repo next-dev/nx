@@ -20,7 +20,7 @@ public:
     MemoryDumpWindow(Nx& nx);
 
     void zoomMode(bool flag);
-
+    void gotoAddress(MemoryMap::Address addr);
     bool allowExit() const { return m_enableGoto == 0 && !m_editMode; }
 
 protected:
@@ -164,24 +164,29 @@ public:
     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
     CommandWindow&      getCommandWindow() { return m_commandWindow; }
 
+    const vector<MemoryMap::Address>&   getFindAddresses() const { return m_findAddresses; }
+    int                                 getFindWidth() const { return m_findWidth; }
+
 private:
     // Command utilities
     vector<string> syntaxCheck(const vector<string>& args, const char* format, vector<string> desc);
     vector<string> describeCommand(const char* format, vector<string> desc);
 
 private:
-    MemoryDumpWindow    m_memoryDumpWindow;
-    DisassemblyWindow   m_disassemblyWindow;
-    CpuStatusWindow     m_cpuStatusWindow;
-    CommandWindow       m_commandWindow;
+    MemoryDumpWindow            m_memoryDumpWindow;
+    DisassemblyWindow           m_disassemblyWindow;
+    CpuStatusWindow             m_cpuStatusWindow;
+    CommandWindow               m_commandWindow;
 
-    vector<string>      m_memoryDumpCommands;
-    vector<string>      m_disassemblyCommands;
-    vector<string>      m_cliCommands;
+    vector<string>              m_memoryDumpCommands;
+    vector<string>              m_disassemblyCommands;
+    vector<string>              m_cliCommands;
 
-    bool                m_zoomMode;
+    bool                        m_zoomMode;
 
-    vector<u32>         m_findAddresses;
+    vector<MemoryMap::Address>  m_findAddresses;
+    int                         m_currentAddress;
+    int                         m_findWidth;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

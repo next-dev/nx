@@ -27,6 +27,8 @@ Debugger::Debugger(Nx& nx)
         "~|Exit",
         "Tab|Switch window",
         "Ctrl-Z|Toggle Zoom",
+        "F3|Find Next",
+        "Shift-F3|Find Previous",
         })
     , m_disassemblyCommands({
         "G|oto",
@@ -51,6 +53,7 @@ Debugger::Debugger(Nx& nx)
         "Ctrl-Z|Toggle Zoom"
         })
     , m_zoomMode(false)
+    , m_currentAddress(-1)
 {
     m_disassemblyWindow.Select();
 
@@ -61,6 +64,7 @@ Debugger::Debugger(Nx& nx)
         // Known commands
         return {
             "B   Toggle breakpoint",
+            "C   Clear search terms",
             "F   Find byte(s)",
             "FW  Find word",
         };
@@ -96,6 +100,21 @@ Debugger::Debugger(Nx& nx)
     });
 
     //
+    // Clear command
+    //
+    m_commandWindow.registerCommand("C", [this](vector<string> args) {
+        vector<string> errors = syntaxCheck(args, "", { "C" });
+        if (errors.empty())
+        {
+            m_findAddresses.clear();
+            m_findWidth = 0;
+            m_currentAddress = -1;
+        }
+
+        return errors;
+    });
+
+    //
     // Find commands
     //
     m_commandWindow.registerCommand("F", [this](vector<string> args) -> vector<string> {
@@ -103,38 +122,49 @@ Debugger::Debugger(Nx& nx)
         vector<string> errors = syntaxCheck(args, "+s", desc);
         if (errors.empty())
         {
-            vector<u8> bytes;
-            u8 b;
-            for (int i = 0; i < args.size(); ++i)
+            if (args.size() == 0)
             {
-                if (parseByte(args[i], b))
-                {
-                    bytes.push_back(b);
-                }
-                else
-                {
-                    u16 w;
-                    if (parseWord(args[i], w))
-                    {
-                        // Catch any value that is not a byte and isn't a string
-                        errors.emplace_back(stringFormat("Argument {0} is the wrong type.", i+1));
-                        vector<string> description = describeCommand("+s", desc);
-                        errors.insert(errors.end(), description.begin(), description.end());
-                        break;
-                    }
-                    for (auto c : args[i]) bytes.push_back(c);
-                }
+                m_findAddresses.clear();
+                m_currentAddress = -1;
+                m_findWidth = 0;
             }
-
-            if (bytes.size() > 0)
+            else
             {
-                m_findAddresses = getSpeccy().findSequence(bytes);
-                for (u32 add : m_findAddresses)
+                vector<u8> bytes;
+                u8 b;
+                for (int i = 0; i < args.size(); ++i)
                 {
-                    errors.push_back(getSpeccy().addressName(add, true));
+                    if (parseByte(args[i], b))
+                    {
+                        bytes.push_back(b);
+                    }
+                    else
+                    {
+                        u16 w;
+                        if (parseWord(args[i], w))
+                        {
+                            // Catch any value that is not a byte and isn't a string
+                            errors.emplace_back(stringFormat("Argument {0} is the wrong type.", i + 1));
+                            vector<string> description = describeCommand("+s", desc);
+                            errors.insert(errors.end(), description.begin(), description.end());
+                            break;
+                        }
+                        for (auto c : args[i]) bytes.push_back(c);
+                    }
                 }
-                errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
-                errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
+
+                if (bytes.size() > 0)
+                {
+                    m_findAddresses = getSpeccy().findSequence(bytes);
+                    m_currentAddress = -1;
+                    m_findWidth = (int)bytes.size();
+                    for (u32 add : m_findAddresses)
+                    {
+                        errors.push_back(getSpeccy().addressName(add, true));
+                    }
+                    errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
+                    errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
+                }
             }
         }
 
@@ -145,9 +175,17 @@ Debugger::Debugger(Nx& nx)
         if (errors.empty())
         {
             u16 w;
-            if (parseWord(args[0], w))
+            if (args.size() == 0)
+            {
+                m_findAddresses.clear();
+                m_currentAddress = -1;
+                m_findWidth = 0;
+            }
+            else if (parseWord(args[0], w))
             {
                 m_findAddresses = getSpeccy().findWord(w);
+                m_currentAddress = -1;
+                m_findWidth = 2;
                 for (u32 add : m_findAddresses)
                 {
                     errors.push_back(getSpeccy().addressName(add, true));
@@ -328,6 +366,14 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             getSpeccy().renderVideo();
             break;
 
+        case K::F3:
+            if (!m_findAddresses.empty())
+            {
+                if (++m_currentAddress >= m_findAddresses.size()) m_currentAddress = 0;
+                m_memoryDumpWindow.gotoAddress(m_findAddresses[m_currentAddress]);
+            }
+            break;
+
         case K::F5:
             getEmulator().togglePause(false);
             break;
@@ -370,6 +416,22 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
         {
         case K::Z:
             m_zoomMode = !m_zoomMode;
+            break;
+
+        default:
+            SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
+        }
+    }
+    else if (shift && !ctrl && !alt)
+    {
+        switch (key)
+        {
+        case K::F3:
+            if (!m_findAddresses.empty())
+            {
+                if (--m_currentAddress < 0) m_currentAddress = max(0, (int)m_findAddresses.size() - 1);
+                m_memoryDumpWindow.gotoAddress(m_findAddresses[m_currentAddress]);
+            }
             break;
 
         default:

@@ -45,7 +45,18 @@ string hexWord(u16 x)
 
 string hexByte(u8 x)
 {
-    return hexWord(u16(x));
+    string s;
+    int div = 16;
+
+    while (div != 0)
+    {
+        int d = x / div;
+        x %= div;
+        div /= 16;
+        s.push_back(d < 10 ? '0' + d : 'A' + d - 10);
+    }
+
+    return s;
 }
 
 bool parseNumber(const string& str, int& n)

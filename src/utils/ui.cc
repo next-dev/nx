@@ -157,13 +157,13 @@ bool Overlay::renderErrors(Draw& draw)
     if (m_counter == 0) return false;
     --m_counter;
 
-    u8 colour = draw.attr(Colour::White, Colour::Red, true);
+    u8 colour = draw.attr(Colour::White, Colour::Red, true) | 0x80;
     draw.attrRect(0, 61, 80, 3, colour);
     for (int i = 61; i < 64; ++i)
     {
         for (int j = 0; j < 80; ++j)
         {
-            draw.printChar(j, i, ' ');
+            draw.printChar(j, i, ' ', (u8)0);
         }
     }
     draw.printSquashedString(1, 62, m_errorString, colour);
@@ -244,7 +244,7 @@ string Draw::format(const char* format, ...)
 void Draw::printChar(int xCell, int yCell, char c, u8 attr, const u8* font)
 {
     if (c < 32 || c > 127) c = 32;
-    pokeAttr(xCell, yCell, attr);
+    if (attr) pokeAttr(xCell, yCell, attr);
     const u8* pixels = &font[(c - ' ') * 8];
     for (int i = 0; i < 8; ++i)
     {

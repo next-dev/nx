@@ -4,6 +4,7 @@
 
 #include <debugger/overlay_debugger.h>
 #include <emulator/nx.h>
+#include <utils/format.h>
 
 #include <iomanip>
 #include <sstream>
@@ -32,39 +33,82 @@ void MemoryDumpWindow::zoomMode(bool flag)
 void MemoryDumpWindow::onDraw(Draw& draw)
 {
     u16 a = m_address;
+    int findIndex = 0;
+    int findWidth = 0;
+    const vector<MemoryMap::Address>& searches = m_nx.getDebugger().getFindAddresses();
+    u8 findColour = Draw::attr(Colour::Black, Colour::Green, true);
+    
     for (int i = 1; i < m_height - 1; ++i, a += 8)
     {
         int cx = 0, cy = 0;
         using namespace std;
-        stringstream ss;
-        ss << setfill('0') << setw(4) << hex << uppercase << a << " : ";
+
+        //
+        // Address
+        //
+        string s = hexWord(a) + ": ";
+        draw.printString(m_x + 1, m_y + i, s, false, m_bkgColour);
+
+        //
+        // Hex digits
+        //
+
+        // Adjust to the next address we should look for
+        while (
+            (findIndex < (int)searches.size()) &&
+            (((MemoryMap::Address)a > searches[findIndex])))
+        {
+            ++findIndex;
+        }
+
         u16 t = 0;
+
         for (int b = 0; b < 8; ++b)
         {
+            // Check for search element
+            if (findIndex < (int)searches.size() && (a + b) == searches[findIndex])
+            {
+                // Look out for next address;
+                ++findIndex;
+                findWidth = m_nx.getDebugger().getFindWidth();
+            }
+
             // Check for cursor position
             if (!m_enableGoto && m_editMode && (a + b) == m_editAddress)
             {
-                cx = m_x + 8 + (b * 3) + m_editNibble;
+                cx = m_x + 7 + (b * 3) + m_editNibble;
                 cy = m_y + i;
             }
             u8 x = m_nx.getSpeccy().peek(a + b);
             t += x;
-            ss << setfill('0') << setw(2) << hex << uppercase << (int)x << " ";
+
+            u8 colour = findWidth > 0 ? findColour : m_bkgColour;
+            s = hexByte(x);
+            draw.printString(m_x + 7 + (b * 3), m_y + i, s, false, colour);
+            if (!m_showChecksums) draw.pokeAttr(m_x + 31 + b, m_y + i, colour);
+            colour = (findWidth > 1 && b != 7) ? findColour : m_bkgColour;
+            draw.printChar(m_x + 7 + (b * 3) + 2, m_y + i, ' ', colour);
+
+            if (findWidth > 0) --findWidth;
         }
-        ss << "  ";
+
+        //
+        // ASCII characters or checksums
+        //
         if (m_showChecksums)
         {
-            ss << "= " << dec << (int)t;
+            s = "= " + intString(t, 0);
+            draw.printString(m_x + 31, m_y + i, s, false, m_bkgColour);
         }
         else
         {
             for (int b = 0; b < 8; ++b)
             {
                 char ch = m_nx.getSpeccy().peek(a + b);
-                ss << ((ch < 32 || ch > 127) ? '.' : ch);
+                draw.printChar(m_x + 31 + b, m_y + i, ch, (u8)0);
             }
         }
-        draw.printString(m_x + 1, m_y + i, ss.str(), false, m_bkgColour);
+
         if (cx != 0)
         {
             draw.pokeAttr(cx, cy, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
@@ -211,6 +255,13 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool 
     {
         m_gotoEditor.key(key, down, shift, ctrl, alt);
     }
+}
+
+void MemoryDumpWindow::gotoAddress(MemoryMap::Address addr)
+{
+    m_enableGoto = 0;
+    m_editMode = false;
+    m_address = u16(addr) & 0xfff8;
 }
 
 void MemoryDumpWindow::onUnselected()

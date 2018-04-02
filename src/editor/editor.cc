@@ -1344,12 +1344,10 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
         {
             if (shift)
             {
-                printf("BACKWARD\n");
                 if (--m_currentError < 0) m_currentError = max(0, (int)m_errors.size() - 1);
             }
             else
             {
-                printf("FOWARD\n");
                 if (++m_currentError >= m_errors.size()) m_currentError = 0;
             }
             goToError(m_currentError);
