@@ -602,7 +602,7 @@ optional<i64> Assembler::lookUpValue(i64 symbol)
 // Parsing utilities
 //----------------------------------------------------------------------------------------------------------------------
 
-bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE /* = nullptr */)
+bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE /* = nullptr */) const
 {
     using T = Lex::Element::Type;
 
@@ -824,7 +824,7 @@ int Assembler::invalidInstruction(Lex& lex, const Lex::Element* e, const Lex::El
     return 0;
 }
 
-bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE)
+bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE) const
 {
     using T = Lex::Element::Type;
     int state = 0;
@@ -3004,7 +3004,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     return true;
 }
 
-Assembler::Expression Assembler::buildExpression(const Lex::Element*& e)
+Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
 {
     using T = Lex::Element::Type;
 
@@ -3110,6 +3110,31 @@ optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, E
     }
 
     return u8(d);
+}
+
+optional<i64> Assembler::calculateExpression(const vector<u8>& exprData)
+{
+    //
+    // Lexical analysis on the expression
+    //
+    Lex lex;
+    if (!lex.parse(*this, exprData, "<input>")) return {};
+
+    //
+    // Check the syntax
+    //
+    const Lex::Element* start = lex.elements().data();
+    const Lex::Element* end;
+    if (!expect(lex, lex.elements().data(), "*", &end)) return {};
+    if (end->m_type != Lex::Element::Type::Newline) return {};
+
+    //
+    // Calculate
+    //
+    Expression expr = buildExpression(start);
+    if (!expr.eval(*this, lex, 0)) return {};
+
+    return expr.result();
 }
 
 //----------------------------------------------------------------------------------------------------------------------

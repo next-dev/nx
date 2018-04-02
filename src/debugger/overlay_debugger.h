@@ -21,6 +21,8 @@ public:
 
     void zoomMode(bool flag);
 
+    bool allowExit() const { return m_enableGoto == 0 && !m_editMode; }
+
 protected:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
@@ -62,6 +64,8 @@ public:
 
     void setLabels(const Labels& labels) { m_labels = labels; }
     const Labels& getLabels() const { return m_labels; }
+
+    bool allowExit() const { return m_enableGoto == 0; }
 
 private:
     void onDraw(Draw& draw) override;

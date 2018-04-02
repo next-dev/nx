@@ -104,6 +104,9 @@ public:
 
     static Overlay* currentOverlay() { return ms_currentOverlay; }
 
+    void error(string msg);
+    bool renderErrors(Draw& draw);
+
 protected:
     Nx& getEmulator();
     Spectrum& getSpeccy();
@@ -111,6 +114,9 @@ protected:
 private:
     static Overlay*     ms_currentOverlay;
     Nx&                 m_nx;
+
+    string              m_errorString;
+    int                 m_counter;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

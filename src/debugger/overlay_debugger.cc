@@ -314,7 +314,14 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
         {
         case K::Tilde:
         case K::Escape:
-            getEmulator().toggleDebugger();
+            if (m_disassemblyWindow.allowExit() && m_memoryDumpWindow.allowExit())
+            {
+                getEmulator().toggleDebugger();
+            }
+            else
+            {
+                SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
+            }
             break;
 
         case K::F1:

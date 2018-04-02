@@ -23,7 +23,6 @@ DisassemblyWindow::DisassemblyWindow(Nx& nx)
     , m_enableGoto(0)
 {
     adjustBar();
-    m_gotoEditor.onlyAllowHex();
 }
 
 void DisassemblyWindow::zoomMode(bool flag)
@@ -269,8 +268,11 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool
             break;
 
         case K::G:
-            m_gotoEditor.clear();
-            m_enableGoto = 1;
+            if (m_enableGoto == 0)
+            {
+                m_gotoEditor.clear();
+                m_enableGoto = 1;
+            }
             break;
 
         default:
@@ -318,28 +320,26 @@ void DisassemblyWindow::onText(char ch)
             case 13:
             {
                 m_enableGoto = 0;
-                u16 t = 0;
-                auto view = m_gotoEditor.getText();
-                int len = view.size();
-                if (len == 0)
+
+                vector<u8> exprData = m_gotoEditor.getData().getData();
+                if (exprData.size() == 0)
                 {
-                    t = m_nx.getSpeccy().getZ80().PC();
+                    setCursor(m_nx.getSpeccy().getZ80().PC());
+                }
+                else if (optional<i64> result = m_nx.getAssembler().calculateExpression(exprData); result)
+                {
+                    setCursor(u16(*result));
                 }
                 else
                 {
-                    for (int i = 0; i < len; ++i)
-                    {
-                        t *= 16;
-                        char c = view[i];
-                        if (c >= '0' && c <= '9') t += (c - '0');
-                        else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
-                        else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
-                    }
+                    m_nx.getDebugger().error("Invalid expression entered.");
                 }
-                
-                setCursor(t);
             }
             break;
+
+            case 27:
+                m_enableGoto = 0;
+                break;
                 
             default:
                 m_gotoEditor.text(ch);

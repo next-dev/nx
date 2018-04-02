@@ -113,6 +113,8 @@ Overlay* Overlay::ms_currentOverlay = 0;
 
 Overlay::Overlay(Nx& nx)
     : m_nx(nx)
+    , m_errorString()
+    , m_counter(0)
 {
 
 }
@@ -124,6 +126,7 @@ void Overlay::toggle(Overlay& fallbackOverlay)
 
 void Overlay::select()
 {
+    if (ms_currentOverlay) ms_currentOverlay->m_counter = 0;
     ms_currentOverlay = this;
 }
 
@@ -141,6 +144,30 @@ Nx& Overlay::getEmulator()
 Spectrum& Overlay::getSpeccy()
 {
     return getEmulator().getSpeccy();
+}
+
+void Overlay::error(string msg)
+{
+    m_errorString = msg;
+    m_counter = 250;
+}
+
+bool Overlay::renderErrors(Draw& draw)
+{
+    if (m_counter == 0) return false;
+    --m_counter;
+
+    u8 colour = draw.attr(Colour::White, Colour::Red, true);
+    draw.attrRect(0, 61, 80, 3, colour);
+    for (int i = 61; i < 64; ++i)
+    {
+        for (int j = 0; j < 80; ++j)
+        {
+            draw.printChar(j, i, ' ');
+        }
+    }
+    draw.printSquashedString(1, 62, m_errorString, colour);
+    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -456,30 +483,36 @@ void Ui::render(bool flash)
     }
 
     //
-    // Render the commands
+    // Render the error message
     //
-    const vector<string>& commands = Overlay::currentOverlay()->commands();
-    if (commands.size() > 0)
+    if (!Overlay::currentOverlay()->renderErrors(draw))
     {
-        int y = 63;
-        int x = 0;
-        u8 bkg = draw.attr(Colour::Black, Colour::White, true);
-        u8 hi = draw.attr(Colour::White, Colour::Red, true);
-        for (const auto& str : commands)
+        //
+        // Render the commands
+        //
+        const vector<string>& commands = Overlay::currentOverlay()->commands();
+        if (commands.size() > 0)
         {
-            vector<string> ss = split(str, '|');
-            int len = (int)ss[0].length() + draw.squashedStringWidth(ss[1]);
-            if (x + len >= 80)
+            int y = 63;
+            int x = 0;
+            u8 bkg = draw.attr(Colour::Black, Colour::White, true);
+            u8 hi = draw.attr(Colour::White, Colour::Red, true);
+            for (const auto& str : commands)
             {
-                for (; x < 80; ++x) draw.printChar(x, y, ' ', bkg);
-                --y;
-                x = 0;
+                vector<string> ss = split(str, '|');
+                int len = (int)ss[0].length() + draw.squashedStringWidth(ss[1]);
+                if (x + len >= 80)
+                {
+                    for (; x < 80; ++x) draw.printChar(x, y, ' ', bkg);
+                    --y;
+                    x = 0;
+                }
+                x = draw.printString(x, y, ss[0], false, hi);
+                x += draw.printSquashedString(x, y, ss[1], bkg);
+                draw.printChar(x++, y, ' ', bkg);
             }
-            x = draw.printString(x, y, ss[0], false, hi);
-            x += draw.printSquashedString(x, y, ss[1], bkg);
-            draw.printChar(x++, y, ' ', bkg);
+            for (; x < 80; ++x) draw.printChar(x, y, ' ', bkg);
         }
-        for (; x < 80; ++x) draw.printChar(x, y, ' ', bkg);
     }
 
     //

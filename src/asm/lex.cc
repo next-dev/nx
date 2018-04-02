@@ -169,7 +169,7 @@ Lex::Lex()
     }
 }
 
-void Lex::parse(Assembler& assembler, const vector<u8>& data, string sourceName)
+bool Lex::parse(Assembler& assembler, const vector<u8>& data, string sourceName)
 {
     m_file = data;
     m_fileName = sourceName;
@@ -179,7 +179,16 @@ void Lex::parse(Assembler& assembler, const vector<u8>& data, string sourceName)
     m_position = Element::Pos{ 0, 1, 1 };
     m_lastPosition = Element::Pos{ 0, 1, 1 };
 
-    while (next(assembler) != Element::Type::EndOfFile) ;
+    bool result = true;
+
+    Element::Type t = Element::Type::Unknown;
+    while (t != Element::Type::EndOfFile)
+    {
+        t = next(assembler);
+        if (t == Element::Type::Error) result = false;
+    };
+
+    return result;
 }
 
 char Lex::nextChar(bool toUpper)

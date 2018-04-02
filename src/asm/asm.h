@@ -100,6 +100,7 @@ public:
     void error(const Lex& l, const Lex::Element& el, const string& message);
     void addErrorInfo(const string& fileName, const string& message, int line, int col);
     i64 getSymbol(const u8* start, const u8* end) { return m_lexSymbols.add((const char*)start, (const char *)end); }
+    optional<i64> calculateExpression(const vector<u8>& exprData);
 
     optional<i64> lookUpLabel(i64 symbol);
     optional<i64> lookUpValue(i64 symbol);
@@ -167,8 +168,8 @@ private:
     //  Specific 8-bit registers: abcdehlirx        (x = IXH, IXL, IYH or IYL)
     //  Specific 16-bit registers: ABDHSX           (AF, BC, DE, HL, SP, IX/IY)
     //
-    bool expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE = nullptr);
-    bool expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
+    bool expect(Lex& lex, const Lex::Element* e, const char* format, const Lex::Element** outE = nullptr) const;
+    bool expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE) const;
 
     int invalidInstruction(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
     void nextLine(const Lex::Element*& e);
@@ -283,7 +284,7 @@ private:
 
     bool pass2(Lex& lex, const vector<Lex::Element>& elems);
     const Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
-    Expression buildExpression(const Lex::Element*& e);
+    Expression buildExpression(const Lex::Element*& e) const;
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
     optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr);
     Path findFile(Path givenPath);

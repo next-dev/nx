@@ -20,7 +20,7 @@ class Lex
 public:
     Lex();
 
-    void parse(Assembler& assembler, const vector<u8>& data, string sourceName);
+    bool parse(Assembler& assembler, const vector<u8>& data, string sourceName);
 
 public:
     // Lexical analysis data structures

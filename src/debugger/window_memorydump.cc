@@ -22,7 +22,6 @@ MemoryDumpWindow::MemoryDumpWindow(Nx& nx)
     , m_editAddress(0)
     , m_editNibble(0)
 {
-    m_gotoEditor.onlyAllowHex();
 }
 
 void MemoryDumpWindow::zoomMode(bool flag)
@@ -181,8 +180,11 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool 
                     break;
 
                 case K::G:
-                    m_gotoEditor.clear();
-                    m_enableGoto = 1;
+                    if (m_enableGoto == 0)
+                    {
+                        m_gotoEditor.clear();
+                        m_enableGoto = 1;
+                    }
                     break;
 
                 case K::C:
@@ -190,8 +192,12 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool 
                     break;
 
                 case K::E:
-                    m_editMode = true;
-                    adjust();
+                    if (m_enableGoto == 0)
+                    {
+                        m_editMode = true;
+                        m_editAddress = m_address;
+                        adjust();
+                    }
                     break;
 
                 default:
@@ -233,28 +239,29 @@ void MemoryDumpWindow::onText(char ch)
             {
                 m_enableGoto = 0;
                 u16 t = 0;
-                auto view = m_gotoEditor.getText();
-                int len = (int)view.size();
-                if (len == 0)
+
+                vector<u8> exprData = m_gotoEditor.getData().getData();
+                if (exprData.size() == 0)
                 {
-                    t = m_nx.getSpeccy().getZ80().HL();
+                    m_editAddress = m_address = m_nx.getSpeccy().getZ80().PC();
+                    m_editNibble = 0;
+                }
+                else if (optional<i64> result = m_nx.getAssembler().calculateExpression(exprData); result)
+                {
+                    m_editAddress = m_address = u16(*result);
+                    m_editNibble = 0;
                 }
                 else
                 {
-                    for (int i = 0; i < len; ++i)
-                    {
-                        t *= 16;
-                        char c = view[i];
-                        if (c >= '0' && c <= '9') t += (c - '0');
-                        else if (c >= 'a' && c <= 'f') t += (c - 'a' + 10);
-                        else if (c >= 'A' && c <= 'F') t += (c - 'A' + 10);
-                    }
-
-                    m_editAddress = m_address = t;
-                    m_editNibble = 0;
+                    m_nx.getDebugger().error("Invalid expression entered.");
                 }
+
             }
             break;
+
+            case 27:
+                m_enableGoto = 0;
+                break;
 
             default:
                 m_gotoEditor.text(ch);
