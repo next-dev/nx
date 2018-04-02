@@ -220,11 +220,12 @@ public:
     void onlyAllowDecimal();
     void onlyAllowHex();
     void setCommentColour(u8 colour);
+    void setLineNumberColour(u8 colour);
 
     SplitView getText() const;
     string getTitle() const;
 
-    void render(Draw& draw, int line);
+    void render(Draw& draw, int line, int lineNumberGap = 0);
     void renderAll(Draw& draw);
     bool key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
     bool text(char ch);
@@ -251,10 +252,12 @@ private:
     bool                m_font6;
     u8                  m_bkgColour;
     u8                  m_commentColour;
+    u8                  m_lineNumberColour;
     vector<bool>        m_allowedChars;
     string              m_fileName;
     bool                m_ioAllowed;
     EnterFunction       m_onEnter;
+    bool                m_showLineNumbers;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

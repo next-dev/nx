@@ -378,19 +378,28 @@ void EditorData::backspace(int num)
 
 void EditorData::newline()
 {
+
+    // Indent to the previous line's position
+    int line = getCurrentLine() ;
+    int indent = 0;
+    DataPos p = getLinePos(line);
+    while (getChar(p++) == ' ')
+    {
+        ++indent;
+    }
+
+    // Remove any spaces before the newline
+    while (m_cursor > 0 && m_buffer[(int)m_cursor - 1] == ' ') leftChar(1);
+
+    // Insert a new line
     insert(0x0a);
     m_lines.insert(m_lines.begin() + m_currentLine + 1, m_cursor);
     ++m_currentLine;
     DUMP();
     changed();
 
-    // Indent to the previous line's position
-    int line = getCurrentLine() - 1;
-    DataPos p = getLinePos(line);
-    while (getChar(p++) == ' ')
-    {
-        insert(' ');
-    }
+    // Indent
+    for (int i = 0; i < indent; ++i) insert(' ');
 }
 
 void EditorData::home()
@@ -704,6 +713,7 @@ Editor::Editor(int xCell,
     , m_allowedChars(128, true)
     , m_ioAllowed(increaseSize != 0)
     , m_onEnter(onEnter)
+    , m_showLineNumbers(false)
 {
     for (int i = 0; i < 32; ++i) m_allowedChars[i] = false;
     m_allowedChars[127] = false;
@@ -731,6 +741,11 @@ void Editor::setCommentColour(u8 colour)
     m_commentColour = colour;
 }
 
+void Editor::setLineNumberColour(u8 colour)
+{
+    m_lineNumberColour = colour;
+}
+
 SplitView Editor::getText() const
 {
     return getData().getText();
@@ -744,7 +759,7 @@ string Editor::getTitle() const
     return title;
 }
 
-void Editor::render(Draw& draw, int line)
+void Editor::render(Draw& draw, int line, int lineNumberGap)
 {
     EditorData& data = getData();
     u8 colour = m_bkgColour;
@@ -752,8 +767,13 @@ void Editor::render(Draw& draw, int line)
     if (y < m_height)
     {
         // This line is visible
-        int x = m_x;
+        int x = m_x + lineNumberGap;
         y += m_y;
+
+        if (lineNumberGap && line < getData().getNumLines())
+        {
+            draw.printSquashedString(m_x, y, intString(line + 1, 0), m_lineNumberColour);
+        }
 
         auto view = data.getLine((int)line);
 
@@ -770,22 +790,31 @@ void Editor::render(Draw& draw, int line)
 
         // Render the cursor if on the same line
         int currentX = m_data.getCurrentPosInLine();
-        if ((m_data.getCurrentLine() == line) && (currentX < (m_lineOffset + m_width)))
+        if ((m_data.getCurrentLine() == line) && (currentX < (m_lineOffset + m_width - lineNumberGap)))
         {
-            draw.pokeAttr(m_x + currentX - m_lineOffset, y, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
+            draw.pokeAttr(m_x + currentX - m_lineOffset + lineNumberGap, y, Draw::attr(Colour::White, Colour::Blue, true) | 0x80);
         }
     }
 }
 
 void Editor::renderAll(Draw& draw)
 {
+    int lineNumberGap = 0;
+    if (m_showLineNumbers)
+    {
+        int width = (int)log((float)getData().getNumLines());
+        string maxInteger = string(width, '9');
+        int cellWidth = draw.squashedStringWidth(maxInteger);
+        lineNumberGap = cellWidth;
+    }
+
     int line = m_topLine;
     int y = m_y;
     int endY = y + m_height;
 
     for (; y < endY; ++y)
     {
-        render(draw, line++);
+        render(draw, line++, lineNumberGap);
     }
 }
 
@@ -1026,6 +1055,10 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             }
             break;
 
+        case K::L:  // Toggle line numbers
+            m_showLineNumbers = !m_showLineNumbers;
+            break;
+
         default:
             break;
         }
@@ -1207,6 +1240,7 @@ void EditorWindow::newFile()
     int index = int(m_editors.size());
     m_editors.emplace_back(2, 2, 76, 57, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024);
     m_editors.back().setCommentColour(Draw::attr(Colour::Green, Colour::Black, false));
+    m_editors.back().setLineNumberColour(Draw::attr(Colour::Cyan, Colour::Black, false));
     m_editors.back().getData().setTabs({ 8, 14, 32 }, 4);
     m_editorOrder.insert(m_editorOrder.begin(), index);
 

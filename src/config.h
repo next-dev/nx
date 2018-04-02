@@ -29,7 +29,7 @@ using namespace std;
 #define NX_MAJOR_VERSION        0
 #define NX_MINOR_VERSION        0
 #define NX_PATCH_VERSION        7
-#define NX_DEV_PATCH            2
+#define NX_DEV_PATCH            3
 
 #define NX_STR2(x) #x
 #define NX_STR(x) NX_STR2(x)

@@ -26,6 +26,7 @@ EditorOverlay::EditorOverlay(Nx& nx)
         "Ctrl-X|Cut Line",
         "Ctrl-C|Copy Line",
         "Ctrl-V|Paste Line",
+        "Shift-Ctrl-L|Line numbers",
         })
 {
 }
