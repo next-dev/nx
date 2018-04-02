@@ -82,7 +82,7 @@ private:
 
     // This is used to improve cursor movement on disassembly.
     vector<u16> m_viewedAddresses;
-    vector<pair<string, MemoryMap::Address>> m_labels;
+    Labels m_labels;
     int m_firstLabel;
     
     Editor  m_gotoEditor;

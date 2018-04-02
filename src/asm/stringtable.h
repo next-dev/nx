@@ -14,10 +14,7 @@ public:
 
     StringTable()
     {
-        m_hashTable.resize(kHashSize);
-        for (int i = 0; i < kHashSize; ++i) m_hashTable[i] = 0;
-        m_headers.emplace_back(Header{ 0, 0 });
-        m_strings.emplace_back(0);
+        clear();
     }
 
     i64 add(const char* str)
@@ -101,6 +98,18 @@ public:
         }
 
         return h;
+    }
+
+    void clear()
+    {
+        m_hashTable.clear();
+        m_headers.clear();
+        m_strings.clear();
+
+        m_hashTable.resize(kHashSize);
+        for (int i = 0; i < kHashSize; ++i) m_hashTable[i] = 0;
+        m_headers.emplace_back(Header{ 0, 0 });
+        m_strings.emplace_back(0);
     }
 
 private:

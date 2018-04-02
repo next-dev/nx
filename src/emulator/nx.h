@@ -105,6 +105,9 @@ public:
     // Obtain a reference to the debugger.
     Debugger& getDebugger() { return m_debugger; }
 
+    // Obtain a reference to the assembler.
+    Assembler& getAssembler() { return m_assembler; }
+
     // Render the currently generated display
     void render();
 
@@ -183,8 +186,9 @@ private:
     RunMode             m_runMode;
 
     // Assembler state
-    EditorOverlay       m_editor;
-    AssemblerOverlay    m_assembler;
+    EditorOverlay       m_editorOverlay;
+    AssemblerOverlay    m_assemblerOverlay;
+    Assembler           m_assembler;
 
     // Settings
     map<string, string> m_settings;

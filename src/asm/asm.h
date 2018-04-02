@@ -92,10 +92,9 @@ public:
     //------------------------------------------------------------------------------------------------------------------
 
     Assembler(AssemblerWindow& window,
-              Spectrum& speccy,
-              const vector<u8>& data,
-              string sourceName);
+              Spectrum& speccy);
 
+    void startAssembly(const vector<u8>& data, string sourceName);
     void output(const std::string& msg);
     int numErrors() const { return (int)m_errors.size(); }
     void error(const Lex& l, const Lex::Element& el, const string& message);
@@ -132,7 +131,6 @@ private:
     //------------------------------------------------------------------------------------------------------------------
 
     // Generates a vector<Lex::Element> database from a file
-    void startAssembly(const vector<u8>& data, string sourceName);
     bool assemble(const vector<u8>& data, string sourceName);
     bool assembleFile1(Path fileName);
     bool assembleFile2(Path fileName);

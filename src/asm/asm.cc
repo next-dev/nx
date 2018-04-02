@@ -148,14 +148,13 @@ void MemoryMap::upload(Spectrum& speccy)
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-Assembler::Assembler(AssemblerWindow& window, Spectrum& speccy, const vector<u8>& data, string sourceName)
+Assembler::Assembler(AssemblerWindow& window, Spectrum& speccy)
     : m_assemblerWindow(window)
     , m_speccy(speccy)
     , m_mmap(speccy)
     , m_address(0)
 {
     window.clear();
-    startAssembly(data, sourceName);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -337,9 +336,28 @@ void Assembler::dumpSymbolTable()
 //
 void Assembler::startAssembly(const vector<u8>& data, string sourceName)
 {
+    //
+    // Reset the assembler
+    //
+    m_assemblerWindow.clear();
+    m_sessions.clear();
     m_fileStack.clear();
-    m_fileStack.emplace_back(sourceName);
+    m_symbolTable.clear();
+    m_values.clear();
+    m_lexSymbols.clear();
+    m_variables.clear();
+    m_mmap.resetRange();
+    m_address = 0;
     m_errors.clear();
+
+    //
+    // Set up the assembler
+    //
+    m_fileStack.emplace_back(sourceName);
+
+    //
+    // Assembler
+    //
     assemble(data, sourceName);
 
     m_assemblerWindow.output("");

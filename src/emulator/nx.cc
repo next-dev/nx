@@ -564,8 +564,9 @@ Nx::Nx(int argc, char** argv)
     , m_runMode(RunMode::Normal)
 
     //--- Assembler state -----------------------------------------------------------
-    , m_editor(*this)
-    , m_assembler(*this)
+    , m_editorOverlay(*this)
+    , m_assemblerOverlay(*this)
+    , m_assembler(m_assemblerOverlay.getWindow(), *m_machine)
 
     //--- Rendering -----------------------------------------------------------------
     , m_window(sf::VideoMode(kWindowWidth * (kDefaultScale + 1), kWindowHeight * (kDefaultScale + 1)), "NX " NX_VERSION,
@@ -684,7 +685,7 @@ void Nx::run()
             switch (event.type)
             {
             case sf::Event::Closed:
-                if (m_editor.getWindow().needToSave())
+                if (m_editorOverlay.getWindow().needToSave())
                 {
                     int result = tinyfd_messageBox(
                         "Unsaved files detected",
@@ -699,7 +700,7 @@ void Nx::run()
                         break;
 
                     case 1:     // Yes - trigger save of unnamed/unsaved files
-                        m_editor.getWindow().saveAll();
+                        m_editorOverlay.getWindow().saveAll();
                         // continue
 
                     case 2:     // No - do not save
@@ -1146,11 +1147,11 @@ bool Nx::loadNxSnapshot(string fileName)
                 dataIndex += int(fn.size()) + 1;
 
                 // Check to see if we don't already have it loaded
-                int numEditors = m_editor.getWindow().getNumEditors();
+                int numEditors = m_editorOverlay.getWindow().getNumEditors();
                 bool addEditor = true;
                 for (int ed = 0; ed < numEditors; ++ed)
                 {
-                    if (m_editor.getWindow().getEditor(ed).getFileName() == fn)
+                    if (m_editorOverlay.getWindow().getEditor(ed).getFileName() == fn)
                     {
                         addEditor = false;
                         break;
@@ -1158,7 +1159,7 @@ bool Nx::loadNxSnapshot(string fileName)
                 }
 
                 // Attempt to load it.
-                m_editor.getWindow().openFile(fn);
+                m_editorOverlay.getWindow().openFile(fn);
             }
 
             // Dealing with version 1 data
@@ -1264,14 +1265,14 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
     {
         BlockSection emul('EMUL');
 
-        u16 count = u16(m_editor.getWindow().getNumEditors());
+        u16 count = u16(m_editorOverlay.getWindow().getNumEditors());
         emul.poke16(1);
 
         // Number of editor files
         u16 realCount = count;
         for (u16 i = 0; i < count; ++i)
         {
-            Editor& ed = m_editor.getWindow().getEditor(i);
+            Editor& ed = m_editorOverlay.getWindow().getEditor(i);
             if (ed.getFileName().empty()) --realCount;
         }
         emul.poke16(realCount);
@@ -1283,7 +1284,7 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
         // Write out the editor file names
         for (u16 i = count; i > 0; --i)
         {
-            Editor& ed = m_editor.getWindow().getEditor(i-1);
+            Editor& ed = m_editorOverlay.getWindow().getEditor(i-1);
             string fn = ed.getFileName();
             if (!fn.empty()) emul.pokeString(fn);
         }
@@ -1483,15 +1484,15 @@ void Nx::toggleZoom()
 
 void Nx::showEditor()
 {
-    m_editor.select();
+    m_editorOverlay.select();
 }
 
 void Nx::assemble(const vector<u8>& data, string sourceName)
 {
-    m_assembler.select();
-    Assembler assembler(m_assembler.getWindow(), getSpeccy(), data, sourceName);
-    m_debugger.getDisassemblyWindow().setLabels(assembler.getLabels());
-    m_editor.getWindow().setErrorInfos(assembler.getErrorInfos());
+    m_assemblerOverlay.select();
+    m_assembler.startAssembly(data, sourceName);
+    m_debugger.getDisassemblyWindow().setLabels(m_assembler.getLabels());
+    m_editorOverlay.getWindow().setErrorInfos(m_assembler.getErrorInfos());
 }
 
 //----------------------------------------------------------------------------------------------------------------------
