@@ -447,8 +447,9 @@ Lex::Element::Type Lex::next(Assembler& assembler)
 
     else if (
         // Check for digits
-        ((c >= '0' && c <= '9') ||
-        '$' == c))
+        (c >= '0' && c <= '9') ||
+        ('$' == c) ||
+        ('%' == c))
     {
         // Possible number
         int base = 10;
@@ -464,9 +465,11 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                 ungetChar();
                 return buildElemInt(el, Element::Type::Dollar, pos, 0);
             }
-
-            // OK, from now on it should be a number
-            base = 16;
+        }
+        else if ('%' == c)
+        {
+            base = 2;
+            c = nextChar();
         }
 
         // Should now be parsing digits
@@ -474,8 +477,14 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         while ((c >= '0' && c <= '9') || (base == 16 && c >= 'A' && c <= 'F'))
         {
             t *= base;
-            t += (c - '0');
-            if (c >= 'A' && c <= 'F') t -= 7;
+            int d = (c - '0');
+            if (c >= 'A' && c <= 'F') d -= 7;
+            if (d >= base)
+            {
+                return error(assembler, "Invalid number literal.");
+            }
+            t += d;
+
             c = nextChar();
         }
         ungetChar();
