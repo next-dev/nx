@@ -41,15 +41,26 @@ bool MemoryMap::Byte::written() const
     return m_pass > 0;
 }
 
+void MemoryMap::Byte::clear()
+{
+    m_byte = 0;
+    m_pass = 0;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // MemoryMap
 //----------------------------------------------------------------------------------------------------------------------
 
 MemoryMap::MemoryMap(Spectrum& speccy)
-    : m_model(speccy.getModel())
-    , m_currentPass(0)
+    : m_currentPass(0)
+{
+    clear(speccy);
+}
+
+void MemoryMap::clear(Spectrum& speccy)
 {
     size_t ramSize;
+    m_model = speccy.getModel();
     switch (m_model)
     {
     case Model::ZX48:
@@ -75,6 +86,10 @@ MemoryMap::MemoryMap(Spectrum& speccy)
     }
 
     m_memory.resize(ramSize);
+    for (auto& b : m_memory)
+    {
+        b.clear();
+    }
     addZ80Range(0x8000, 0xffff);
 }
 
@@ -155,6 +170,8 @@ Assembler::Assembler(AssemblerWindow& window, Spectrum& speccy)
     , m_address(0)
 {
     window.clear();
+
+    m_options.m_startAddress = 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -346,7 +363,7 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     m_values.clear();
     m_lexSymbols.clear();
     m_variables.clear();
-    m_mmap.resetRange();
+    m_mmap.clear(m_speccy);
     m_address = 0;
     m_errors.clear();
 
@@ -358,7 +375,10 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     //
     // Assembler
     //
-    assemble(data, sourceName);
+    if (assemble(data, sourceName))
+    {
+        m_mmap.upload(m_speccy);
+    }
 
     m_assemblerWindow.output("");
     if (numErrors())
@@ -1136,6 +1156,10 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 }
                 break;
 
+            case T::OPT:
+                nextLine(e);
+                break;
+
             default:
                 FAIL("Unimplemented directive.");
             }
@@ -1767,6 +1791,10 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
                 }
                 break;
 
+            case T::OPT:
+                buildResult = doOpt(lex, ++e);
+                break;
+
             default:
                 FAIL("Unimplemented directive.");
             }
@@ -1775,11 +1803,6 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
         {
             ++e;
         }
-    }
-
-    if (buildResult)
-    {
-        m_mmap.upload(m_speccy);
     }
 
     return buildResult;
@@ -3380,8 +3403,7 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
             if (expr.result() < -32768 || expr.result() > 65535)
             {
                 error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
-                while (e->m_type != T::Newline) ++e;
-                ++e;
+                nextLine(e);
                 return false;
             }
 
@@ -3391,6 +3413,72 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
         if (e->m_type == T::Comma) ++e;
     }
 
+    return true;
+}
+
+bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    i64 startSym = m_lexSymbols.addString("start", true);
+
+    i64 option = 0;
+    vector<const Lex::Element*> args;
+
+    if (e->m_type == T::Symbol)
+    {
+        option = e->m_symbol;
+        ++e;
+
+        if (e->m_type == T::Colon)
+        {
+            ++e;
+        }
+        else if (e->m_type != T::Newline)
+        {
+            error(lex, *e, "Invalid option syntax.");
+            nextLine(e);
+            return false;
+        }
+
+        if (option == startSym)         return doOptStart(lex, e);
+        else
+        {
+            error(lex, *e, "Unknown option.");
+            nextLine(e);
+            return false;
+        }
+    }
+    else
+    {
+        error(lex, *e, "Invalid option syntax.");
+        nextLine(e);
+        return false;
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Options
+//----------------------------------------------------------------------------------------------------------------------
+
+bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
+{
+    if (!expect(lex, e, "*"))
+    {
+        error(lex, *e, "Syntax error in START option.  Should be \"START:<address>\".");
+        nextLine(e);
+        return false;
+    }
+
+    Expression expr = buildExpression(e);
+    if (!expr.eval(*this, lex, m_address))
+    {
+        error(lex, *e, "Invalid start address expression.");
+        nextLine(e);
+        return false;
+    }
+
+    m_options.m_startAddress = MemoryMap::Address(expr.result());
     return true;
 }
 

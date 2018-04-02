@@ -1,5 +1,7 @@
 ; Hello World!
 
+        opt   Start:Start
+
         org   $8000
         
         load  "rom.asm"
@@ -9,9 +11,10 @@ Start:
         call  OPEN
         ld    de,text           ; Print it
         ld    bc,textend-text
-        jp    PRINT
+        call  PRINT
+        jp    $
 
-text:   db    "Hello, World!\r-------------"
+text:   db    "Hello, World!\r-------------\r"
 textend:
 
 

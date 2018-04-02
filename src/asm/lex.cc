@@ -160,7 +160,7 @@ Lex::Lex()
     {
         if (gKeywords[i] == 0) continue;
 
-        u64 h = StringTable::hash(gKeywords[i]);
+        u64 h = StringTable::hash(gKeywords[i], true);
         int idx = int(h % kKeywordHashSize);
         // If this asserts, there is too many keywords with the same hashed index (maximum 8)
         assert((m_keywords[idx] & 0xff00000000000000ull) == 0);
@@ -331,7 +331,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         ungetChar();
 
         el.m_s1 = m_cursor;
-        u64 h = StringTable::hash((const char *)el.m_s0, (const char *)el.m_s1);
+        u64 h = StringTable::hash((const char *)el.m_s0, (const char *)el.m_s1, true);
         u64 tokens = m_keywords[h % kKeywordHashSize];
         i64 sizeToken = (el.m_s1 - el.m_s0);
 
@@ -352,7 +352,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         }
 
         // It's a symbol
-        return buildElemSymbol(el, Element::Type::Symbol, pos, assembler.getSymbol(el.m_s0, el.m_s1));
+        return buildElemSymbol(el, Element::Type::Symbol, pos, assembler.getSymbol(el.m_s0, el.m_s1, true));
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -437,7 +437,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         else
         {
             return buildElemSymbol(el, Element::Type::String, pos,
-                assembler.getSymbol((const u8 *)s.data(), (const u8 *)s.data() + s.size()));
+                assembler.getSymbol((const u8 *)s.data(), (const u8 *)s.data() + s.size(), false));
         }
     }
 

@@ -37,6 +37,7 @@ public:
     //
     // Interface parameters
     //
+    void clear(Spectrum& speccy);
     void setPass(int pass);
     void resetRange();
     void addRange(Address start, Address end);
@@ -61,6 +62,7 @@ private:
         operator u8() const { return m_byte; }
         bool poke(u8 b, u8 currentPass);
         bool written() const;
+        void clear();
 
     private:
         u8  m_pass;
@@ -99,7 +101,7 @@ public:
     int numErrors() const { return (int)m_errors.size(); }
     void error(const Lex& l, const Lex::Element& el, const string& message);
     void addErrorInfo(const string& fileName, const string& message, int line, int col);
-    i64 getSymbol(const u8* start, const u8* end) { return m_lexSymbols.add((const char*)start, (const char *)end); }
+    i64 getSymbol(const u8* start, const u8* end, bool ignoreCase) { return m_lexSymbols.addRange((const char*)start, (const char *)end, ignoreCase); }
     optional<i64> calculateExpression(const vector<u8>& exprData);
 
     optional<i64> lookUpLabel(i64 symbol);
@@ -125,6 +127,13 @@ public:
     };
 
     vector<ErrorInfo> getErrorInfos() const { return m_errors; }
+
+    struct Options
+    {
+        MemoryMap::Address      m_startAddress;
+    };
+
+    const Options& getOptions() const { return m_options; }
 
 private:
     //------------------------------------------------------------------------------------------------------------------
@@ -296,6 +305,12 @@ private:
     bool doEqu(Lex& lex, i64 symbol, const Lex::Element*& e);
     bool doDb(Lex& lex, const Lex::Element*& e);
     bool doDw(Lex& lex, const Lex::Element*& e);
+    bool doOpt(Lex& lex, const Lex::Element*& e);
+
+    //
+    // Options
+    //
+    bool doOptStart(Lex& lex, const Lex::Element*& e);
 
     //
     // Emission utilities
@@ -344,6 +359,8 @@ private:
     MemoryMap                   m_mmap;
     int                         m_address;
     vector<ErrorInfo>           m_errors;
+
+    Options                     m_options;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

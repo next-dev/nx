@@ -108,6 +108,9 @@ public:
     // Obtain a reference to the assembler.
     Assembler& getAssembler() { return m_assembler; }
 
+    // Obtain a reference to the emulator overlay.
+    Emulator& getEmulator() { return m_emulator; }
+
     // Render the currently generated display
     void render();
 
@@ -145,7 +148,7 @@ public:
     void toggleDebugger();
     void showEditor();
     void hideAll();
-    void assemble(const vector<u8>& data, string sourceName);
+    bool assemble(const vector<u8>& data, string sourceName);
     void switchModel(Model model);
 
     // Zoom

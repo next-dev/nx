@@ -1487,12 +1487,14 @@ void Nx::showEditor()
     m_editorOverlay.select();
 }
 
-void Nx::assemble(const vector<u8>& data, string sourceName)
+bool Nx::assemble(const vector<u8>& data, string sourceName)
 {
     m_assemblerOverlay.select();
     m_assembler.startAssembly(data, sourceName);
     m_debugger.getDisassemblyWindow().setLabels(m_assembler.getLabels());
     m_editorOverlay.getWindow().setErrorInfos(m_assembler.getErrorInfos());
+
+    return m_assembler.getErrorInfos().size() == 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

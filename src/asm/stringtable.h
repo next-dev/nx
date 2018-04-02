@@ -17,14 +17,21 @@ public:
         clear();
     }
 
-    i64 add(const char* str)
+    i64 addString(const char* str, bool ignoreCase)
     {
-        u64 i = hash(str) % kHashSize;
+        u64 i = hash(str, ignoreCase) % kHashSize;
         size_t hdr = m_hashTable[i];
         while (hdr != 0)
         {
             const char* s = m_strings.data() + m_headers[hdr].m_data;
-            if (strcmp(s, (const char *)str) == 0) return i64(hdr);
+            if (ignoreCase)
+            {
+                if (_stricmp(s, (const char *)str) == 0) return i64(hdr);
+            }
+            else
+            {
+                if (strcmp(s, (const char *)str) == 0) return i64(hdr);
+            }
             hdr = m_headers[hdr].m_next;
         }
 
@@ -35,21 +42,30 @@ public:
         m_hashTable[i] = hdrIndex;
         while (*str != 0)
         {
-            m_strings.emplace_back(*str++);
+            char c = *str++;
+            c = (ignoreCase && c >= 'a' && c <= 'z') ? c - 32 : c;
+            m_strings.emplace_back(c);
         }
         m_strings.emplace_back(0);
 
         return i64(hdrIndex);
     }
 
-    i64 add(const char* start, const char* end)
+    i64 addRange(const char* start, const char* end, bool ignoreCase)
     {
-        u64 i = hash(start, end) % kHashSize;
+        u64 i = hash(start, end, ignoreCase) % kHashSize;
         size_t hdr = m_hashTable[i];
         while (hdr != 0)
         {
             const char* s = m_strings.data() + m_headers[hdr].m_data;
-            if (_strnicmp(s, start, size_t(end - start)) == 0) return i64(hdr);
+            if (ignoreCase)
+            {
+                if (_strnicmp(s, start, size_t(end - start)) == 0) return i64(hdr);
+            }
+            else
+            {
+                if (strncmp(s, start, size_t(end - start)) == 0) return i64(hdr);
+            }
             hdr = m_headers[hdr].m_next;
         }
 
@@ -60,7 +76,9 @@ public:
         m_hashTable[i] = hdrIndex;
         while (start != end)
         {
-            m_strings.emplace_back(*start++);
+            char c = *start++;
+            c = (ignoreCase && c >= 'a' && c <= 'z') ? c - 32 : c;
+            m_strings.emplace_back(c);
         }
         m_strings.emplace_back(0);
 
@@ -72,13 +90,13 @@ public:
         return (const u8*)(m_strings.data() + m_headers[handle].m_data);
     }
 
-    static u64 hash(const char* str)
+    static u64 hash(const char* str, bool ignoreCase)
     {
         u64 h = 14695981039346656037;
         while (*str != 0)
         {
             char c = *str++;
-            c = (c >= 'a' && c <= 'z') ? c - 32 : c;
+            c = (ignoreCase && c >= 'a' && c <= 'z') ? c - 32 : c;
             h ^= c;
             h *= (u64)1099511628211ull;
         }
@@ -86,13 +104,13 @@ public:
         return h;
     }
 
-    static u64 hash(const char* start, const char* end)
+    static u64 hash(const char* start, const char* end, bool ignoreCase)
     {
         u64 h = 14695981039346656037;
         while (start != end)
         {
             char c = *start++;
-            c = (c >= 'a' && c <= 'z') ? c - 32 : c;
+            c = (ignoreCase && c >= 'a' && c <= 'z') ? c - 32 : c;
             h ^= c;
             h *= (u64)1099511628211ull;
         }

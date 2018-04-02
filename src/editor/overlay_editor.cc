@@ -20,6 +20,7 @@ EditorOverlay::EditorOverlay(Nx& nx)
         "Shift-Ctrl-S|Save as",
         "Ctrl-Tab|Switch buffers",
         "Ctrl-B|Build",
+        "Ctrl-R|Build & Run",
         "F4|Next error",
         "Shift-F4|Previous error",
         "Ctrl-X|Cut Line",
@@ -49,7 +50,9 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
     }
     else if (down && !shift && ctrl && !alt)
     {
-        if (key == K::B)
+        bool buildSuccess = false;
+
+        if (key == K::B || key == K::R)
         {
             // Ensure that all files are saved
             if (m_window.saveAll() && m_window.hasData())
@@ -60,7 +63,21 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
                 {
                     sourceName = "<Unsaved>";
                 }
-                getEmulator().assemble(data, sourceName);
+                buildSuccess = getEmulator().assemble(data, sourceName);
+            }
+        }
+
+        const Assembler::Options& options = getEmulator().getAssembler().getOptions();
+        if (key == K::R && options.m_startAddress != 0)
+        {
+            if (buildSuccess)
+            {
+                // Return to the emulator
+                getEmulator().getEmulator().select();
+
+                // Run the code
+                // #todo: make it work for 128K
+                getEmulator().getSpeccy().getZ80().PC() = u16(options.m_startAddress);
             }
         }
     }
