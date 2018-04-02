@@ -6,6 +6,7 @@
 #include <utils/format.h>
 #include <utils/tinyfiledialogs.h>
 
+#include <algorithm>
 #include <fstream>
 
 #if NX_DEBUG_EDITOR
@@ -317,7 +318,7 @@ void EditorData::backspace(int num)
     int count = 1;
     if (num == 1)
     {
-        int p1 = getPosAtLine(getCurrentLine()) + lastTabPos();
+        int p1 = m_lines[getCurrentLine()] + lastTabPos();
         int p2 = m_cursor - 1;
         while (p2 > p1)
         {
@@ -361,9 +362,9 @@ void EditorData::newline()
     DUMP();
     changed();
 
-    // Ident to the previous line's position
+    // Indent to the previous line's position
     int line = getCurrentLine() - 1;
-    int p = getPosAtLine(line);
+    int p = m_lines[line];
     while (m_buffer[p++] == ' ')
     {
         insert(' ');
@@ -479,7 +480,7 @@ int EditorData::getCurrentPosInLine() const
 
 int EditorData::getPosAtLine(int line) const
 {
-    return m_lines[line];
+    return toVirtualPos(m_lines[line]);
 }
 
 bool EditorData::ensureSpace(int numChars)
@@ -1025,7 +1026,13 @@ EditorWindow::EditorWindow(Nx& nx, string title)
     , m_selectedTab(-1)
     , m_status("Line: {6l}, Column: {6c}")
     , m_statusColour(Draw::attr(Colour::White, Colour::Blue, true))
+    , m_currentError(-1)
 {
+}
+
+void EditorWindow::setDefaultStatus()
+{
+    setStatus("Line: {6l}, Column: {6c}", Draw::attr(Colour::White, Colour::Blue, true));
 }
 
 void EditorWindow::onDraw(Draw& draw)
@@ -1077,24 +1084,26 @@ void EditorWindow::onDraw(Draw& draw)
     // Draw status bar
     draw.attrRect(m_x + 0, m_y + m_height, m_width, 1, m_statusColour);
 
-    string line;
-    for (const char* str = m_status.data(); *str != 0; ++str)
+    if (!m_editors.empty())
     {
-        if (*str == '{')
+        string line;
+        for (const char* str = m_status.data(); *str != 0; ++str)
         {
-            // Special formatting
-            int pad = 0;
-            ++str;
-            while (*str != '}')
+            if (*str == '{')
             {
-                if (*str >= '0' && *str <= '9')
+                // Special formatting
+                int pad = 0;
+                ++str;
+                while (*str != '}')
                 {
-                    pad = (pad * 10) + (*str - '0');
-                }
-                else switch(*str)
-                {
-                case 'l':
-                    // Line number
+                    if (*str >= '0' && *str <= '9')
+                    {
+                        pad = (pad * 10) + (*str - '0');
+                    }
+                    else switch (*str)
+                    {
+                    case 'l':
+                        // Line number
                     {
                         string x = intString(getEditor().getData().getCurrentLine() + 1, pad);
                         line += x;
@@ -1102,8 +1111,8 @@ void EditorWindow::onDraw(Draw& draw)
                     }
                     break;
 
-                case 'c':
-                    // Column number
+                    case 'c':
+                        // Column number
                     {
                         string x = intString(getEditor().getData().getCurrentPosInLine() + 1, pad);
                         line += x;
@@ -1111,18 +1120,19 @@ void EditorWindow::onDraw(Draw& draw)
                     }
                     break;
 
-                default:
-                    break;
+                    default:
+                        break;
+                    }
+                    ++str;
                 }
-                ++str;
+            }
+            else
+            {
+                line += *str;
             }
         }
-        else
-        {
-            line += *str;
-        }
+        draw.printSquashedString(m_x + 1, m_y + m_height, line, m_statusColour);
     }
-    draw.printSquashedString(m_x + 1, m_y + m_height, line, m_statusColour);
 }
 
 void EditorWindow::newFile()
@@ -1175,8 +1185,6 @@ void EditorWindow::closeFile()
 
 void EditorWindow::openFile(const string& fileName /* = string() */)
 {
-    newFile();
-
     const char* fn = 0;
     if (fileName.empty())
     {
@@ -1191,6 +1199,18 @@ void EditorWindow::openFile(const string& fileName /* = string() */)
 
     if (fn)
     {
+        // Make sure we don't already have it open.
+        for (int i = 0; i < getNumEditors(); ++i)
+        {
+            if (getEditor(i).getFileName() == fn)
+            {
+                switchTo(getEditor(i));
+                return;
+            }
+        }
+
+        newFile();
+
         Editor& thisEditor = getEditor();
         if (thisEditor.getData().load(fn))
         {
@@ -1200,11 +1220,8 @@ void EditorWindow::openFile(const string& fileName /* = string() */)
         {
             string msg = stringFormat("Unable to open file '{0}'.", fileName);
             tinyfd_messageBox("ERROR", msg.c_str(), "ok", "warning", 0);
+            closeFile();
         }
-    }
-    else
-    {
-        closeFile();
     }
 
 #if NX_DEBUG_CONSOLE
@@ -1217,9 +1234,25 @@ void EditorWindow::openFile(const string& fileName /* = string() */)
 #endif
 }
 
+void EditorWindow::switchTo(const Editor& editor)
+{
+    int editorIndex = int(&editor - m_editors.data());
+    int tabIndex = int(find(m_editorOrder.begin(), m_editorOrder.end(), editorIndex) - m_editorOrder.begin());
+    m_editorOrder.erase(m_editorOrder.begin() + tabIndex);
+    m_editorOrder.insert(m_editorOrder.begin(), editorIndex);
+}
+
 void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
+    bool resetStatus = true;
+
+    if (key == K::LShift || key == K::RShift || key == K::LAlt || key == K::RAlt ||
+        key == K::LControl || key == K::RControl || key == K::Unknown)
+    {
+        resetStatus = false;
+    }
+
     if (down && ctrl && !shift && !alt)
     {
         switch (key)
@@ -1236,6 +1269,25 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
             openFile();
             break;
         }
+    }
+
+    if (!ctrl && !alt && key == K::F4)
+    {
+        if (down)
+        {
+            if (shift)
+            {
+                printf("BACKWARD\n");
+                if (--m_currentError < 0) m_currentError = max(0, (int)m_errors.size() - 1);
+            }
+            else
+            {
+                printf("FOWARD\n");
+                if (++m_currentError >= m_errors.size()) m_currentError = 0;
+            }
+            goToError(m_currentError);
+        }
+        resetStatus = false;
     }
 
     if (!m_editors.empty())
@@ -1275,6 +1327,11 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
     {
         setTitle(string("Editor/Assembler"));
     }
+
+    if (resetStatus)
+    {
+        setDefaultStatus();
+    }
 }
 
 void EditorWindow::onText(char ch)
@@ -1283,6 +1340,7 @@ void EditorWindow::onText(char ch)
     {
         getEditor().text(ch);
     }
+    setDefaultStatus();
 }
 
 bool EditorWindow::saveAll()
@@ -1338,6 +1396,41 @@ bool EditorWindow::needToSave() const
     }
 
     return false;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Error cycling
+//----------------------------------------------------------------------------------------------------------------------
+
+void EditorWindow::setErrorInfos(vector<Assembler::ErrorInfo> errors)
+{
+    m_errors = errors;
+    m_currentError = -1;
+}
+
+void EditorWindow::goToError(int n)
+{
+    if (n < 0 || n >= m_errors.size()) return;
+    const Assembler::ErrorInfo& err = m_errors[n];
+
+    openFile(err.m_fileName);
+    EditorData& data = getEditor().getData();
+
+    // Make sure we have a valid line
+    if ((err.m_line - 1) < data.getNumLines())
+    {
+        int pos = data.getPosAtLine(err.m_line - 1);
+
+        // Make sure we have a valid column
+        if ((err.m_column - 1) < data.lineLength(err.m_line - 1))
+        {
+            pos += err.m_column - 1;
+        }
+
+        data.moveTo(pos);
+    }
+
+    setStatus(err.m_error, Draw::attr(Colour::Black, Colour::Red, true));
 }
 
 //----------------------------------------------------------------------------------------------------------------------

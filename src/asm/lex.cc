@@ -227,6 +227,7 @@ void Lex::ungetChar()
 Lex::Element::Type Lex::error(Assembler& assembler, const std::string& msg)
 {
     assembler.output(stringFormat("!{0}({1}): Lexical Error: {2}", m_fileName, m_lastPosition.m_line, msg));
+    assembler.addErrorInfo(m_fileName, msg, m_lastPosition.m_line, m_lastPosition.m_col);
 
     i32 x = m_lastPosition.m_col - 1;
     const u8* lineStart = m_file.data() + m_lastPosition.m_lineOffset;
@@ -243,7 +244,6 @@ Lex::Element::Type Lex::error(Assembler& assembler, const std::string& msg)
     for (int j = 0; j < x; ++j) line += ' ';
     line += '^';
     assembler.output(line);
-    assembler.addError();
 
     return Element::Type::Error;
 }

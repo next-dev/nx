@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <asm/asm.h>
 #include <config.h>
 #include <utils/ui.h>
 
@@ -209,11 +210,15 @@ public:
 
     void openFile(const string& fileName = string());
 
+    void setErrorInfos(vector<Assembler::ErrorInfo> errors);
+    void goToError(int n);
+
 private:
     void newFile();
     void closeFile();
     void switchTo(const Editor& editor);
     void setStatus(string str, u8 colour) { m_status = str; m_statusColour = colour; }
+    void setDefaultStatus();
 
 protected:
     void onDraw(Draw& draw) override;
@@ -221,12 +226,14 @@ protected:
     void onText(char ch) override;
 
 private:
-    vector<Editor>      m_editors;
-    vector<int>         m_editorOrder;
+    vector<Editor>                  m_editors;
+    vector<int>                     m_editorOrder;
+    vector<Assembler::ErrorInfo>    m_errors;
+    int                             m_currentError;
 
-    int                 m_selectedTab;      // Current tab index during selection window
-    string              m_status;
-    u8                  m_statusColour;
+    int                             m_selectedTab;      // Current tab index during selection window
+    string                          m_status;
+    u8                              m_statusColour;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

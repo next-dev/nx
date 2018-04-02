@@ -174,7 +174,7 @@ AssemblerOverlay::AssemblerOverlay(Nx& nx)
     , m_window(nx)
     , m_commands({
             "ESC|Exits",
-            "Up/Down|Scroll",
+            "Up/Down/Left/Right|Scroll",
             "PgUp/PgDn|Page",
             "Home|Top",
             "End|Bottom",

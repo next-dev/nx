@@ -20,6 +20,8 @@ EditorOverlay::EditorOverlay(Nx& nx)
         "Shift-Ctrl-S|Save as",
         "Ctrl-Tab|Switch buffers",
         "Ctrl-B|Build",
+        "F4|Next error",
+        "Shift-F4|Previous error",
         })
 {
 }

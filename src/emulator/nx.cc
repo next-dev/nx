@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include <asm/asm.h>
+#include <editor/editor.h>
 #include <emulator/nx.h>
 #include <emulator/nxfile.h>
 #include <utils/tinyfiledialogs.h>
@@ -1490,6 +1491,7 @@ void Nx::assemble(const vector<u8>& data, string sourceName)
     m_assembler.select();
     Assembler assembler(m_assembler.getWindow(), getSpeccy(), data, sourceName);
     m_debugger.getDisassemblyWindow().setLabels(assembler.getLabels());
+    m_editor.getWindow().setErrorInfos(assembler.getErrorInfos());
 }
 
 //----------------------------------------------------------------------------------------------------------------------

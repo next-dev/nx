@@ -97,15 +97,34 @@ public:
               string sourceName);
 
     void output(const std::string& msg);
-    void addError();
-    int numErrors() const { return m_numErrors; }
+    int numErrors() const { return (int)m_errors.size(); }
     void error(const Lex& l, const Lex::Element& el, const string& message);
+    void addErrorInfo(const string& fileName, const string& message, int line, int col);
     i64 getSymbol(const u8* start, const u8* end) { return m_lexSymbols.add((const char*)start, (const char *)end); }
 
     optional<i64> lookUpLabel(i64 symbol);
     optional<i64> lookUpValue(i64 symbol);
 
     Labels getLabels() const;
+
+    struct ErrorInfo
+    {
+        string      m_fileName;
+        string      m_error;
+        int         m_line;
+        int         m_column;
+
+        ErrorInfo(string fileName, string error, int line, int column)
+            : m_fileName(fileName)
+            , m_error(error)
+            , m_line(line)
+            , m_column(column)
+        {}
+
+        ErrorInfo() {}
+    };
+
+    vector<ErrorInfo> getErrorInfos() const { return m_errors; }
 
 private:
     //------------------------------------------------------------------------------------------------------------------
@@ -311,7 +330,6 @@ private:
     vector<string>              m_fileStack;
     AssemblerWindow&            m_assemblerWindow;
     Spectrum&                   m_speccy;
-    int                         m_numErrors;
 
     // Symbols (labels)
     map<i64, SymbolInfo>        m_symbolTable;
@@ -326,6 +344,7 @@ private:
     //
     MemoryMap                   m_mmap;
     int                         m_address;
+    vector<ErrorInfo>           m_errors;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

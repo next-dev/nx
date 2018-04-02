@@ -151,7 +151,6 @@ void MemoryMap::upload(Spectrum& speccy)
 Assembler::Assembler(AssemblerWindow& window, Spectrum& speccy, const vector<u8>& data, string sourceName)
     : m_assemblerWindow(window)
     , m_speccy(speccy)
-    , m_numErrors(0)
     , m_mmap(speccy)
     , m_address(0)
 {
@@ -340,6 +339,7 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
 {
     m_fileStack.clear();
     m_fileStack.emplace_back(sourceName);
+    m_errors.clear();
     assemble(data, sourceName);
 
     m_assemblerWindow.output("");
@@ -493,9 +493,9 @@ void Assembler::output(const std::string& msg)
     m_assemblerWindow.output(msg);
 }
 
-void Assembler::addError()
+void Assembler::addErrorInfo(const string& fileName, const string& message, int line, int col)
 {
-    ++m_numErrors;
+    m_errors.emplace_back(fileName, message, line, col);
 }
 
 void Assembler::error(const Lex& l, const Lex::Element& el, const string& message)
@@ -503,10 +503,11 @@ void Assembler::error(const Lex& l, const Lex::Element& el, const string& messag
     Lex::Element::Pos start = el.m_position;
     int length = int(el.m_s1 - el.m_s0);
 
+    addErrorInfo(l.getFileName(), message, start.m_line, start.m_col);
+
     // Output the error
     string err = stringFormat("!{0}({1}): {2}", l.getFileName(), start.m_line, message);
     output(err);
-    addError();
 
     // Output the markers
     string line;
