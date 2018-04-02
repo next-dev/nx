@@ -69,24 +69,78 @@ public:
 //
 //----------------------------------------------------------------------------------------------------------------------
 
+template <int n>
+struct PosT
+{
+    int m_pos;
+
+    PosT() : m_pos(0) {}
+    PosT(int p) : m_pos(p) {}
+    PosT(const PosT& p) : m_pos(p.m_pos) {}
+
+    PosT& operator= (int p) { m_pos = p; return *this; }
+    PosT& operator= (const PosT& p) { m_pos = p.m_pos; return *this; }
+
+    PosT& operator+= (int p) { m_pos += p; return *this; }
+    PosT& operator-= (int p) { m_pos += p; return *this; }
+
+    explicit operator int() const { return m_pos; }
+
+    int operator- (const PosT& p) const { return (m_pos - p.m_pos); }
+    PosT operator+ (int p) const { return (m_pos + p); }
+    PosT operator- (int p) const { return (m_pos - p); }
+
+    PosT& operator++ () { ++m_pos; return *this; }
+    PosT& operator-- () { --m_pos; return *this; }
+    PosT operator++ (int) { PosT p(m_pos); ++m_pos; return p; }
+    PosT operator-- (int) { PosT p(m_pos); --m_pos; return p; }
+
+    bool operator< (const PosT& p) const { return m_pos < p.m_pos; }
+    bool operator> (const PosT& p) const { return m_pos > p.m_pos; }
+    bool operator<= (const PosT& p) const { return m_pos <= p.m_pos; }
+    bool operator>= (const PosT& p) const { return m_pos >= p.m_pos; }
+    bool operator== (const PosT& p) const { return m_pos == p.m_pos; }
+    bool operator!= (const PosT& p) const { return m_pos != p.m_pos; }
+
+};
+
 class EditorData
 {
 public:
     EditorData(int initialSize, int increaseSize);
 
+    // This type represents a 0-based index from the beginning of the document, irregardless of the internal
+    // editor buffer structure.  All public functions deal with this type.
+    using Pos = PosT<0>;
+
     void clear();
+
+    //
+    // Query
+    //
     SplitView getLine(int n) const;
     SplitView getText() const;
     vector<u8> getData() const;
     int lineLength(int n) const;
     int dataLength() const;
     int getNumLines() const;
-    
+    Pos lastWordPos() const;
+    Pos nextWordPos() const;
+    int getCurrentLine() const { return m_currentLine; }
+    int getCurrentPosInLine() const;
+    Pos getPosAtLine(int l) const;
+    bool hasChanged() const { return m_changed; }
+    char getChar(Pos p) const { return m_buffer[(int)toDataPos(p)]; }
+    void setChar(Pos p, char ch) { m_buffer[(int)toDataPos(p)] = ch; }
+
+    //
+    // Commands
+    //
     void insert(char ch);
     void insert(string str);
     void backspace(int num);
     void deleteChar(int num);
-    void moveTo(int pos);
+    void moveTo(Pos pos);
     void leftChar(int num);
     void rightChar(int num);
     void upChar(int num);
@@ -94,14 +148,20 @@ public:
     void newline();
     void home();
     void end();
+    void cutLine();
+    void copyLine();
+    void pasteLine();
 
+    //
+    // File
+    //
     bool load(const char* fileName);
     bool save(const char* fileName);
 
+    //
+    // State
+    //
     void resetChanged() { m_changed = false; }
-
-    int lastWordPos() const;
-    int nextWordPos() const;
 
     //
     // Tabs
@@ -111,32 +171,38 @@ public:
     void setTabs(vector<int> tabs, int tabSize);
     int lastTabPos() const;
 
-    //
-    // Queries
-    //
-    int getCurrentLine() const { return m_currentLine; }
-    int getCurrentPosInLine() const;
-    int getPosAtLine(int l) const;
-    bool hasChanged() const { return m_changed; }
-    
 private:
+    // This type represents a true index into the internal buffer.  This only represents an actual
+    // index into the document if the position is before the current cursor position, due to the
+    // gap buffer structure that is used internally.  All positions that use
+    using DataPos = PosT<1>;
+
     bool ensureSpace(int numChars);
     void dump() const;
-    int toVirtualPos(int actualPos) const;
+    Pos toVirtualPos(DataPos actualPos) const;
+    DataPos toDataPos(Pos virtualPos) const;
     void changed() { m_changed = true; }
     static int getCharCategory(char ch);        // 0 = space, 1 = chars/numbers, 2 = punctuation
 
+    bool isValidPos(Pos pos) const;
+    bool isValidPos(DataPos pos) const;
+    DataPos getLinePos(int line) const { return m_lines[line]; }
+    void setLinePos(int line, DataPos pos) { assert(isValidPos(pos)); m_lines[line] = pos; }
+    char getChar(DataPos p) const { assert(isValidPos(p));  return m_buffer[(int)p]; }
+    void setChar(DataPos p, char ch) { assert(isValidPos(p));  m_buffer[(int)p] = ch; }
+
 private:
     vector<char>    m_buffer;
-    vector<int>     m_lines;
+    vector<DataPos> m_lines;
     int             m_currentLine;
-    int             m_cursor;
-    int             m_endBuffer;
+    DataPos         m_cursor;
+    DataPos         m_endBuffer;
     int             m_increaseSize;
     int             m_lastOffset;       // Used for remembering the line offset when moving up and down
     bool            m_changed;          // True, if the data changed since last reset
     vector<int>     m_initialTabs;
     int             m_tabSize;
+    vector<char>    m_clipboard;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -66,30 +66,30 @@ void EditorData::clear()
 
 SplitView EditorData::getLine(int n) const
 {
-    int nextLinePos = (n + 1 >= (int)m_lines.size()) ? (int)m_buffer.size() : m_lines[n + 1];
+    DataPos nextLinePos = (n + 1 >= (int)m_lines.size()) ? (int)m_buffer.size() : getLinePos(n + 1);
     if (m_currentLine == n)
     {
         // m_cursor is between m_lines[n] and nextLinePos.
         return (m_cursor == nextLinePos)
-            ? SplitView(m_buffer, m_lines[n], m_cursor, 0, 0)
-            : SplitView(m_buffer, m_lines[n], m_cursor, m_endBuffer, nextLinePos);
+            ? SplitView(m_buffer, (int)getLinePos(n), (int)m_cursor, 0, 0)
+            : SplitView(m_buffer, (int)getLinePos(n), (int)m_cursor, (int)m_endBuffer, (int)nextLinePos);
     }
     else if (n < m_lines.size())
     {
-        int i = m_lines[n];
+        DataPos i = getLinePos(n);
         int start[2] = { 0 }, end[2] = { 0 };
-        start[0] = i;
+        start[0] = (int)i;
         int idx = 0;
-        for (; m_buffer.begin() + i < m_buffer.end() && (i != m_cursor && m_buffer[i] != '\n'); ++i)
+        for (; (m_buffer.begin() + (int)i) < m_buffer.end() && (i != m_cursor && getChar(i) != '\n'); ++i)
         {
             if (i == m_cursor)
             {
                 i = m_endBuffer - 1;
-                end[idx++] = m_cursor;
-                start[idx] = m_endBuffer;
+                end[idx++] = (int)m_cursor;
+                start[idx] = (int)m_endBuffer;
             }
         }
-        end[idx] = i;
+        end[idx] = (int)i;
         return SplitView(m_buffer, start[0], end[0], start[1], end[1]);
     }
     else
@@ -100,20 +100,20 @@ SplitView EditorData::getLine(int n) const
 
 SplitView EditorData::getText() const
 {
-    return SplitView(m_buffer, 0, m_cursor, m_endBuffer, (int)m_buffer.size());
+    return SplitView(m_buffer, 0, (int)m_cursor, (int)m_endBuffer, (int)m_buffer.size());
 }
 
 vector<u8> EditorData::getData() const
 {
-    vector<u8> data(m_buffer.begin(), m_buffer.begin() + m_cursor);
-    data.insert(data.end(), m_buffer.begin() + m_endBuffer, m_buffer.end());
+    vector<u8> data(m_buffer.begin(), m_buffer.begin() + (int)m_cursor);
+    data.insert(data.end(), m_buffer.begin() + (int)m_endBuffer, m_buffer.end());
     return data;
 }
 
 int EditorData::lineLength(int n) const
 {
-    int start = m_lines[n];
-    int end;
+    DataPos start = getLinePos(n);
+    DataPos end;
     if (n == m_currentLine)
     {
         end = m_endBuffer;
@@ -123,13 +123,13 @@ int EditorData::lineLength(int n) const
     {
         end = start;
     }
-    for (; m_buffer.begin() + end < m_buffer.end() && m_buffer[end] != '\n'; ++end) ;
+    for (; m_buffer.begin() + (int)end < m_buffer.end() && getChar(end) != '\n'; ++end) ;
     return end - start;
 }
 
 int EditorData::dataLength() const
 {
-    return m_cursor + ((int)m_buffer.size() - m_endBuffer);
+    return (int)m_cursor + ((int)m_buffer.size() - (int)m_endBuffer);
 }
 
 int EditorData::getNumLines() const
@@ -140,26 +140,47 @@ int EditorData::getNumLines() const
 void EditorData::dump() const
 {
     NX_LOG("----------------------------------------------------------\n");
-    for (int i = 0; i < m_cursor; ++i)
+    for (DataPos i = 0; i < m_cursor; ++i)
     {
-        NX_LOG("%04d: %c\n", i, m_buffer[i]);
+        NX_LOG("%04d: %c\n", i, getChar(i));
     }
     NX_LOG("----\n");
-    for (int i = m_endBuffer; i < (int)m_buffer.size(); ++i)
+    for (DataPos i = m_endBuffer; i < (int)m_buffer.size(); ++i)
     {
-        NX_LOG("%04d: %c\n", i, m_buffer[i]);
+        NX_LOG("%04d: %c\n", i, getChar(i));
     }
     NX_LOG("\n");
     for (int i = 0; i < m_lines.size(); ++i)
     {
         NX_LOG(m_currentLine == i ? "*" : " ");
-        NX_LOG("%04d: %d\n", i, m_lines[i]);
+        NX_LOG("%04d: %d\n", i, getLinePos(i));
     }
 }
 
-int EditorData::toVirtualPos(int actualPos) const
+bool EditorData::isValidPos(Pos pos) const
 {
-    return actualPos > m_cursor ? actualPos - m_endBuffer + m_cursor : actualPos;
+    return
+        (pos >= 0) &&
+        (pos <= (int)m_cursor + ((int)m_buffer.size() - (int)m_endBuffer));
+}
+
+bool EditorData::isValidPos(DataPos pos) const
+{
+    return
+        (pos >= 0 && pos <= m_cursor) ||
+        (pos >= m_endBuffer && pos <= (int)m_buffer.size());
+}
+
+EditorData::Pos EditorData::toVirtualPos(DataPos actualPos) const
+{
+    assert(isValidPos(actualPos));
+    return (int)(actualPos > m_cursor ? m_cursor + (actualPos - m_endBuffer) : actualPos);
+}
+
+EditorData::DataPos EditorData::toDataPos(Pos virtualPos) const
+{
+    assert(isValidPos(virtualPos));
+    return (int)(virtualPos > int(m_cursor) ? m_endBuffer + (DataPos((int)virtualPos) - m_cursor) : (int)virtualPos);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -171,7 +192,7 @@ void EditorData::insert(char ch)
     bool result = ensureSpace(1);
     if (result)
     {
-        m_buffer[m_cursor++] = ch;
+        setChar(m_cursor++, ch);
     }
 
     m_lastOffset = -1;
@@ -187,12 +208,14 @@ void EditorData::insert(string str)
     }
 }
 
-void EditorData::moveTo(int pos)
+void EditorData::moveTo(Pos pos)
 {
-    pos = max(0, min(pos, dataLength()));
-    if (pos != m_cursor)
+    Pos p = max(0, min((int)pos, dataLength()));
+    DataPos dp = toDataPos(p);
+    Pos cursor = toVirtualPos(m_cursor);
+    if (p != cursor)
     {
-        if (pos < m_cursor)
+        if (p < cursor)
         {
             // Cursor moving left
             // Moving X->Y
@@ -205,24 +228,24 @@ void EditorData::moveTo(int pos)
             //
 
             // Move the X section to the Y section
-            int l = m_cursor - pos;
-            int newEnd = m_endBuffer - l;
-            int oldCursor = m_cursor;
-            move(m_buffer.begin() + pos, m_buffer.begin() + m_cursor, m_buffer.begin() + newEnd);
+            int l = cursor - p;
+            DataPos newEnd = m_endBuffer - l;
+            DataPos oldCursor = m_cursor;
+            move(m_buffer.begin() + (int)p, m_buffer.begin() + (int)m_cursor, m_buffer.begin() + (int)newEnd);
             m_endBuffer = newEnd;
-            m_cursor = pos;
+            m_cursor = dp;
 
             // Any line references between [pos, cursor) need to be adjusted
-            int adjust = newEnd - pos;
-            for (int i = 0; i < m_lines.size() && m_lines[i] <= oldCursor; ++i)
+            int adjust = newEnd - m_cursor;
+            for (int i = 0; i < m_lines.size() && getLinePos(i) <= oldCursor; ++i)
             {
-                if (m_lines[i] > pos)
+                if (getLinePos(i) > dp)
                 {
-                    m_lines[i] += adjust;
+                    setLinePos(i, getLinePos(i) + adjust);
                 }
             }
 
-            while (m_lines[m_currentLine] > m_cursor) --m_currentLine;
+            while (getLinePos(m_currentLine) > m_cursor) --m_currentLine;
         }
         else
         {
@@ -236,24 +259,23 @@ void EditorData::moveTo(int pos)
             //                ^      newCursor   ^      actualPos
             //                cursor             endBuffer
             //
-            int actualPos = m_endBuffer + (pos - m_cursor);
             int adjust = m_endBuffer - m_cursor;
-            int origEndBuffer = m_endBuffer;
-            int l = actualPos - m_endBuffer;
-            move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + actualPos, m_buffer.begin() + m_cursor);
+            DataPos origEndBuffer = m_endBuffer;
+            int l = dp - m_endBuffer;
+            move(m_buffer.begin() + (int)m_endBuffer, m_buffer.begin() + (int)dp, m_buffer.begin() + (int)m_cursor);
             m_cursor += l;
-            m_endBuffer = actualPos;
+            m_endBuffer = dp;
 
-            // Any line references between [endBuffer, actualPos) need to be adjusted
-            for (int i = 0; i < m_lines.size() && m_lines[i] <= actualPos; ++i)
+            // Any line references between [endBuffer, dp) need to be adjusted
+            for (int i = 0; i < m_lines.size() && getLinePos(i) <= dp; ++i)
             {
-                if (m_lines[i] >= origEndBuffer)
+                if (getLinePos(i) >= origEndBuffer)
                 {
-                    m_lines[i] -= adjust;
+                    setLinePos(i, getLinePos(i) - adjust);
                 }
             }
 
-            while (m_currentLine < int(m_lines.size() - 1) && m_lines[m_currentLine+1] <= m_cursor) ++m_currentLine;
+            while (m_currentLine < int(m_lines.size() - 1) && getLinePos(m_currentLine+1) <= m_cursor) ++m_currentLine;
         }
     }
 
@@ -262,29 +284,29 @@ void EditorData::moveTo(int pos)
 
 void EditorData::deleteChar(int num)
 {
-    num = min(num, int(m_buffer.size()) - m_endBuffer);
-    for (int i = m_endBuffer; i < m_endBuffer + num; ++i)
+    num = min(num, int(m_buffer.size()) - (int)m_endBuffer);
+    for (DataPos i = m_endBuffer; i < m_endBuffer + num; ++i)
     {
-        if (m_buffer[i] == '\n')
+        if (getChar(i) == '\n')
         {
             m_lines.erase(m_lines.begin() + m_currentLine + 1);
         }
     }
     m_endBuffer += num;
-    moveTo(m_cursor);
+    moveTo(Pos((int)m_cursor));
     m_lastOffset = -1;
     changed();
 }
 
 void EditorData::leftChar(int num = 1)
 {
-    moveTo(max(0, m_cursor - num));
+    moveTo(max(0, (int)m_cursor - num));
     m_lastOffset = -1;
 }
 
 void EditorData::rightChar(int num = 1)
 {
-    moveTo(min(dataLength(), m_cursor + num));
+    moveTo(min(dataLength(), (int)m_cursor + num));
     m_lastOffset = -1;
 }
 
@@ -297,7 +319,7 @@ void EditorData::upChar(int num)
     m_lastOffset = m_lastOffset == -1 ? getCurrentPosInLine() : m_lastOffset;
     int len = lineLength(newLine);
     int requiredOffset = m_lastOffset > len ? len : m_lastOffset;
-    moveTo(toVirtualPos(m_lines[newLine] + requiredOffset));
+    moveTo(toVirtualPos(getLinePos(newLine) + requiredOffset));
 }
 
 void EditorData::downChar(int num)
@@ -309,7 +331,7 @@ void EditorData::downChar(int num)
     m_lastOffset = m_lastOffset == -1 ? getCurrentPosInLine() : m_lastOffset;
     int len = lineLength(newLine);
     int requiredOffset = m_lastOffset > len ? len : m_lastOffset;
-    moveTo(toVirtualPos(m_lines[newLine] + requiredOffset));
+    moveTo(toVirtualPos(getLinePos(newLine) + requiredOffset));
 }
 
 void EditorData::backspace(int num)
@@ -318,11 +340,11 @@ void EditorData::backspace(int num)
     int count = 1;
     if (num == 1)
     {
-        int p1 = m_lines[getCurrentLine()] + lastTabPos();
-        int p2 = m_cursor - 1;
+        DataPos p1 = getLinePos(getCurrentLine()) + lastTabPos();
+        DataPos p2 = m_cursor - 1;
         while (p2 > p1)
         {
-            if (m_buffer[--p2] != ' ')
+            if (getChar(--p2) != ' ')
             {
                 // At least one of the characters after the previous tab is a non-space.
                 // So just delete one character.
@@ -339,8 +361,8 @@ void EditorData::backspace(int num)
 
     for (int i = 0; i < count; ++i)
     {
-        int lineStart = m_lines[m_currentLine];
-        if (m_cursor == lineStart)
+        DataPos lineStart = getLinePos(m_currentLine);
+        if (m_cursor == (int)lineStart)
         {
             // Delete newline
             if (m_currentLine == 0) return;
@@ -364,8 +386,8 @@ void EditorData::newline()
 
     // Indent to the previous line's position
     int line = getCurrentLine() - 1;
-    int p = m_lines[line];
-    while (m_buffer[p++] == ' ')
+    DataPos p = getLinePos(line);
+    while (getChar(p++) == ' ')
     {
         insert(' ');
     }
@@ -373,7 +395,7 @@ void EditorData::newline()
 
 void EditorData::home()
 {
-    moveTo(toVirtualPos(m_lines[m_currentLine]));
+    moveTo(toVirtualPos(getLinePos(m_currentLine)));
     m_lastOffset = -1;
 }
 
@@ -386,9 +408,42 @@ void EditorData::end()
     }
     else
     {
-        moveTo(toVirtualPos(m_lines[m_currentLine+1])-1);
+        moveTo((int)toVirtualPos(getLinePos(m_currentLine+1))-1);
     }
     m_lastOffset = -1;
+}
+
+void EditorData::cutLine()
+{
+    copyLine();
+    home();
+    deleteChar(lineLength(m_currentLine) + 1);
+}
+
+void EditorData::copyLine()
+{
+    Pos linePos = getPosAtLine(m_currentLine);
+    Pos endPos = linePos + lineLength(m_currentLine);
+
+    DataPos p0 = toDataPos(linePos);
+    DataPos p1 = toDataPos(endPos);
+
+    m_clipboard.clear();
+
+    int a0 = (int)min(p0, m_cursor);
+    int a1 = (int)min(p1, m_cursor);
+    int b0 = (int)max(p0, m_endBuffer);
+    int b1 = (int)max(p1, m_endBuffer);
+
+    m_clipboard.insert(m_clipboard.end(), m_buffer.begin() + a0, m_buffer.begin() + a1);
+    m_clipboard.insert(m_clipboard.end(), m_buffer.begin() + b0, m_buffer.begin() + b1);
+}
+
+void EditorData::pasteLine()
+{
+    home();
+    insert(string(m_clipboard.begin(), m_clipboard.end()));
+    newline();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -457,7 +512,7 @@ void EditorData::untab()
     // tab points to the place we should go.  Keep deleting spaces until we reach a non-space or the tab position
     while (x > tab)
     {
-        if (m_buffer[m_cursor - 1] != ' ') break;
+        if (getChar(m_cursor - 1) != ' ') break;
         backspace(1);
         --x;
     }
@@ -475,12 +530,12 @@ void EditorData::setTabs(vector<int> tabs, int tabSize)
 
 int EditorData::getCurrentPosInLine() const
 {
-    return m_cursor - m_lines[m_currentLine];
+    return m_cursor - getLinePos(m_currentLine);
 }
 
-int EditorData::getPosAtLine(int line) const
+EditorData::Pos EditorData::getPosAtLine(int line) const
 {
-    return toVirtualPos(m_lines[line]);
+    return toVirtualPos(getLinePos(line));
 }
 
 bool EditorData::ensureSpace(int numChars)
@@ -497,8 +552,8 @@ bool EditorData::ensureSpace(int numChars)
         result = true;
     
         // Move text afterwards forward
-        int len = (int)(m_buffer.end() - (m_buffer.begin() + m_endBuffer));
-        move(m_buffer.begin() + m_endBuffer, m_buffer.begin() + oldSize, m_buffer.end() - len);
+        int len = (int)(m_buffer.end() - (m_buffer.begin() + (int)m_endBuffer));
+        move(m_buffer.begin() + (int)m_endBuffer, m_buffer.begin() + oldSize, m_buffer.end() - len);
         m_endBuffer += delta;
     }
     
@@ -515,48 +570,48 @@ int EditorData::getCharCategory(char ch)
     return 2;
 }
 
-int EditorData::lastWordPos() const
+EditorData::Pos EditorData::lastWordPos() const
 {
     if (m_cursor == 0) return 0;
 
-    int x = m_cursor - 1;
+    DataPos x = m_cursor - 1;
 
     // Skip past any space (char category == 0)
-    while (x > 0 && getCharCategory(m_buffer[x]) == 0)
+    while (x > 0 && getCharCategory(getChar(x)) == 0)
     {
         --x;
         // Stop at the beginning of each line
-        if (m_buffer[x] == '\n') return x + 1;
+        if (getChar(x) == '\n') return toVirtualPos(x + 1);
     }
 
     // Find the beginning of the group of characters that share the same category
-    int origCat = getCharCategory(m_buffer[x]);
-    while (x > 0 && getCharCategory(m_buffer[x-1]) == origCat)
+    int origCat = getCharCategory(getChar(x));
+    while (x > 0 && getCharCategory(getChar(x-1)) == origCat)
     {
         --x;
     }
 
-    return x;
+    return toVirtualPos(x);
 }
 
-int EditorData::nextWordPos() const
+EditorData::Pos EditorData::nextWordPos() const
 {
-    int x = m_endBuffer;
-    if (x == m_buffer.size()) return toVirtualPos(x);
+    DataPos x = m_endBuffer;
+    if (x == (int)m_buffer.size()) return toVirtualPos(x);
 
     // Skip past any characters of the same category
-    int origCat = getCharCategory(m_buffer[x]);
-    while (x < m_buffer.size() && getCharCategory(m_buffer[x]) == origCat)
+    int origCat = getCharCategory(getChar(x));
+    while (x < (int)m_buffer.size() && getCharCategory(getChar(x)) == origCat)
     {
         ++x;
     }
-    if (x == m_buffer.size() || m_buffer[x] == '\n') return toVirtualPos(x);
+    if (x == (int)m_buffer.size() || getChar(x) == '\n') return toVirtualPos(x);
 
     // Skip past any space (char catgory == 0)
-    while (x < m_buffer.size() && getCharCategory(m_buffer[x]) == 0)
+    while (x < (int)m_buffer.size() && getCharCategory(getChar(x)) == 0)
     {
         ++x;
-        if (m_buffer[x] == '\n') return toVirtualPos(x);
+        if (getChar(x) == '\n') return toVirtualPos(x);
     }
 
     return toVirtualPos(x);
@@ -586,9 +641,9 @@ bool EditorData::load(const char* fileName)
         m_cursor = size;
 
         // Update lines
-        for (int i = 0; i < m_cursor; ++i)
+        for (DataPos i = 0; i < m_cursor; ++i)
         {
-            if (m_buffer[i] == 0x0a)
+            if (getChar(i) == 0x0a)
             {
                 m_lines.emplace_back(i+1);
             }
@@ -611,8 +666,8 @@ bool EditorData::save(const char* fileName)
     f.open(fileName, ios::binary | ios::trunc | ios::out);
     if (f.is_open())
     {
-        f.write(m_buffer.data(), (size_t)m_cursor);
-        f.write(m_buffer.data() + m_endBuffer, m_buffer.size() - m_endBuffer);
+        f.write(m_buffer.data(), (size_t)(int)m_cursor);
+        f.write(m_buffer.data() + (int)m_endBuffer, m_buffer.size() - (int)m_endBuffer);
         f.close();
         resetChanged();
         return true;
@@ -937,6 +992,18 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
         case K::Right:  // Ctrl-Right
             m_data.moveTo(m_data.nextWordPos());
             ensureVisibleCursor();
+            break;
+
+        case K::C:      // Copy
+            m_data.copyLine();
+            break;
+
+        case K::X:      // Cut
+            m_data.cutLine();
+            break;
+
+        case K::V:      // Paste
+            m_data.pasteLine();
             break;
 
         default:
@@ -1419,7 +1486,7 @@ void EditorWindow::goToError(int n)
     // Make sure we have a valid line
     if ((err.m_line - 1) < data.getNumLines())
     {
-        int pos = data.getPosAtLine(err.m_line - 1);
+        EditorData::Pos pos = data.getPosAtLine(err.m_line - 1);
 
         // Make sure we have a valid column
         if ((err.m_column - 1) < data.lineLength(err.m_line - 1))

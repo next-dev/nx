@@ -22,6 +22,9 @@ EditorOverlay::EditorOverlay(Nx& nx)
         "Ctrl-B|Build",
         "F4|Next error",
         "Shift-F4|Previous error",
+        "Ctrl-X|Cut Line",
+        "Ctrl-C|Copy Line",
+        "Ctrl-V|Paste Line",
         })
 {
 }

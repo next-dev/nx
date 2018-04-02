@@ -68,20 +68,20 @@ void CommandWindow::onText(char ch)
 string CommandWindow::extractInput(EditorData& data)
 {
     string input;
-    int x0 = data.getPosAtLine(data.getCurrentLine());
+    EditorData::Pos x0 = data.getPosAtLine(data.getCurrentLine());
     SplitView view = data.getText();
-    if (view[x0] != ';')
+    if (view[(int)x0] != ';')
     {
         // Transfer a previous line to the end
-        if (view[x0] == '>')
+        if (view[(int)x0] == '>')
         {
             x0++;
-            if (x0 != data.dataLength() && view[x0] == ' ') x0++;
+            if (x0 != data.dataLength() && view[(int)(int)x0] == ' ') x0++;
         }
 
-        while (x0 != data.dataLength() && view[x0] != '\n')
+        while (x0 != data.dataLength() && view[(int)x0] != '\n')
         {
-            input.push_back(view[x0++]);
+            input.push_back(view[(int)x0++]);
         }
     }
 
