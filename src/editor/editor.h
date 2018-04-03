@@ -145,7 +145,7 @@ public:
     void rightChar(int num);
     void upChar(int num);
     void downChar(int num);
-    void newline();
+    void newline(bool indent = true);
     void home();
     void end();
     void cutLine();

@@ -376,16 +376,19 @@ void EditorData::backspace(int num)
     changed();
 }
 
-void EditorData::newline()
+void EditorData::newline(bool indentFlag)
 {
+    int indent = 0;
 
     // Indent to the previous line's position
-    int line = getCurrentLine() ;
-    int indent = 0;
-    DataPos p = getLinePos(line);
-    while (getChar(p++) == ' ')
+    if (indentFlag)
     {
-        ++indent;
+        int line = getCurrentLine();
+        DataPos p = getLinePos(line);
+        while (getChar(p++) == ' ')
+        {
+            ++indent;
+        }
     }
 
     // Remove any spaces before the newline
@@ -452,7 +455,7 @@ void EditorData::pasteLine()
 {
     home();
     insert(string(m_clipboard.begin(), m_clipboard.end()));
-    newline();
+    newline(false);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
