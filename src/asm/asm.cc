@@ -3471,7 +3471,7 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
     }
 
     Expression expr = buildExpression(e);
-    if (!expr.eval(*this, lex, m_address))
+    if (!expr.eval(*this, lex, m_mmap.getAddress(m_address)))
     {
         error(lex, *e, "Invalid start address expression.");
         nextLine(e);
