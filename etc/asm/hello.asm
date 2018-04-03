@@ -10,8 +10,8 @@ Start:
         ld    de,text           ; Print it
         ld    bc,textend-text
         jp    PRINT
-        
-text    db    "Hello, World!",13
+
+text:   db    "Hello, World!\r-------------"
 textend:
 
         

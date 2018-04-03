@@ -6,6 +6,7 @@
 #include <asm/overlay_asm.h>
 #include <emulator/nxfile.h>
 #include <emulator/spectrum.h>
+#include <utils/filename.h>
 #include <utils/format.h>
 
 #define NX_DEBUG_LOG_LEX    (0)
@@ -330,8 +331,15 @@ void Assembler::dumpSymbolTable()
 // Parser
 //----------------------------------------------------------------------------------------------------------------------
 
+//
+// This function is the top-level start to assembly.  This will assemble the source code that appears in the editor
+// when you press Ctrl+B or the file given at the command line.  Source name is either an invalid name or the FULL
+// filename of the file being assembled.
+//
 void Assembler::startAssembly(const vector<u8>& data, string sourceName)
 {
+    m_fileStack.clear();
+    m_fileStack.emplace_back(sourceName);
     assemble(data, sourceName);
 
     m_assemblerWindow.output("");
@@ -345,56 +353,13 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     }
 }
 
-bool Assembler::assembleFile1(string fileName)
-{
-    const vector<u8> data = NxFile::loadFile(fileName);
-    if (!data.empty())
-    {
-        //
-        // Lexical analysis
-        //
-        m_sessions.emplace_back();
-        m_sessions.back().parse(*this, std::move(data), fileName);
-
-#if NX_DEBUG_LOG_LEX
-        dumpLex(m_sessions.back());
-#endif // NX_DEBUG_LOG_LEX
-
-        //
-        // Pass 1
-        //
-        if (!pass1(m_sessions.back(), m_sessions.back().elements()))
-        {
-            m_sessions.pop_back();
-            return false;
-        }
-    }
-    else
-    {
-        output(stringFormat("!ERROR: Cannot open {0} for reading.", fileName));
-        return false;
-    }
-
-    return true;
-}
-
-bool Assembler::assembleFile2()
-{
-    //
-    // Pass 2
-    //
-    bool result = pass2(m_sessions.back(), m_sessions.back().elements());
-    m_sessions.pop_back();
-    return result;
-}
-
 bool Assembler::assemble(const vector<u8>& data, string sourceName)
 {
     //
     // Lexical Analysis
     //
-    m_sessions.emplace_back();
-    m_sessions.back().parse(*this, std::move(data), sourceName);
+    m_sessions[sourceName] = Lex();
+    currentLex().parse(*this, std::move(data), sourceName);
 
 #if NX_DEBUG_LOG_LEX
     dumpLex(m_sessions.back());
@@ -404,12 +369,25 @@ bool Assembler::assemble(const vector<u8>& data, string sourceName)
     // Passes
     //
     // We store the index since passes may add new lexes.
-    if (pass1(m_sessions.back(), m_sessions.back().elements()))
+    output("Pass 1...");
+    m_mmap.setPass(1);
+    m_mmap.resetRange();
+    m_mmap.addZ80Range(0x8000, 0xffff);
+    m_address = 0;
+
+
+    if (pass1(currentLex(), currentLex().elements()))
     {
-        if (pass2(m_sessions.back(), m_sessions.back().elements()))
+        output("Pass 2...");
+        m_mmap.setPass(2);
+        m_mmap.resetRange();
+        m_mmap.addZ80Range(0x8000, 0xffff);
+        m_address = 0;
+
+        if (pass2(currentLex(), currentLex().elements()))
         {
             dumpSymbolTable();
-            m_sessions.pop_back();
+            m_fileStack.pop_back();
             return true;
         }
     }
@@ -418,8 +396,92 @@ bool Assembler::assemble(const vector<u8>& data, string sourceName)
         output("Pass 2 skipped due to errors.");
     }
 
-    m_sessions.pop_back();
+    m_fileStack.pop_back();
     return false;
+}
+
+Path Assembler::findFile(Path givenPath)
+{
+    Path p(currentFileName());
+    if (givenPath.isRelative() && p.valid())
+    {
+        givenPath = p.parent() / givenPath;
+    }
+
+    return givenPath;
+}
+
+//
+// This function is used to assemble files referenced in the source code (via LOAD directive).
+//
+bool Assembler::assembleFile1(Path fileName)
+{
+    //
+    // Step 1 - Find the file we're referring to
+    //
+
+    string fn = findFile(fileName).osPath();
+
+    //
+    // Step 2 - try to load it (if necessary)
+    //
+
+    if (m_sessions.find(fn) != m_sessions.end())
+    {
+        // We've seen this file before - no need for lexical analysis
+        m_fileStack.emplace_back(fn);
+    }
+    else
+    {
+        const vector<u8> data = NxFile::loadFile(fn);
+        if (!data.empty())
+        {
+            //
+            // Lexical analysis
+            //
+            m_fileStack.emplace_back(fn);
+            m_sessions[fn] = Lex();
+            currentLex().parse(*this, std::move(data), fn);
+
+#if NX_DEBUG_LOG_LEX
+            dumpLex(m_sessions.back());
+#endif // NX_DEBUG_LOG_LEX
+        }
+        else
+        {
+            output(stringFormat("!ERROR: Cannot open '{0}' for reading.", fn));
+            return false;
+        }
+    }
+
+    //
+    // Pass 1
+    //
+    if (!pass1(currentLex(), currentLex().elements()))
+    {
+        m_fileStack.pop_back();
+        return false;
+    }
+
+    m_fileStack.pop_back();
+    return true;
+}
+
+bool Assembler::assembleFile2(Path fileName)
+{
+    //
+    // Step 1 - Find the file we're referring to
+    //
+
+    string fn = findFile(fileName).osPath();
+
+    //
+    // Pass 2
+    //
+    m_fileStack.emplace_back(fn);
+    bool result = pass2(currentLex(), currentLex().elements());
+    m_fileStack.pop_back();
+    return result;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -847,6 +909,12 @@ expr_failed:
     return false;
 }
 
+void Assembler::nextLine(const Lex::Element*& e)
+{
+    while (e->m_type != Lex::Element::Type::Newline) ++e;
+    ++e;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Pass 1
 //----------------------------------------------------------------------------------------------------------------------
@@ -854,14 +922,13 @@ expr_failed:
 #define FAIL(msg)                               \
     do {                                        \
     error(lex, *e, (msg));                      \
-    while (e->m_type != T::Newline) ++e;        \
-    ++e;                                        \
+    nextLine(e);                                \
     buildResult = false;                        \
     } while (0)
 
 bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 {
-    output("Pass 1...");
+    output(lex.getFileName());
 
     using T = Lex::Element::Type;
     const Lex::Element* e = elems.data();
@@ -869,8 +936,6 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
     bool symbolToAdd = false;
     bool buildResult = true;
     int symAddress = 0;
-
-    m_mmap.setPass(1);
 
     while (e->m_type != T::EndOfFile)
     {
@@ -902,8 +967,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             else
             {
                 buildResult = false;
-                while (e->m_type != T::Newline) ++e;
-                ++e;
+                nextLine(e);
             }
         }
         else if (e->m_type > T::_END_OPCODES && e->m_type < T::_END_DIRECTIVES)
@@ -971,7 +1035,9 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                     else if (e->m_type == T::String)
                     {
                         // String found
-                        m_address += int(e->m_s1 - e->m_s0);
+                        string str = (const char *)m_lexSymbols.get(e->m_symbol);
+                        int strLen = int(str.size());
+                        m_address += strLen;
                         ++e;
                     }
                     else
@@ -1038,11 +1104,12 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 ++e;
                 if (e->m_type == T::String)
                 {
-                    string fileName = string((char *)e->m_s0, (char *)e->m_s1);
+                    string fileName = (const char *)m_lexSymbols.get(e->m_symbol);
                     if (!assembleFile1(fileName))
                     {
                         FAIL(stringFormat("Failed to assemble '{0}'.", fileName));
                     }
+                    nextLine(e);
                 }
                 else
                 {
@@ -1613,18 +1680,13 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Addr
 
 bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 {
-    output("Pass 2...");
+    output(lex.getFileName());
 
     using T = Lex::Element::Type;
     const Lex::Element* e = elems.data();
     i64 symbol = 0;
     const Lex::Element* symE = 0;
     bool buildResult = true;
-    m_mmap.setPass(2);
-    m_mmap.resetRange();
-    m_mmap.addZ80Range(0x8000, 0xffff);
-    m_address = 0;
-
     while (e->m_type != T::EndOfFile)
     {
         if (e->m_type == T::Symbol)
@@ -1679,8 +1741,11 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
                 break;
 
             case T::LOAD:
-                ++e;
-                buildResult = assembleFile2();
+                {
+                    ++e;
+                    string fileName = string((char *)e->m_s0, (char *)e->m_s1);
+                    buildResult = assembleFile2(fileName);
+                }
                 break;
 
             default:
@@ -3242,9 +3307,9 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
         }
         else if (e->m_type == T::String)
         {
-            for (const u8* c = e->m_s0; c < e->m_s1; ++c)
+            for (const char* str = (const char *)m_lexSymbols.get(e->m_symbol); *str != 0; ++str)
             {
-                emit8(*c);
+                emit8(*str);
             }
             ++e;
         }
@@ -3283,6 +3348,25 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
     }
 
     return true;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Label management
+//----------------------------------------------------------------------------------------------------------------------
+
+Labels Assembler::getLabels() const
+{
+    Labels labels;
+    for (const auto& si : m_symbolTable)
+    {
+        labels.emplace_back(make_pair((const char *)m_lexSymbols.get(si.first), si.second.m_addr));
+    }
+
+    sort(labels.begin(), labels.end(), [](const auto& p1, const auto& p2) -> bool {
+        return p1.second < p2.second;
+    });
+
+    return labels;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

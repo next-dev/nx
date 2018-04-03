@@ -7,6 +7,7 @@
 #include <asm/lex.h>
 #include <asm/stringtable.h>
 #include <emulator/spectrum.h>
+#include <utils/filename.h>
 
 #include <array>
 #include <map>
@@ -74,6 +75,8 @@ private:
     u16                     m_offset;
 };
 
+using Labels = vector<pair<string, MemoryMap::Address>>;
+
 
 //----------------------------------------------------------------------------------------------------------------------
 // Assembler
@@ -102,6 +105,8 @@ public:
     optional<i64> lookUpLabel(i64 symbol);
     optional<i64> lookUpValue(i64 symbol);
 
+    Labels getLabels() const;
+
 private:
     //------------------------------------------------------------------------------------------------------------------
     // Internal methods
@@ -110,8 +115,8 @@ private:
     // Generates a vector<Lex::Element> database from a file
     void startAssembly(const vector<u8>& data, string sourceName);
     bool assemble(const vector<u8>& data, string sourceName);
-    bool assembleFile1(string fileName);
-    bool assembleFile2();
+    bool assembleFile1(Path fileName);
+    bool assembleFile2(Path fileName);
 
     bool addSymbol(i64 symbol, MemoryMap::Address address);
     bool addValue(i64 symbol, i64 value);
@@ -119,8 +124,12 @@ private:
     void dumpLex(const Lex& l);
     void dumpSymbolTable();
 
+    const string& currentFileName() const { assert(!m_fileStack.empty()); return m_fileStack.back(); }
+    Lex& currentLex() { assert(!m_fileStack.empty()); return m_sessions[m_fileStack.back()]; }
+    const Lex& currentLex() const { assert(!m_fileStack.empty()); return m_sessions.at(m_fileStack.back()); }
+
     //------------------------------------------------------------------------------------------------------------------
-    // Parsing utilties
+    // Parsing utilities
     //------------------------------------------------------------------------------------------------------------------
 
     // Format spec:
@@ -145,6 +154,7 @@ private:
     bool expectExpression(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
 
     int invalidInstruction(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
+    void nextLine(const Lex::Element*& e);
 
     //------------------------------------------------------------------------------------------------------------------
     // Pass 1
@@ -259,6 +269,7 @@ private:
     Expression buildExpression(const Lex::Element*& e);
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
     optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr);
+    Path findFile(Path givenPath);
 
     //
     // Directives
@@ -296,7 +307,8 @@ private:
         SymbolInfo(MemoryMap::Address addr) : m_addr(addr) {}
     };
 
-    vector<Lex>                 m_sessions;
+    map<string, Lex>            m_sessions;
+    vector<string>              m_fileStack;
     AssemblerWindow&            m_assemblerWindow;
     Spectrum&                   m_speccy;
     int                         m_numErrors;

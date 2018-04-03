@@ -5,6 +5,7 @@
 #pragma once
 
 #include <editor/editor.h>
+#include <asm/asm.h>
 
 #include <string>
 
@@ -59,6 +60,9 @@ public:
 
     void zoomMode(bool flag);
 
+    void setLabels(const vector<pair<string, MemoryMap::Address>>& labels) { m_labels = labels; }
+    const Labels& getLabels() const { return m_labels; }
+
 private:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
@@ -77,7 +81,9 @@ private:
     u16     m_address;
 
     // This is used to improve cursor movement on disassembly.
-    std::vector<u16> m_viewedAddresses;
+    vector<u16> m_viewedAddresses;
+    vector<pair<string, MemoryMap::Address>> m_labels;
+    int m_firstLabel;
     
     Editor  m_gotoEditor;
     int     m_enableGoto;
