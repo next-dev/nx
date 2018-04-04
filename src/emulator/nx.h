@@ -7,6 +7,7 @@
 
 #include <asm/overlay_asm.h>
 #include <debugger/overlay_debugger.h>
+#include <disasm/overlay_disasm.h>
 #include <editor/overlay_editor.h>
 #include <emulator/spectrum.h>
 #include <tape/tape.h>
@@ -147,6 +148,7 @@ public:
     void showTapeBrowser();
     void toggleDebugger();
     void showEditor();
+    void showDisassembler();
     void hideAll();
     bool assemble(const vector<u8>& data, string sourceName);
     void switchModel(Model model);
@@ -192,6 +194,7 @@ private:
     EditorOverlay       m_editorOverlay;
     AssemblerOverlay    m_assemblerOverlay;
     Assembler           m_assembler;
+    DisassemblerOverlay m_disassemblerOverlay;
 
     // Settings
     map<string, string> m_settings;

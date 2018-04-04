@@ -177,6 +177,10 @@ void Emulator::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
             getEmulator().showEditor();
             break;
 
+        case K::D:
+            getEmulator().showDisassembler();
+            break;
+
         case K::Space:
             if (getSpeccy().getTape())
             {
@@ -567,6 +571,9 @@ Nx::Nx(int argc, char** argv)
     , m_editorOverlay(*this)
     , m_assemblerOverlay(*this)
     , m_assembler(m_assemblerOverlay.getWindow(), *m_machine)
+
+    //--- Disassembler state --------------------------------------------------------
+    , m_disassemblerOverlay(*this)
 
     //--- Rendering -----------------------------------------------------------------
     , m_window(sf::VideoMode(kWindowWidth * (kDefaultScale + 1), kWindowHeight * (kDefaultScale + 1)), "NX " NX_VERSION,
@@ -1485,6 +1492,11 @@ void Nx::toggleZoom()
 void Nx::showEditor()
 {
     m_editorOverlay.select();
+}
+
+void Nx::showDisassembler()
+{
+    m_disassemblerOverlay.select();
 }
 
 bool Nx::assemble(const vector<u8>& data, string sourceName)

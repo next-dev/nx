@@ -59,6 +59,7 @@ These controls are only valid when no other window is showing.
 |------------------|-------------------------------------------------------|
 | Right Shift      | Symbol shift                                          |
 | Ctrl+A           | Open editor/assembler                                 |
+| Ctrl+D           | Open disassembler                                     |
 | Ctrl+O           | Open file                                             |
 | Ctrl+K           | Toggle Kempston joystick                              |
 | Ctrl+R           | Restart the machine                                   |
@@ -100,6 +101,7 @@ While in the editor these controls are available:
 | Ctrl+Shift+S     | Save as.  Will ask for filename every time.                            |
 | Ctrl+Tab         | Switch buffers.                                                        |
 | Ctrl+B           | Build current file.                                                    |
+| Ctrl+R           | Run current file.  Requires an 'OPT START' option in the source.       |
 
 Some of the usual controls via cursor keys, page up/down, home & end work.  Currently the
 assembler does not exist.
