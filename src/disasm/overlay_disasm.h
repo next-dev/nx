@@ -42,6 +42,7 @@ private:
     int                 m_longestLine;      // Length of longest line rendered
     string              m_fileName;
     Editor*             m_editor;
+    bool                m_blockFirstChar;   // Stop the character that initiates the editor to be consumed by it
     int                 m_currentLine;
 };
 

@@ -22,6 +22,7 @@ DisassemblerEditor::DisassemblerEditor(Spectrum& speccy, int xCell, int yCell, i
     , m_topLine(0)
     , m_lineOffset(0)
     , m_editor(nullptr)
+    , m_blockFirstChar(false)
     , m_currentLine(0)
 {
 
@@ -109,7 +110,25 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 ensureVisibleCursor();
                 break;
 
+            case K::Delete:
+                getData().deleteLine(m_currentLine);
+                m_currentLine = min(m_currentLine, getData().getNumLines() - 1);
+                ensureVisibleCursor();
+                break;
+
             case K::SemiColon:
+                if (m_data.getLine(m_currentLine).type != DisassemblerDoc::LineType::Instruction)
+                {
+                    m_data.processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
+                    m_blockFirstChar = true;
+                    m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
+                        Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
+                        [this](Editor& ed)
+                        {
+                            getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
+                            ++m_currentLine;
+                        });
+                }
                 break;
 
             default:
@@ -151,9 +170,16 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
 void DisassemblerEditor::onText(char ch)
 {
-    if (m_editor)
+    if (!m_blockFirstChar && m_editor)
     {
         m_editor->text(ch);
+    }
+    m_blockFirstChar = false;
+
+    if (m_editor && ch == 13)
+    {
+        delete m_editor;
+        m_editor = nullptr;
     }
 }
 
@@ -188,12 +214,15 @@ void DisassemblerEditor::render(Draw& draw)
             break;
 
         case T::UnknownRange:
-            m_longestLine = m_width;
+            m_longestLine = m_width - 2;
             draw.attrRect(m_x+1, y, m_width-2, 1, rangeColour);
             draw.printSquashedString(m_x+1, y, stringFormat("-- Unknown area: {0}-{1} --", hexWord(u16(line.startAddress)), hexWord(u16(line.endAddress))), rangeColour);
             break;
 
         case T::FullComment:
+            m_longestLine = max(m_longestLine, (int)line.text.size());
+            draw.printChar(m_x + 1, y, ';', commentColour);
+            draw.printString(m_x + 3, y, line.text, false, commentColour);
             break;
 
         case T::Label:
@@ -208,6 +237,8 @@ void DisassemblerEditor::render(Draw& draw)
             draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
         }
     }
+
+    if (m_editor) m_editor->renderAll(draw);
 }
 
 void DisassemblerEditor::saveFile()

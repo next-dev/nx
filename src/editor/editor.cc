@@ -40,7 +40,7 @@ SplitView::SplitView(const vector<char>& v, int start, int end)
 //----------------------------------------------------------------------------------------------------------------------
 
 EditorData::EditorData(int initialSize, int increaseSize)
-    : m_buffer(16)
+    : m_buffer(initialSize)
     , m_lines(1, 0)
     , m_cursor(0)
     , m_currentLine(0)
@@ -108,6 +108,13 @@ vector<u8> EditorData::getData() const
     vector<u8> data(m_buffer.begin(), m_buffer.begin() + (int)m_cursor);
     data.insert(data.end(), m_buffer.begin() + (int)m_endBuffer, m_buffer.end());
     return data;
+}
+
+string EditorData::getString() const
+{
+    string str(m_buffer.begin(), m_buffer.begin() + (int)m_cursor);
+    str.insert(str.end(), m_buffer.begin() + (int)m_endBuffer, m_buffer.end());
+    return str;
 }
 
 int EditorData::lineLength(int n) const
