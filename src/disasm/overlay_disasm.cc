@@ -7,6 +7,8 @@
 #include <utils/tinyfiledialogs.h>
 #include <utils/format.h>
 
+#define K_LINE_SKIP 20
+
 //----------------------------------------------------------------------------------------------------------------------
 // DisassemblerEditor
 //----------------------------------------------------------------------------------------------------------------------
@@ -19,8 +21,32 @@ DisassemblerEditor::DisassemblerEditor(Spectrum& speccy, int xCell, int yCell, i
     , m_height(height)
     , m_topLine(0)
     , m_lineOffset(0)
+    , m_editor(nullptr)
+    , m_currentLine(0)
 {
 
+}
+
+void DisassemblerEditor::ensureVisibleCursor()
+{
+    // Check for required up scroll
+    if (m_currentLine < m_topLine)
+    {
+        m_topLine = max(0, m_topLine - K_LINE_SKIP);
+    }
+
+    // Check for required down scroll
+    else if (m_currentLine >= (m_topLine + m_height))
+    {
+        m_topLine = min(getData().getNumLines() - 1, m_topLine + K_LINE_SKIP);
+
+    }
+
+    // if still not visible, then snap
+    if ((m_currentLine < m_topLine) || (m_currentLine >= (m_topLine + m_height)))
+    {
+        m_topLine = max(0, m_currentLine - (m_height / 2));
+    }
 }
 
 void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
@@ -28,87 +54,107 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
     using K = sf::Keyboard::Key;
     if (!down) return;
 
-    //------------------------------------------------------------------------------------------------------------------
-    // No shift keys
-    //------------------------------------------------------------------------------------------------------------------
-    
-    if (!shift && !ctrl && !alt)
+    if (!m_editor)
     {
-        switch (key)
+
+        //------------------------------------------------------------------------------------------------------------------
+        // No shift keys
+        //------------------------------------------------------------------------------------------------------------------
+
+        if (!shift && !ctrl && !alt)
         {
-        case K::Up:
-            m_topLine = max(0, m_topLine - 1);
-            break;
-
-        case K::Down:
-            m_topLine = max(0, min(m_topLine + 1, getData().getNumLines() - 1));
-            break;
-
-        case K::Left:
-            m_lineOffset = max(0, m_lineOffset - 1);
-            break;
-
-        case K::Right:
-            m_lineOffset = min(max(0, int(m_longestLine - 2)), m_lineOffset + 1);
-            break;
-
-        case K::PageUp:
-            m_topLine = max(0, m_topLine - (m_height - 2));
-            break;
-
-        case K::PageDown:
-            m_topLine = max(0, min(m_topLine + (m_height - 2), getData().getNumLines() - 1));
-            break;
-
-        case K::Home:
-            if (m_lineOffset != 0)
+            switch (key)
             {
-                m_lineOffset = 0;
+            case K::Up:
+                if (m_currentLine > 0) --m_currentLine;
+                ensureVisibleCursor();
+                break;
+
+            case K::Down:
+                if (m_currentLine < getData().getNumLines() - 1) ++m_currentLine;
+                break;
+
+            case K::Left:
+                m_lineOffset = max(0, m_lineOffset - 1);
+                break;
+
+            case K::Right:
+                m_lineOffset = min(max(0, int(m_longestLine - 2)), m_lineOffset + 1);
+                break;
+
+            case K::PageUp:
+                m_currentLine = min(m_currentLine + m_height, getData().getNumLines() - 1);
+                ensureVisibleCursor();
+                break;
+
+            case K::PageDown:
+                m_currentLine = max(0, m_currentLine - m_height);
+                ensureVisibleCursor();
+                break;
+
+            case K::Home:
+                if (m_lineOffset != 0)
+                {
+                    m_lineOffset = 0;
+                }
+                else
+                {
+                    m_topLine = 0;
+                }
+                ensureVisibleCursor();
+                break;
+
+            case K::End:
+                m_currentLine = getData().getNumLines() - 1;
+                ensureVisibleCursor();
+                break;
+
+            case K::SemiColon:
+                break;
+
+            default:
+                break;
             }
-            else
+        }
+
+        //------------------------------------------------------------------------------------------------------------------
+        // Ctrl-keys
+        //------------------------------------------------------------------------------------------------------------------
+
+        else if (!shift && ctrl && !alt)
+        {
+            switch (key)
             {
+            case K::Home:
                 m_topLine = 0;
+                break;
+
+            case K::End:
+                m_topLine = max(0, getData().getNumLines() - (m_height / 2));
+                break;
+
+            case K::S:  // Save
+                saveFile();
+                break;
+
+            default:
+                break;
             }
-            break;
-
-        case K::End:
-            m_topLine = max(0, getData().getNumLines() - (m_height / 2 - 1));
-            break;
-
-        default:
-            break;
         }
     }
-
-    //------------------------------------------------------------------------------------------------------------------
-    // Ctrl-keys
-    //------------------------------------------------------------------------------------------------------------------
-
-    else if (!shift && ctrl && !alt)
+    else
     {
-        switch (key)
-        {
-        case K::Home:
-            m_topLine = 0;
-            break;
-
-        case K::End:
-            m_topLine = max(0, getData().getNumLines() - (m_height / 2));
-            break;
-
-        case K::S:  // Save
-            saveFile();
-            break;
-
-        default:
-            break;
-        }
+        // Editing mode
+        m_editor->key(key, down, shift, ctrl, alt);
     }
 }
 
 void DisassemblerEditor::onText(char ch)
 {
-
+    if (m_editor)
+    {
+        m_editor->text(ch);
+    }
 }
 
 string DisassemblerEditor::getTitle() const
@@ -127,7 +173,8 @@ void DisassemblerEditor::render(Draw& draw)
     u8 bkgColour = Draw::attr(Colour::White, Colour::Black, false);
     u8 commentColour = Draw::attr(Colour::Green, Colour::Black, true);
     u8 labelColour = Draw::attr(Colour::Cyan, Colour::Black, true);
-    u8 rangeColour = Draw::attr(Colour::White, Colour::Green, false);
+    u8 rangeColour = Draw::attr(Colour::Black, Colour::Green, false);
+    u8 cursorColour = Draw::attr(Colour::White, Colour::Blue, true) | 0x80;
 
     int y = m_y;
     for (int i = m_topLine; i < getData().getNumLines(); ++i, ++y)
@@ -142,8 +189,8 @@ void DisassemblerEditor::render(Draw& draw)
 
         case T::UnknownRange:
             m_longestLine = m_width;
-            draw.attrRect(m_x, y, m_width, 1, rangeColour);
-            draw.printSquashedString(m_x, y, stringFormat("-- Unknown area: {0}-{1} --", hexWord(u16(line.startAddress)), hexWord(u16(line.endAddress))), rangeColour);
+            draw.attrRect(m_x+1, y, m_width-2, 1, rangeColour);
+            draw.printSquashedString(m_x+1, y, stringFormat("-- Unknown area: {0}-{1} --", hexWord(u16(line.startAddress)), hexWord(u16(line.endAddress))), rangeColour);
             break;
 
         case T::FullComment:
@@ -154,6 +201,11 @@ void DisassemblerEditor::render(Draw& draw)
 
         case T::Instruction:
             break;
+        }
+
+        if (i == m_currentLine)
+        {
+            draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
         }
     }
 }
@@ -476,6 +528,8 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         "Shift-Ctrl-S|Save as",
         "Ctrl-Tab|Switch buffers",
         "Ctrl-B|Build",
+        ";|Add/Edit comment",
+        "Ctrl-;|Add/Edit line comment",
         })
 {
 }

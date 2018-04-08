@@ -5,6 +5,7 @@
 #pragma once
 
 #include <disasm/disassembler.h>
+#include <editor/editor.h>
 #include <utils/ui.h>
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -28,6 +29,7 @@ public:
 
 private:
     void saveFile();
+    void ensureVisibleCursor();
 
 private:
     DisassemblerDoc     m_data;
@@ -39,6 +41,8 @@ private:
     int                 m_lineOffset;       // Scroll offset of editor
     int                 m_longestLine;      // Length of longest line rendered
     string              m_fileName;
+    Editor*             m_editor;
+    int                 m_currentLine;
 };
 
 
@@ -76,6 +80,7 @@ private:
     vector<DisassemblerEditor>  m_editors;
     vector<int>                 m_editorOrder;
     int                         m_selectedTab;
+
 };
 
 //----------------------------------------------------------------------------------------------------------------------
