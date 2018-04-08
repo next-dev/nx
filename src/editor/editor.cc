@@ -1259,10 +1259,12 @@ void EditorWindow::newFile()
 
 void EditorWindow::closeFile()
 {
+    if (m_editors.empty()) return;
+
     if (getEditor().getData().hasChanged())
     {
         // Check to see if the user really wants to overwrite their changes.
-        if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes.",
+        if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes?",
             "yesno", "question", 0))
         {
             return;
@@ -1366,7 +1368,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
             break;
 
         case K::W:  // Close file
-            if (!m_editors.empty()) closeFile();
+            closeFile();
             break;
 
         case K::O:  // Open file
@@ -1416,6 +1418,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
         if ((m_selectedTab >= 0) && !down && !ctrl && !shift && !alt)
         {
             int index = m_editorOrder[m_selectedTab];
+            // #todo: use switchTo
             m_editorOrder.erase(m_editorOrder.begin() + m_selectedTab);
             m_editorOrder.insert(m_editorOrder.begin(), index);
             m_selectedTab = -1;
