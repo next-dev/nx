@@ -34,6 +34,7 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
 void DisassemblerDoc::reset()
 {
     m_lines.emplace_back(LineType::UnknownRange, 0x4000, 0xffff, string{});
+    m_changed = false;
 }
 
 bool DisassemblerDoc::processCommand(CommandType type, int line, i64 param1, string text)
@@ -123,6 +124,7 @@ bool DisassemblerDoc::load(string fileName)
         }
     }
 
+    m_changed = false;
     return true;
 }
 

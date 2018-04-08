@@ -122,6 +122,40 @@ string DisassemblerEditor::getTitle() const
 void DisassemblerEditor::render(Draw& draw)
 {
     m_longestLine = 0;
+
+    // Colours
+    u8 bkgColour = Draw::attr(Colour::White, Colour::Black, false);
+    u8 commentColour = Draw::attr(Colour::Green, Colour::Black, true);
+    u8 labelColour = Draw::attr(Colour::Cyan, Colour::Black, true);
+    u8 rangeColour = Draw::attr(Colour::White, Colour::Green, false);
+
+    int y = m_y;
+    for (int i = m_topLine; i < getData().getNumLines(); ++i, ++y)
+    {
+        using T = DisassemblerDoc::LineType;
+        const DisassemblerDoc::Line& line = getData().getLine(i);
+
+        switch (line.type)
+        {
+        case T::Blank:
+            break;
+
+        case T::UnknownRange:
+            m_longestLine = m_width;
+            draw.attrRect(m_x, y, m_width, 1, rangeColour);
+            draw.printSquashedString(m_x, y, stringFormat("-- Unknown area: {0}-{1} --", hexWord(u16(line.startAddress)), hexWord(u16(line.endAddress))), rangeColour);
+            break;
+
+        case T::FullComment:
+            break;
+
+        case T::Label:
+            break;
+
+        case T::Instruction:
+            break;
+        }
+    }
 }
 
 void DisassemblerEditor::saveFile()

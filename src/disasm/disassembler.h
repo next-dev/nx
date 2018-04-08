@@ -29,11 +29,11 @@ public:
 
     enum class LineType
     {
+        Blank,              // Blank Line
         UnknownRange,       // Unknown range of memory
         FullComment,        // Line-based comment
-        MajorLabel,
-        MinorLabel,
-        Instruction
+        Label,
+        Instruction,
     };
 
     struct Line
