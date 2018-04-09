@@ -26,6 +26,8 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
     case Model::ZXPlus2:
         assert(0);
     }
+
+    reset();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -34,6 +36,8 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
 
 void DisassemblerDoc::reset()
 {
+    m_lines.clear();
+    m_commands.clear();
     m_lines.emplace_back(LineType::UnknownRange, -1, 0x4000, 0xffff, string{});
     m_changed = false;
 }
