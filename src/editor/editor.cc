@@ -40,7 +40,7 @@ SplitView::SplitView(const vector<char>& v, int start, int end)
 //----------------------------------------------------------------------------------------------------------------------
 
 EditorData::EditorData(int initialSize, int increaseSize)
-    : m_buffer(16)
+    : m_buffer(initialSize)
     , m_lines(1, 0)
     , m_cursor(0)
     , m_currentLine(0)
@@ -108,6 +108,13 @@ vector<u8> EditorData::getData() const
     vector<u8> data(m_buffer.begin(), m_buffer.begin() + (int)m_cursor);
     data.insert(data.end(), m_buffer.begin() + (int)m_endBuffer, m_buffer.end());
     return data;
+}
+
+string EditorData::getString() const
+{
+    string str(m_buffer.begin(), m_buffer.begin() + (int)m_cursor);
+    str.insert(str.end(), m_buffer.begin() + (int)m_endBuffer, m_buffer.end());
+    return str;
 }
 
 int EditorData::lineLength(int n) const
@@ -1259,10 +1266,12 @@ void EditorWindow::newFile()
 
 void EditorWindow::closeFile()
 {
+    if (m_editors.empty()) return;
+
     if (getEditor().getData().hasChanged())
     {
         // Check to see if the user really wants to overwrite their changes.
-        if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes.",
+        if (!tinyfd_messageBox("Are you sure?", "There has been changes since you last saved.  Are you sure you want to lose your changes?",
             "yesno", "question", 0))
         {
             return;
@@ -1366,7 +1375,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
             break;
 
         case K::W:  // Close file
-            if (!m_editors.empty()) closeFile();
+            closeFile();
             break;
 
         case K::O:  // Open file
@@ -1416,6 +1425,7 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
         if ((m_selectedTab >= 0) && !down && !ctrl && !shift && !alt)
         {
             int index = m_editorOrder[m_selectedTab];
+            // #todo: use switchTo
             m_editorOrder.erase(m_editorOrder.begin() + m_selectedTab);
             m_editorOrder.insert(m_editorOrder.begin(), index);
             m_selectedTab = -1;

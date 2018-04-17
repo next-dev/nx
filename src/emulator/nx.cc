@@ -698,7 +698,7 @@ void Nx::run()
             switch (event.type)
             {
             case sf::Event::Closed:
-                if (m_editorOverlay.getWindow().needToSave())
+                if (m_editorOverlay.getWindow().needToSave() || m_disassemblerOverlay.getWindow().needToSave())
                 {
                     int result = tinyfd_messageBox(
                         "Unsaved files detected",
@@ -714,6 +714,7 @@ void Nx::run()
 
                     case 1:     // Yes - trigger save of unnamed/unsaved files
                         m_editorOverlay.getWindow().saveAll();
+                        m_disassemblerOverlay.getWindow().saveAll();
                         // continue
 
                     case 2:     // No - do not save
@@ -1159,20 +1160,17 @@ bool Nx::loadNxSnapshot(string fileName)
                 string fn = emul.peekString(dataIndex);
                 dataIndex += int(fn.size()) + 1;
 
-                // Check to see if we don't already have it loaded
-                int numEditors = m_editorOverlay.getWindow().getNumEditors();
-                bool addEditor = true;
-                for (int ed = 0; ed < numEditors; ++ed)
+                char* dotPos = strrchr((char *)fn.c_str(), '.');
+                if (dotPos && _stricmp(dotPos, ".dis") == 0)
                 {
-                    if (m_editorOverlay.getWindow().getEditor(ed).getFileName() == fn)
-                    {
-                        addEditor = false;
-                        break;
-                    }
+                    // This is a disassembly file.
+                    m_disassemblerOverlay.getWindow().openFile(fn);
                 }
-
-                // Attempt to load it.
-                m_editorOverlay.getWindow().openFile(fn);
+                else
+                {
+                    // Attempt to load it in the editor
+                    m_editorOverlay.getWindow().openFile(fn);
+                }
             }
 
             // Dealing with version 1 data
@@ -1278,14 +1276,22 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
     {
         BlockSection emul('EMUL');
 
-        u16 count = u16(m_editorOverlay.getWindow().getNumEditors());
+        u16 editorCount = u16(m_editorOverlay.getWindow().getNumEditors());
         emul.poke16(1);
 
         // Number of editor files
-        u16 realCount = count;
-        for (u16 i = 0; i < count; ++i)
+        u16 realCount = editorCount;
+        for (u16 i = 0; i < editorCount; ++i)
         {
             Editor& ed = m_editorOverlay.getWindow().getEditor(i);
+            if (ed.getFileName().empty()) --realCount;
+        }
+
+        u16 disCount = u16(m_disassemblerOverlay.getWindow().getNumEditors());
+        realCount += disCount;
+        for (u16 i = 0; i < disCount; ++i)
+        {
+            DisassemblerEditor& ed = m_disassemblerOverlay.getWindow().getEditor(i);
             if (ed.getFileName().empty()) --realCount;
         }
         emul.poke16(realCount);
@@ -1295,9 +1301,15 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
         emul.poke16((u16)labels.size());
 
         // Write out the editor file names
-        for (u16 i = count; i > 0; --i)
+        for (u16 i = editorCount; i > 0; --i)
         {
             Editor& ed = m_editorOverlay.getWindow().getEditor(i-1);
+            string fn = ed.getFileName();
+            if (!fn.empty()) emul.pokeString(fn);
+        }
+        for (u16 i = disCount; i > 0; --i)
+        {
+            DisassemblerEditor& ed = m_disassemblerOverlay.getWindow().getEditor(i - 1);
             string fn = ed.getFileName();
             if (!fn.empty()) emul.pokeString(fn);
         }

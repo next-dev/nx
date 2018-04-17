@@ -103,12 +103,23 @@ u32 BlockSection::peek32(int i) const
     return u32(peek16(i)) + (u32(peek16(i + 2)) << 16);
 }
 
+i64 BlockSection::peek64(int i) const
+{
+    return i64(peek32(i)) + (i64(peek32(i + 4)) << 32);
+}
+
 string BlockSection::peekString(int i) const
 {
     const char* start = (const char *)m_data.data() + i;
     const char* end = start;
     while (*end != 0) ++end;
     return string(start, end);
+}
+
+void BlockSection::peekData(int i, vector<u8>& data, i64 size) const
+{
+    data.resize(size);
+    copy(m_data.begin() + i, m_data.begin() + i + size, data.begin());
 }
 
 void BlockSection::poke8(u8 byte)
@@ -128,6 +139,12 @@ void BlockSection::poke32(u32 dword)
     poke16(dword >> 16);
 }
 
+void BlockSection::poke64(i64 qword)
+{
+    poke32(qword & 0xffffffff);
+    poke32(qword >> 32);
+}
+
 void BlockSection::pokeString(const string& s)
 {
     for (const auto c : s)
@@ -135,6 +152,16 @@ void BlockSection::pokeString(const string& s)
         m_data.emplace_back(u8(c));
     }
     m_data.emplace_back(0);
+}
+
+void BlockSection::pokeData(const u8* data, i64 size)
+{
+    copy(data, data + size, back_inserter(m_data));
+}
+
+void BlockSection::pokeData(const vector<u8>& data)
+{
+    copy(data.begin(), data.end(), back_inserter(m_data));
 }
 
 void BlockSection::checkSize(u32 expectedSize) const

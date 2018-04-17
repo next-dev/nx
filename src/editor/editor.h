@@ -121,6 +121,7 @@ public:
     SplitView getLine(int n) const;
     SplitView getText() const;
     vector<u8> getData() const;
+    string getString() const;
     int lineLength(int n) const;
     int dataLength() const;
     int getNumLines() const;

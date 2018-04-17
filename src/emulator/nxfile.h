@@ -126,13 +126,18 @@ public:
     u8 peek8(int i) const;
     u16 peek16(int i) const;
     u32 peek32(int i) const;
+    i64 peek64(int i) const;
     string peekString(int i) const;
+    void peekData(int i, vector<u8>& data, i64 size) const;
 
     // Used for writing
     void poke8(u8 byte);
     void poke16(u16 word);
     void poke32(u32 dword);
+    void poke64(i64 qword);
     void pokeString(const string& s);
+    void pokeData(const u8* data, i64 size);
+    void pokeData(const vector<u8>& data);
     void checkSize(u32 expectedSize) const;
 
     void write(vector<u8>& data) const;
