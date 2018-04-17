@@ -74,6 +74,7 @@ public:
     void saveFile();
 
     void switchModel(Model model);
+    void clearKeys();
 
 private:
     void joystickKey(Joystick key, bool down);

@@ -412,6 +412,12 @@ void Emulator::calculateKeys()
     getSpeccy().setKeyboardState(m_keyRows);
 }
 
+void Emulator::clearKeys()
+{
+    for (auto& b : m_speccyKeys) b = false;
+    calculateKeys();
+}
+
 void Emulator::text(char ch)
 {
     
@@ -1365,6 +1371,7 @@ void Nx::toggleDebugger()
 
 void Nx::togglePause(bool breakpointHit)
 {
+    m_emulator.clearKeys();
     m_runMode = (m_runMode != RunMode::Normal) ? RunMode::Normal : RunMode::Stopped;
     m_machine->getAudio().mute(m_runMode == RunMode::Stopped);
 
@@ -1467,11 +1474,13 @@ bool Nx::isCallInstructionAt(u16 address)
 
 void Nx::showTapeBrowser()
 {
+    m_emulator.clearKeys();
     m_tapeBrowser.select();
 }
 
 void Nx::hideAll()
 {
+    m_emulator.clearKeys();
     m_emulator.select();
 }
 
@@ -1491,11 +1500,13 @@ void Nx::toggleZoom()
 
 void Nx::showEditor()
 {
+    m_emulator.clearKeys();
     m_editorOverlay.select();
 }
 
 void Nx::showDisassembler()
 {
+    m_emulator.clearKeys();
     m_disassemblerOverlay.select();
 }
 
