@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <asm/disasm.h>
 #include <asm/lex.h>
 #include <asm/stringtable.h>
 #include <emulator/spectrum.h>
@@ -197,49 +198,6 @@ private:
     // Pass 2
     // Evaluates variable expressions and generates the opcodes
     //------------------------------------------------------------------------------------------------------------------
-
-    enum class OperandType
-    {
-        None,                   // No operand exists
-        Expression,             // A valid expression
-        AddressedExpression,    // A valid address expression (i.e. (nnnn)).
-        IX_Expression,
-        IY_Expression,
-
-        A,
-        B,
-        C,
-        D,
-        E,
-        H,
-        L,
-        I,
-        R,
-        AF,
-        AF_,
-        BC,
-        DE,
-        HL,
-        IX,
-        IY,
-        IXH,
-        IXL,
-        IYH,
-        IYL,
-        SP,
-        NC,
-        Z,
-        NZ,
-        PO,
-        PE,
-        M,
-        P,
-        Address_BC,
-        Address_DE,
-        Address_HL,
-        Address_SP,
-        Address_C,
-    };
 
     class Expression
     {

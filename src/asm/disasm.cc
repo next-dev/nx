@@ -8,6 +8,9 @@
 #include <iomanip>
 #include <sstream>
 
+using T = Lex::Element::Type;
+using O = OperandType;
+
 //----------------------------------------------------------------------------------------------------------------------
 // Disassembler
 //----------------------------------------------------------------------------------------------------------------------
@@ -21,26 +24,26 @@ void Disassembler::decode(u8 opCode, u8& x, u8& y, u8& z, u8& p, u8& q)
     q = (y & 0x01);
 }
 
-void Disassembler::result(std::string&& opCode, std::string&& operands, int instructionSize)
-{
-    m_opCode = std::move(opCode);
-    m_operands = std::move(operands);
-    m_comment = std::string();
-
-    for (int i = instructionSize; i < 4; ++i) m_bytes.pop_back();
-}
-
-void Disassembler::result(std::string&& opCode, int instructionSize)
-{
-    result(std::move(opCode), std::string(), instructionSize);
-}
+// void Disassembler::result(std::string&& opCode, std::string&& operands, int instructionSize)
+// {
+//     m_opCode = std::move(opCode);
+//     m_operands = std::move(operands);
+//     m_comment = std::string();
+// 
+//     for (int i = instructionSize; i < 4; ++i) m_bytes.pop_back();
+// }
+// 
+// void Disassembler::result(std::string&& opCode, int instructionSize)
+// {
+//     result(std::move(opCode), std::string(), instructionSize);
+// }
 
 void Disassembler::invalidOpCode()
 {
-    result("defb", byte(m_bytes[0]), 1);
+    result(T::DB, O::Expression, 0, 1);
 }
 
-std::string Disassembler::word(u8 l, u8 h)
+std::string Disassembler::word(u8 l, u8 h) const
 {
     std::stringstream ss;
     ss << '$'
@@ -49,14 +52,14 @@ std::string Disassembler::word(u8 l, u8 h)
     return ss.str();
 }
 
-std::string Disassembler::byte(u8 b)
+std::string Disassembler::byte(u8 b) const
 {
     std::stringstream ss;
     ss << '$' << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << (int)b;
     return ss.str();
 }
 
-std::string Disassembler::wordNoPrefix(u8 l, u8 h)
+std::string Disassembler::wordNoPrefix(u8 l, u8 h) const
 {
     std::stringstream ss;
     ss
@@ -65,54 +68,54 @@ std::string Disassembler::wordNoPrefix(u8 l, u8 h)
     return ss.str();
 }
 
-std::string Disassembler::byteNoPrefix(u8 b)
+std::string Disassembler::byteNoPrefix(u8 b) const
 {
     std::stringstream ss;
     ss << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << (int)b;
     return ss.str();
 }
 
-std::string Disassembler::index(u8 b)
+std::string Disassembler::index(u8 b) const
 {
     std::stringstream ss;
     ss << (int)b;
     return ss.str();
 }
 
-std::string Disassembler::displacement(u16 a, u8 d, int instructionSize)
+std::string Disassembler::displacement(u16 a, u8 d, int instructionSize) const
 {
     a += instructionSize + (int)(i8)d;
     return word(a % 256, a / 256);
 }
 
-std::string Disassembler::indexDisplacement(u8 d, std::string ix)
+std::string Disassembler::indexDisplacement(u8 d, std::string ix) const
 {
     i8 x = (i8)d;
     return "(" + ix + (x < 0 ? "-" : "+") + byte(x < 0 ? -d : d) + ")";
 }
 
-std::string Disassembler::regs8(u8 y)
+std::string Disassembler::regs8(u8 y) const
 {
     static const char* regs[] = { "b", "c", "d", "e", "h", "l", "(hl)", "a" };
     assert(y >= 0 && y < 8);
     return regs[y];
 }
 
-std::string Disassembler::regs16_1(u8 p)
+std::string Disassembler::regs16_1(u8 p) const
 {
     static const char* regs[] = { "bc", "de", "hl", "sp" };
     assert(p >= 0 && p < 4);
     return regs[p];
 }
 
-std::string Disassembler::regs16_2(u8 p)
+std::string Disassembler::regs16_2(u8 p) const
 {
     static const char* regs[] = { "bc", "de", "hl", "af" };
     assert(p >= 0 && p < 4);
     return regs[p];
 }
 
-std::string Disassembler::regs8_ix(u8 y, std::string ix, u8 d)
+std::string Disassembler::regs8_ix(u8 y, std::string ix, u8 d) const
 {
     assert(y >= 0 && y < 8);
     switch (y)
@@ -130,42 +133,42 @@ std::string Disassembler::regs8_ix(u8 y, std::string ix, u8 d)
     return {};
 }
 
-std::string Disassembler::regs16_1_ix(u8 p, std::string ix)
+std::string Disassembler::regs16_1_ix(u8 p, std::string ix) const
 {
     static const char* regs[] = { "bc", "de", "??", "sp" };
     assert(p >= 0 && p < 4);
     return p == 2 ? ix : regs[p];
 }
 
-std::string Disassembler::regs16_2_ix(u8 p, std::string ix)
+std::string Disassembler::regs16_2_ix(u8 p, std::string ix) const
 {
     static const char* regs[] = { "bc", "de", "??", "af" };
     assert(p >= 0 && p < 4);
     return p == 2 ? ix : regs[p];
 }
 
-std::string Disassembler::flags(u8 y)
+std::string Disassembler::flags(u8 y) const
 {
     static const char* flags[] = { "nz", "z", "nc", "c", "po", "pe", "p", "m" };
     assert(y >= 0 && y < 8);
     return flags[y];
 }
 
-std::string Disassembler::aluOpCode(u8 y)
+std::string Disassembler::aluOpCode(u8 y) const
 {
     static const char* aluOpcodes[] = { "add", "adc", "sub", "sbc", "and", "xor", "or", "cp" };
     assert(y >= 0 && y < 8);
     return aluOpcodes[y];
 }
 
-std::string Disassembler::aluOperandPrefix(u8 y)
+std::string Disassembler::aluOperandPrefix(u8 y) const
 {
     static const char* prefixes[] = { "a,", "a,", "", "a,", "", "", "", "" };
     assert(y >= 0 && y < 8);
     return prefixes[y];
 }
 
-std::string Disassembler::rotShift(u8 y)
+std::string Disassembler::rotShift(u8 y) const
 {
     static const char* opCodes[] = { "rlc", "rrc", "rl", "rr", "sla", "sra", "sl1", "srl" };
     assert(y >= 0 && y < 8);
@@ -186,17 +189,17 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
         case 0: // x, z = (0, 0)
             switch (y)
             {
-            case 0: result("nop", 1);                                               break;
-            case 1: result("ex", "af,af'", 1);                                      break;
-            case 2: result("djnz", displacement(a, b2, 2), 2);                         break;
-            case 3: result("jr", displacement(a, b2, 2), 2);                           break;
-            default: result("jr", flags(y - 4) + "," + displacement(a, b2, 2), 2);
+            case 0: result(T::NOP, 1);                                                          break;
+            case 1: result(T::EX, O::AF, O::AF_, 1);                                            break;
+            case 2: result(T::DJNZ, O::Expression16, displacement(a, b2, 2), 2);                break;
+            case 3: result(T::JR, O::Expression16, displacement(a, b2, 2), 2);                  break;
+            default: result(T::JR, flags(y - 4), O::Expression16, displacement(a, b2, 2), 2);
             }
             break;
 
         case 1: // x, z = (0, 1)
-            if (q) result("add", "hl," + regs16_1(p), 1);
-            else result("ld", regs16_1(p) + "," + word(b2, b3), 3);
+            if (q) result(T::ADD, O::HL, regs16_1(p), 1);
+            else result(T::LD, regs16_1(p), O::Expression16, b2 + 16 * b3, 3);
             break;
 
         case 2: // x, z = (0, 2)
@@ -204,51 +207,51 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
             {
                 switch (p)
                 {
-                case 0: result("ld", "(bc),a", 1);                      break;
-                case 1: result("ld", "(de),a", 1);                      break;
-                case 2: result("ld", "(" + word(b2, b3) + "),hl", 3);   break;
-                case 3: result("ld", "(" + word(b2, b3) + "),a", 3);    break;
+                case 0: result(T::LD, O::Address_BC, O::A, 1);                              break;
+                case 1: result(T::LD, O::Address_DE, O::A, 1);                              break;
+                case 2: result(T::LD, O::AddressedExpression, word(b2, b3), O::HL, 3);      break;
+                case 3: result(T::LD, O::AddressedExpression, word(b2, b3), O::A, 3);       break;
                 }
             }
             else
             {
                 switch (p)
                 {
-                case 0: result("ld", "a,(bc)", 1);                      break;
-                case 1: result("ld", "a,(de)", 1);                      break;
-                case 2: result("ld", "hl,(" + word(b2, b3) + ")", 3);   break;
-                case 3: result("ld", "a,(" + word(b2, b3) + ")", 3);    break;
+                case 0: result(T::LD, O::A, O::Address_BC, 1);                              break;
+                case 1: result(T::LD, O::A, O::Address_DE, 1);                              break;
+                case 2: result(T::LD, O::HL, O::AddressedExpression, word(b2, b3), 3);      break;
+                case 3: result(T::LD, O::A, O::AddressedExpression, word(b2, b3), 3);       break;
                 }
             }
             break;
 
         case 3: // x, z = (0, 3)
-            result(q ? "dec" : "inc", regs16_1(p), 1);
+            result(q ? T::DEC : T::INC, regs16_1(p), 1);
             break;
 
         case 4: // x, z = (0, 4)
-            result("inc", regs8(y), 1);
+            result(T::INC, regs8(y), 1);
             break;
 
         case 5: // x, z = (0, 5)
-            result("dec", regs8(y), 1);
+            result(T::DEC, regs8(y), 1);
             break;
 
         case 6: // x, z = (0, 6)
-            result("ld", regs8(y) + "," + byte(b2), 2);
+            result(T::LD, regs8(y), O::Expression8, byte(b2), 2);
             break;
 
         case 7: // x, z = (0, 7)
             switch (y)
             {
-            case 0: result("rlca", 1);  break;
-            case 1: result("rrca", 1);  break;
-            case 2: result("rla", 1);   break;
-            case 3: result("rra", 1);   break;
-            case 4: result("daa", 1);   break;
-            case 5: result("cpl", 1);   break;
-            case 6: result("scf", 1);   break;
-            case 7: result("ccf", 1);   break;
+            case 0: result(T::RLCA, 1);     break;
+            case 1: result(T::RRCA, 1);     break;
+            case 2: result(T::RLA, 1);      break;
+            case 3: result(T::RRA, 1);      break;
+            case 4: result(T::DAA, 1);      break;
+            case 5: result(T::CPL, 1);      break;
+            case 6: result(T::SCF, 1);      break;
+            case 7: result(T::CCF, 1);      break;
             }
             break;
         }
@@ -257,23 +260,30 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
     case 1:
         if (b1 == 0x76)
         {
-            result("halt", 1);
+            result(T::HALT, 1);
         }
         else
         {
-            result("ld", regs8(y) + "," + regs8(z), 1);
+            result(T::LD, regs8(y), regs8(z), 1);
         }
         break; // x = 1
 
     case 2:
-        result(aluOpCode(y), aluOperandPrefix(y) + regs8(z), 1);
+        if (aluOperandPrefix(y))
+        {
+            result(aluOpCode(y), O::A, regs8(z), 1);
+        }
+        else
+        {
+            result(aluOpCode(y), regs8(z), 1);
+        }
         break; // x = 2
 
     case 3:
         switch (z)
         {
         case 0: // x, z = (3, 0)
-            result("ret", flags(y), 1);
+            result(T::RET, flags(y), 1);
             break;
 
         case 1: // x, z = (3, 1)
@@ -281,38 +291,38 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
             {
                 switch (p)
                 {
-                case 0: result("ret", 1);           break;
-                case 1: result("exx", 1);           break;
-                case 2: result("jp", "hl", 1);      break;
-                case 3: result("ld", "sp,hl", 1);    break;
+                case 0: result(T::RET, 1);                  break;
+                case 1: result(T::EXX, 1);                  break;
+                case 2: result(T::JP, O::HL, 1);            break;
+                case 3: result(T::LD, O::SP, O::HL, 1);     break;
                 }
             }
             else
             {
-                result("pop", regs16_2(p), 1);
+                result(T::POP, regs16_2(p), 1);
             }
             break;
 
         case 2: // x, z = (3, 2)
-            result("jp", flags(y) + "," + word(b2, b3), 3);
+            result(T::JP, flags(y), O::Expression16, word(b2, b3), 3);
             break;
 
         case 3: // x, z = (3, 3)
             switch (y)
             {
-            case 0: result("jp", word(b2, b3), 3);              break;
-            case 1: disassembleCB(b2);                          break;
-            case 2: result("out", "(" + byte(b2) + "),a", 2);   break;
-            case 3: result("in", "a,(" + byte(b2) + ")", 2);    break;
-            case 4: result("ex", "(sp),hl", 1);                 break;
-            case 5: result("ex", "de,hl", 1);                   break;
-            case 6: result("di", 1);                            break;
-            case 7: result("ei", 1);                            break;
+            case 0: result(T::JP, O::Expression16, word(b2, b3), 3);                break;
+            case 1: disassembleCB(b2);                                              break;
+            case 2: result(T::OUT, O::AddressedExpression8, byte(b2), O::A, 2);     break;
+            case 3: result(T::INC, O::A, O::AddressedExpression8, byte(b2), 2);     break;
+            case 4: result(T::EX, O::Address_SP, O::HL, 1);                         break;
+            case 5: result(T::EX, O::DE, O::HL, 1);                                 break;
+            case 6: result(T::DI, 1);                                               break;
+            case 7: result(T::EI, 1);                                               break;
             }
             break;
 
         case 4: // x, z = (3, 4)
-            result("call", flags(y) + "," + word(b2, b3), 3);
+            result(T::CALL, flags(y), O::Expression16, word(b2, b3), 3);
             break;
 
         case 5: // x, z = (3, 5)
@@ -320,24 +330,31 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
             {
                 switch (p)
                 {
-                case 0: result("call", word(b2, b3), 3);        break;
-                case 1: disassembleDDFD(b1, b2, b3, b4, "ix");  break;
-                case 2: disassembleED(b2, b3, b4);              break;
-                case 3: disassembleDDFD(b1, b2, b3, b4, "iy");  break;
+                case 0: result(T::CALL, O::Expression16, word(b2, b3), 3);          break;
+                case 1: disassembleDDFD(b1, b2, b3, b4, O::IX);                     break;
+                case 2: disassembleED(b2, b3, b4);                                  break;
+                case 3: disassembleDDFD(b1, b2, b3, b4, O::IY);                     break;
                 }
             }
             else
             {
-                result("push", regs16_2(p), 1);
+                result(T::PUSH, regs16_2(p), 1);
             }
             break;
 
         case 6: // x, z = (3, 6)
-            result(aluOpCode(y), aluOperandPrefix(y) + byte(b2), 2);
+            if (aluOperandPrefix(y))
+            {
+                result(aluOpCode(y), O::A, O::Expression8, byte(b2), 2);
+            }
+            else
+            {
+                result(aluOpCode(y), O::Expression8, byte(b2), 2);
+            }
             break;
 
         case 7: // x, z = (3, 7)
-            result("rst", byte(y * 8), 1);
+            result(T::RST, O::Expression8, byte(y * 8), 1);
             break;
         }
         break; // x = 3
@@ -353,14 +370,14 @@ void Disassembler::disassembleCB(u8 b2)
 
     switch (x)
     {
-    case 0: result(rotShift(y), regs8(z), 2);               break;
-    case 1: result("bit", index(y) + "," + regs8(z), 2);    break;
-    case 2: result("res", index(y) + "," + regs8(z), 2);    break;
-    case 3: result("set", index(y) + "," + regs8(z), 2);    break;
+    case 0: result(rotShift(y), regs8(z), 2);                       break;
+    case 1: result(T::BIT, O::Expression4, index(y), regs8(z), 2);  break;
+    case 2: result(T::RES, O::Expression4, index(y), regs8(z), 2);  break;
+    case 3: result(T::SET, O::Expression4, index(y), regs8(z), 2);  break;
     }
 }
 
-void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
+void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, OperandType ix)
 {
     u8 x, y, z, p, q;
     decode(b2, x, y, z, p, q);
@@ -373,11 +390,11 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
         case 1:
             if (q)
             {
-                result("add", ix + "," + regs16_1_ix(p, ix), 2);
+                result(T:ADD, ix, regs16_1_ix(p, ix), 2);
             }
             else
             {
-                if (2 == p) result("ld", ix + "," + word(b3, b4), 4);
+                if (2 == p) result(T::LD, ix, O::Expression16, word(b3, b4), 4);
                 else goto invalid;
             }
             break;
@@ -387,11 +404,11 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
             {
                 if (q)
                 {
-                    result("ld", ix + ",(" + word(b3, b4) + ")", 4);
+                    result(T::LD, ix, O::AddressedExpression, word(b3, b4), 4);
                 }
                 else
                 {
-                    result("ld", "(" + word(b3, b4) + ")," + ix, 4);
+                    result(T::LD, O::AddressedExpression, word(b3, b4), ix, 4);
                 }
             }
             else goto invalid;
@@ -400,7 +417,7 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
         case 3:
             if (2 == p)
             {
-                result(q ? "dec" : "inc", std::move(ix), 2);
+                result(q ? T::DEC : T::INC, ix, 2);
             }
             else goto invalid;
             break;
@@ -408,9 +425,9 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
         case 4:
             switch (y)
             {
-            case 4: result("inc", ix + "h", 2);                     break;
-            case 5: result("inc", ix + "l", 2);                     break;
-            case 6: result("inc", indexDisplacement(b3, ix), 3);    break;
+            case 4: result(T::INC, ixh(ix), 2);                     break;
+            case 5: result(T::INC, ixl(ix), 2);                     break;
+            case 6: result(T::INC, ixExpr(ix), (i64)b3, 3);         break;
             default: goto invalid;
             }
             break;
@@ -418,9 +435,9 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
         case 5:
             switch (y)
             {
-            case 4: result("dec", ix + "h", 2);                     break;
-            case 5: result("dec", ix + "l", 2);                     break;
-            case 6: result("dec", indexDisplacement(b3, ix), 3);    break;
+            case 4: result(T::DEC, ixh(ix), 2);                     break;
+            case 5: result(T::DEC, ixl(ix), 2);                     break;
+            case 6: result(T::DEC, ixExpr(ix), (i64)b3, 3);         break;
             default: goto invalid;
             }
             break;
@@ -428,9 +445,9 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
         case 6:
             switch (y)
             {
-            case 4: result("ld", ix + "h" + "," + byte(b3), 3);                     break;
-            case 5: result("ld", ix + "l" + "," + byte(b3), 3);                     break;
-            case 6: result("ld", indexDisplacement(b3, ix) + "," + byte(b4), 4);    break;
+            case 4: result(T::LD, ixh(ix), O::Expression8, byte(b3), 3);                    break;
+            case 5: result(T::LD, ixl(ix), O::Expression8, byte(b3), 3);                    break;
+            case 6: result(T::LD, ixExpr(ix), (i64)b3, O::Expression8, byte(b4), 4);        break;
             default: goto invalid;
             }
             break;
@@ -446,22 +463,31 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
         if (y == 6 && z != 6)
         {
             // ld (ix+d),r
-            result("ld", indexDisplacement(b3, ix) + "," + regs8(z), 3);
+            result(T::LD, ixExpr(ix), (i64)b3, regs8(z), 3);
         }
         else if (y != 6 && z == 6)
         {
             // ld r,(ix+d)
-            result("ld", regs8(y) + "," + indexDisplacement(b3, ix), 3);
+            result(T::LD, regs8(y), ixExpr(ix), (i64)b3, 3);
         }
         else
         {
-            result("ld", regs8_ix(y, ix, b3) + "," + regs8_ix(z, ix, b3), 2);
+            int sz = y == 6 || z == 6 ? 3 : 2;
+            // #todo: Check for LD (IX+n),(IX+n)
+            result(T::LD, regs8_ix(y, ix), (i64)b3, regs8_ix(z, ix), (i64)b3, sz);
         }
         break;
 
     case 2: // x = 2
         if (z != 4 && z != 5 && z != 6) goto invalid;
-        result(aluOpCode(y), aluOperandPrefix(y) + regs8_ix(z, ix, b3), z == 6 ? 3 : 2);
+        if (int sz = z == 6 ? 3 : 2; aluOperandPrefix(y))
+        {
+            result(aluOpCode(y), O::A, regs8_ix(z, ix), sz);
+        }
+        else
+        {
+            result(aluOpCode(y), regs8_ix(z, ix), sz);
+        }
         break;
 
     case 3: // x = 3
@@ -472,23 +498,23 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
             break;
 
         case 0xe1:
-            result("pop", std::move(ix), 2);
+            result(T::POP, ix, 2);
             break;
 
         case 0xe3:
-            result("ex", "(sp)," + ix, 2);
+            result(T::EX, O::SP, ix, 2);
             break;
 
         case 0xe5:
-            result("push", std::move(ix), 2);
+            result(T::PUSH, ix, 2);
             break;
 
         case 0xe9:
-            result("jp", std::move(ix), 2);
+            result(T::JP, ix, 2);
             break;
 
         case 0xf9:
-            result("ld", "(sp)," + ix, 2);
+            result(T::LD, O::Address_SP, ix, 2);
             break;
 
         default:
@@ -500,10 +526,10 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, std::string ix)
     return;
 
 invalid:
-    result("defb", byte(b1), 1);
+    result(T::DB, O::Expression8, ix == O::IX ? byte(0xdd) : byte(0xfd), O::Expression8, byte(b1), 1);
 }
 
-void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, std::string ix)
+void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
 {
     u8 x, y, z, _;
     decode(b4, x, y, z, _, _);
@@ -514,27 +540,29 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, std::string ix)
         if (z == 6)
         {
             // rot/shift[y] (IX+d)
-            result(rotShift(y), indexDisplacement(b3, ix), 4);
+            result(rotShift(y), O::IX_Expression, (i64)b3, 4);
         }
         else
         {
+            // #todo: Fix this!
             // LD R[z],rot/shift[y] (IX+d)
             result("ld", regs8(z) + "," + rotShift(y) + " " + indexDisplacement(b3, ix), 4);
         }
         break;
 
     case 1:
-        result("bit", index(y) + "," + indexDisplacement(b3, ix), 4);
+        result(T::BIT, O::Expression4, y, ixExpr(ix), (i64)b3, 4);
         break;
 
     case 2:
         if (z == 6)
         {
             // RES y,(IX+d)
-            result("res", index(y) + "," + indexDisplacement(b3, ix), 4);
+            result(T::RES, O::Expression4, y, ixExpr(ix), (i64)b3, 4);
         }
         else
         {
+            // #todo: Fixme
             // LD R[z],RES y,(IX+d)
             result("ld", regs8(z) + ",res " + index(y) + "," + indexDisplacement(b3, ix), 4);
         }
@@ -544,10 +572,11 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, std::string ix)
         if (z == 6)
         {
             // SET y,(IX+d)
-            result("set", index(y) + "," + indexDisplacement(b3, ix), 4);
+            result(T::SET, O::Expression4, y, ixExpr(ix), (i64)b3, 4);
         }
         else
         {
+            // #todo: FIXME
             // LD R[z],SET y,(IX+d)
             result("ld", regs8(z) + ",set " + index(y) + "," + indexDisplacement(b3, ix), 4);
         }
@@ -569,8 +598,8 @@ void Disassembler::disassembleED(u8 b2, u8 b3, u8 b4)
     case 1:
         switch (z)
         {
-        case 0: result("in", (y == 6 ? "f" : regs8(y)) + ",(c)", 2);            break;
-        case 1: result("out", "(c)," + (y == 6 ? "0" : regs8(y)), 2);           break;
+        case 0: result(T::IN, (y == 6 ? O::F : regs8(y)), O::Address_C, 2);                 break;
+        case 1: result(T::OUT, O::Address_C, (y == 6 ? O::Expression8 : regs8(y)), 0, 2);   break;
         case 2: result(q ? "adc" : "sbc", "hl," + regs16_1(p), 2);              break;
         case 3: result("ld", q
             ? (regs16_1(p) + ",(" + word(b3, b4) + ")")
@@ -617,7 +646,7 @@ invalid:
     result("defb", "$ed", 1);
 }
 
-std::string Disassembler::addressAndBytes(u16 a)
+std::string Disassembler::addressAndBytes(u16 a) const
 {
     std::string s = wordNoPrefix(a % 256, a / 256) + "  ";
     for (int i = 0; i < m_bytes.size(); ++i)
@@ -628,12 +657,12 @@ std::string Disassembler::addressAndBytes(u16 a)
     return s;
 }
 
-std::string Disassembler::opCode()
+std::string Disassembler::opCode() const
 {
     return m_opCode;
 }
 
-std::string Disassembler::operands()
+std::string Disassembler::operands() const
 {
     return m_operands;
 }
