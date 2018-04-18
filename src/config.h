@@ -30,13 +30,18 @@ using namespace std;
 #define NX_MINOR_VERSION        0
 #define NX_PATCH_VERSION        7
 #define NX_DEV_PATCH            3
+//#define NX_DEV_TESTER           "Richard Dodds"
 
 #define NX_STR2(x) #x
 #define NX_STR(x) NX_STR2(x)
 
 #if NX_MAJOR_VERSION == 0
 #   if NX_MINOR_VERSION == 0
-#       define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_PATCH)
+#       ifdef NX_DEV_TESTER
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_PATCH) " (" NX_DEV_TESTER ")"
+#       else
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_PATCH)
+#       endif
 #   elif NX_MINOR_VERSION == 9
 #       define NX_VERSION "Beta." NX_STR(NX_PATCH_VERSION)
 #   else
