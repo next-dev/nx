@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include <asm/disasm.h>
+#include <utils/format.h>
 
 #include <cassert>
 #include <iomanip>
@@ -43,7 +44,7 @@ void Disassembler::invalidOpCode()
     result(T::DB, O::Expression, 0, 1);
 }
 
-std::string Disassembler::word(u8 l, u8 h) const
+std::string Disassembler::wordString(u8 l, u8 h) const
 {
     std::stringstream ss;
     ss << '$'
@@ -52,7 +53,7 @@ std::string Disassembler::word(u8 l, u8 h) const
     return ss.str();
 }
 
-std::string Disassembler::byte(u8 b) const
+std::string Disassembler::byteString(u8 b) const
 {
     std::stringstream ss;
     ss << '$' << std::setw(2) << std::setfill('0') << std::hex << std::uppercase << (int)b;
@@ -82,95 +83,114 @@ std::string Disassembler::index(u8 b) const
     return ss.str();
 }
 
-std::string Disassembler::displacement(u16 a, u8 d, int instructionSize) const
+i64 Disassembler::displacement(u16 a, u8 d, int instructionSize) const
 {
     a += instructionSize + (int)(i8)d;
-    return word(a % 256, a / 256);
+    return (i64)a;
 }
 
 std::string Disassembler::indexDisplacement(u8 d, std::string ix) const
 {
     i8 x = (i8)d;
-    return "(" + ix + (x < 0 ? "-" : "+") + byte(x < 0 ? -d : d) + ")";
+    return "(" + ix + (x < 0 ? "-" : "+") + byteString(x < 0 ? -d : d) + ")";
 }
 
-std::string Disassembler::regs8(u8 y) const
+OperandType Disassembler::regs8(u8 y) const
 {
-    static const char* regs[] = { "b", "c", "d", "e", "h", "l", "(hl)", "a" };
+    //static const char* regs[] = { "b", "c", "d", "e", "h", "l", "(hl)", "a" };
+    static O regs[] = {
+        O::B, O::C,
+        O::D, O::E,
+        O::H, O::L,
+        O::Address_HL, O::A,
+    };
     assert(y >= 0 && y < 8);
     return regs[y];
 }
 
-std::string Disassembler::regs16_1(u8 p) const
+OperandType Disassembler::regs16_1(u8 p) const
 {
-    static const char* regs[] = { "bc", "de", "hl", "sp" };
+    //static const char* regs[] = { "bc", "de", "hl", "sp" };
+    static O regs[] = {
+        O::BC,
+        O::DE,
+        O::HL,
+        O::SP,
+    };
     assert(p >= 0 && p < 4);
     return regs[p];
 }
 
-std::string Disassembler::regs16_2(u8 p) const
+OperandType Disassembler::regs16_2(u8 p) const
 {
-    static const char* regs[] = { "bc", "de", "hl", "af" };
+    //static const char* regs[] = { "bc", "de", "hl", "af" };
+    static O regs[] = { O::BC, O::DE, O::HL, O::AF };
     assert(p >= 0 && p < 4);
     return regs[p];
 }
 
-std::string Disassembler::regs8_ix(u8 y, std::string ix, u8 d) const
+OperandType Disassembler::regs8_ix(u8 y, OperandType ix) const
 {
     assert(y >= 0 && y < 8);
     switch (y)
     {
-    case 0: return "b";
-    case 1: return "c";
-    case 2: return "d";
-    case 3: return "e";
-    case 4: return ix + "h";
-    case 5: return ix + "l";
-    case 6: return indexDisplacement(d, ix);
-    case 7: return "a";
+    case 0: return O::B; // "b";
+    case 1: return O::C; // "c";
+    case 2: return O::D; // "d";
+    case 3: return O::E; // "e";
+    case 4: return ixh(ix); // ix + "h";
+    case 5: return ixl(ix); // ix + "l";
+    case 6: return ixExpr(ix); // indexDisplacement(d, ix);
+    case 7: return O::A; // "a";
     }
 
     return {};
 }
 
-std::string Disassembler::regs16_1_ix(u8 p, std::string ix) const
+OperandType Disassembler::regs16_1_ix(u8 p, OperandType ix) const
 {
-    static const char* regs[] = { "bc", "de", "??", "sp" };
+    //static const char* regs[] = { "bc", "de", "??", "sp" };
+    static O regs[] = { O::BC, O::DE, O::None, O::SP };
     assert(p >= 0 && p < 4);
     return p == 2 ? ix : regs[p];
 }
 
-std::string Disassembler::regs16_2_ix(u8 p, std::string ix) const
+OperandType Disassembler::regs16_2_ix(u8 p, OperandType ix) const
 {
-    static const char* regs[] = { "bc", "de", "??", "af" };
+    //static const char* regs[] = { "bc", "de", "??", "af" };
+    static O regs[] = { O::BC, O::DE, O::None, O::AF };
     assert(p >= 0 && p < 4);
     return p == 2 ? ix : regs[p];
 }
 
-std::string Disassembler::flags(u8 y) const
+OperandType Disassembler::flags(u8 y) const
 {
-    static const char* flags[] = { "nz", "z", "nc", "c", "po", "pe", "p", "m" };
+    //static const char* flags[] = { "nz", "z", "nc", "c", "po", "pe", "p", "m" };
+    static O flags[] = { O::NZ, O::Z, O::NC, O::C, O::PO, O::PE, O::P, O::M };
     assert(y >= 0 && y < 8);
     return flags[y];
 }
 
-std::string Disassembler::aluOpCode(u8 y) const
+T Disassembler::aluOpCode(u8 y) const
 {
-    static const char* aluOpcodes[] = { "add", "adc", "sub", "sbc", "and", "xor", "or", "cp" };
+    //static const char* aluOpcodes[] = { "add", "adc", "sub", "sbc", "and", "xor", "or", "cp" };
+    static T aluOpcodes[] = { T::ADD, T::ADC, T::SUB, T::SBC, T::AND, T::XOR, T::OR, T::CP };
     assert(y >= 0 && y < 8);
     return aluOpcodes[y];
 }
 
-std::string Disassembler::aluOperandPrefix(u8 y) const
+bool Disassembler::aluOperandPrefix(u8 y) const
 {
-    static const char* prefixes[] = { "a,", "a,", "", "a,", "", "", "", "" };
+    //static const char* prefixes[] = { "a,", "a,", "", "a,", "", "", "", "" };
+    static bool prefixes[] = { true, true, false, true, false, false, false, false };
     assert(y >= 0 && y < 8);
     return prefixes[y];
 }
 
-std::string Disassembler::rotShift(u8 y) const
+T Disassembler::rotShift(u8 y) const
 {
-    static const char* opCodes[] = { "rlc", "rrc", "rl", "rr", "sla", "sra", "sl1", "srl" };
+    //static const char* opCodes[] = { "rlc", "rrc", "rl", "rr", "sla", "sra", "sl1", "srl" };
+    static T opCodes[] = { T::RLC, T::RRC, T::RL, T::RR, T::SLA, T::SRA, T::SL1, T::SRL };
     assert(y >= 0 && y < 8);
     return opCodes[y];
 }
@@ -371,9 +391,9 @@ void Disassembler::disassembleCB(u8 b2)
     switch (x)
     {
     case 0: result(rotShift(y), regs8(z), 2);                       break;
-    case 1: result(T::BIT, O::Expression4, index(y), regs8(z), 2);  break;
-    case 2: result(T::RES, O::Expression4, index(y), regs8(z), 2);  break;
-    case 3: result(T::SET, O::Expression4, index(y), regs8(z), 2);  break;
+    case 1: result(T::BIT, O::Expression4, i64(y), regs8(z), 2);    break;
+    case 2: result(T::RES, O::Expression4, i64(y), regs8(z), 2);    break;
+    case 3: result(T::SET, O::Expression4, i64(y), regs8(z), 2);    break;
     }
 }
 
@@ -390,7 +410,7 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, OperandType ix)
         case 1:
             if (q)
             {
-                result(T:ADD, ix, regs16_1_ix(p, ix), 2);
+                result(T::ADD, ix, regs16_1_ix(p, ix), 2);
             }
             else
             {
@@ -472,9 +492,15 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, OperandType ix)
         }
         else
         {
-            int sz = y == 6 || z == 6 ? 3 : 2;
-            // #todo: Check for LD (IX+n),(IX+n)
-            result(T::LD, regs8_ix(y, ix), (i64)b3, regs8_ix(z, ix), (i64)b3, sz);
+            if (y == 6 && z == 6)
+            {
+                goto invalid;
+            }
+            else
+            {
+                int sz = y == 6 || z == 6 ? 3 : 2;
+                result(T::LD, regs8_ix(y, ix), (i64)b3, regs8_ix(z, ix), (i64)b3, sz);
+            }
         }
         break;
 
@@ -544,9 +570,8 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
         }
         else
         {
-            // #todo: Fix this!
             // LD R[z],rot/shift[y] (IX+d)
-            result("ld", regs8(z) + "," + rotShift(y) + " " + indexDisplacement(b3, ix), 4);
+            result(T::LD, regs8(z), rotShift(y), ixExpr(ix), i64(b3), 4);
         }
         break;
 
@@ -562,9 +587,8 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
         }
         else
         {
-            // #todo: Fixme
             // LD R[z],RES y,(IX+d)
-            result("ld", regs8(z) + ",res " + index(y) + "," + indexDisplacement(b3, ix), 4);
+            result(T::LD, regs8(z), T::RES, ixExpr(ix), i64(b3), 4);
         }
         break;
 
@@ -576,9 +600,8 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
         }
         else
         {
-            // #todo: FIXME
             // LD R[z],SET y,(IX+d)
-            result("ld", regs8(z) + ",set " + index(y) + "," + indexDisplacement(b3, ix), 4);
+            result(T::LD, regs8(z), T::SET, ixExpr(ix), i64(b3), 4);
         }
         break;
     }
@@ -600,24 +623,31 @@ void Disassembler::disassembleED(u8 b2, u8 b3, u8 b4)
         {
         case 0: result(T::IN, (y == 6 ? O::F : regs8(y)), O::Address_C, 2);                 break;
         case 1: result(T::OUT, O::Address_C, (y == 6 ? O::Expression8 : regs8(y)), 0, 2);   break;
-        case 2: result(q ? "adc" : "sbc", "hl," + regs16_1(p), 2);              break;
-        case 3: result("ld", q
-            ? (regs16_1(p) + ",(" + word(b3, b4) + ")")
-            : ("(" + word(b3, b4) + ")," + regs16_1(p)), 4);    break;
-        case 4: result("neg", 2);                                               break;
-        case 5: result(y == 1 ? "reti" : "retn", 2);                            break;
-        case 6: result("im", (y & 3) == 0 ? "0" : index(y - 1), 2);             break;
+        case 2: result(q ? T::ADC : T::SBC, O::HL, regs16_1(p), 2);                         break;
+        case 3:
+            if (q)
+            {
+                result(T::LD, regs16_1(p), O::AddressedExpression, word(b3, b4), 4);
+            }
+            else
+            {
+                result(T::LD, O::AddressedExpression, word(b3, b4), regs16_1(p), 4);
+            }
+            break;
+        case 4: result(T::NEG, 2);                                                          break;
+        case 5: result(y == 1 ? T::RETI : T::RETN, 2);                                      break;
+        case 6: result(T::IM, O::Expression4, (y & 3) == 0 ? 0 : i64(y - 1), 2);            break;
         case 7:
             switch (y)
             {
-            case 0: result("ld", "i,a", 2);     break;
-            case 1: result("ld", "r,a", 2);     break;
-            case 2: result("ld", "a,i", 2);     break;
-            case 3: result("ld", "a,r", 2);     break;
-            case 4: result("rrd", 2);           break;
-            case 5: result("rld", 2);           break;
-            case 6: result("nop", 2);           break;
-            case 7: result("nop", 2);           break;
+            case 0: result(T::LD, O::I, O::A, 2);   break;
+            case 1: result(T::LD, O::R, O::A, 2);   break;
+            case 2: result(T::LD, O::A, O::I, 2);   break;
+            case 3: result(T::LD, O::A, O::R, 2);   break;
+            case 4: result(T::RRD, 2);              break;
+            case 5: result(T::RLD, 2);              break;
+            case 6: result(T::NOP, 2);              break;
+            case 7: result(T::NOP, 2);              break;
             }
             break;
         }
@@ -625,15 +655,15 @@ void Disassembler::disassembleED(u8 b2, u8 b3, u8 b4)
 
     case 2:
     {
-        static const char* ySuffixes[4] = { "i", "d", "ir", "dr" };
-        static const char* zPrefixes1[4] = { "ld", "cp", "in", "out" };
-        static const char* zPrefixes2[4] = { "ld", "cp", "in", "ot" };
+        static T ops[] = {
+            T::LDI,     T::CPI,     T::INI,     T::OUTI,
+            T::LDD,     T::CPD,     T::IND,     T::OUTD,
+            T::LDIR,    T::CPIR,    T::INIR,    T::OTIR,
+            T::LDDR,    T::CPDR,    T::INDR,    T::OTDR,
+        };
         if (z <= 3 && y >= 4)
         {
-            result(
-                std::string(z > 1 ? zPrefixes2[z] : zPrefixes1[z]) +
-                ySuffixes[y - 4],
-                2);
+            result(ops[(y - 4) * 4 + z], 2);
         }
         else goto invalid;
     }
@@ -643,7 +673,7 @@ void Disassembler::disassembleED(u8 b2, u8 b3, u8 b4)
     return;
 
 invalid:
-    result("defb", "$ed", 1);
+    result(T::DB, O::Expression8, (i64)0xed, 1);
 }
 
 std::string Disassembler::addressAndBytes(u16 a) const
@@ -657,14 +687,167 @@ std::string Disassembler::addressAndBytes(u16 a) const
     return s;
 }
 
-std::string Disassembler::opCode() const
+std::string Disassembler::opCodeString(T type)
 {
-    return m_opCode;
+    static const char* opCodeStrings[(int)T::_END_DIRECTIVES - (int)T::_KEYWORDS - 1] =
+    {
+        "adc",
+        "add",
+        "and",
+        "bit",
+        "call",
+        "ccf",
+        "cp",
+        "cpd",
+        "cpdr",
+        "cpi",
+        "cpir",
+        "cpl",
+        "daa",
+        "dec",
+        "di",
+        "djnz",
+        "ei",
+        "ex",
+        "exx",
+        "halt",
+        "im",
+        "in",
+        "inc",
+        "ind",
+        "indr",
+        "ini",
+        "inir",
+        "jp",
+        "jr",
+        "ld",
+        "ldd",
+        "lddr",
+        "ldi",
+        "ldir",
+        "neg",
+        "nop",
+        "or",
+        "otdr",
+        "otir",
+        "out",
+        "outd",
+        "outi",
+        "pop",
+        "push",
+        "res",
+        "ret",
+        "reti",
+        "retn",
+        "rl",
+        "rla",
+        "rlc",
+        "rlca",
+        "rld",
+        "rr",
+        "rra",
+        "rrc",
+        "rrca",
+        "rrd",
+        "rst",
+        "sbc",
+        "scf",
+        "set",
+        "sla",
+        "sll",
+        "sl1",
+        "sra",
+        "srl",
+        "sub",
+        "xor",
+        "???",
+        "db",
+        "dw",
+        "equ",
+        "load",
+        "opt",
+        "org",
+    };
+    return opCodeStrings[(int)type - (int)T::_KEYWORDS - 1];
 }
 
-std::string Disassembler::operands() const
+std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2)
 {
-    return m_operands;
+    switch (type)
+    {
+    case O::Expression:
+    case O::Expression4:
+        return intString((int)param, 0);
+
+    case O::AddressedExpression:
+        return string("($") + hexWord(u16(param)) + ')';
+
+    case O::IX_Expression:
+        return string("(ix") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
+
+    case O::IY_Expression:
+        return string("(iy") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
+
+    case O::A:	                    return "a";
+    case O::B:	                    return "b";
+    case O::C:	                    return "c";
+    case O::D:	                    return "d";
+    case O::E:	                    return "e";
+    case O::H:	                    return "h";
+    case O::L:	                    return "l";
+    case O::I:	                    return "i";
+    case O::R:	                    return "r";
+    case O::AF:	                    return "af";
+    case O::AF_:	                return "af'";
+    case O::BC:	                    return "bc";
+    case O::DE:	                    return "de";
+    case O::HL:	                    return "hl";
+    case O::IX:	                    return "ix";
+    case O::IY:	                    return "iy";
+    case O::IXH:	                return "ixh";
+    case O::IXL:	                return "ixl";
+    case O::IYH:	                return "iyh";
+    case O::IYL:	                return "iyl";
+    case O::SP:	                    return "sp";
+    case O::NC:	                    return "nc";
+    case O::Z:	                    return "z";
+    case O::NZ:	                    return "nz";
+    case O::PO:	                    return "po";
+    case O::PE:	                    return "pe";
+    case O::M:	                    return "m";
+    case O::P:	                    return "p";
+
+    case O::Address_BC:             return "(BC)";
+    case O::Address_DE:             return "(DE)";
+    case O::Address_HL:             return "(HL)";
+    case O::Address_SP:             return "(SP)";
+    case O::Address_C:              return "(C)";
+
+    case O::Expression8:            return string("$") + hexByte(u8(param));
+    case O::Expression16:           return string("$") + hexWord(u16(param));
+    case O::AddressedExpression8:   return string("($") + hexByte(u8(param)) + ')';
+
+    case O::F:	                    return "f";
+
+    default:
+        assert(0);
+        return "???";
+    }
+}
+
+std::string Disassembler::opCodeString() const
+{
+    return opCodeString(m_opCode);
+}
+
+std::string Disassembler::operand1String() const
+{
+    return "";
+}
+
+std::string Disassembler::operand2String() const
+{
+    return "";
 }
 
 //----------------------------------------------------------------------------------------------------------------------
