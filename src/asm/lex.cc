@@ -365,7 +365,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         el.m_s0 = m_cursor;
         pos = m_position;
         c = nextChar(false);
-        string s;
+        vector<char> s;
         while (c != delim)
         {
             if (0 == c || '\n' == c)
@@ -378,12 +378,12 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                 c = nextChar(false);
                 switch (c)
                 {
-                case '\\':  s += '\\';          break;
-                case 'n':   s += '\n';          break;
-                case 'r':   s += '\r';          break;
-                case '0':   s += '\0';          break;
-                case '\'':  s += '\'';          break;
-                case '"':   s += '"';           break;
+                case '\\':  s.emplace_back('\\');      break;
+                case 'n':   s.emplace_back('\n');      break;
+                case 'r':   s.emplace_back('\r');      break;
+                case '0':   s.emplace_back('\0');      break;
+                case '\'':  s.emplace_back('\'');      break;
+                case '"':   s.emplace_back('"');       break;
                 case 'x':
                     {
                         i64 t = 0;
@@ -413,14 +413,14 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                             ungetChar();
                         }
 
-                        s += char(t);
+                        s.emplace_back(char(t));
                     }
                     break;
                 }
             }
             else
             {
-                s += c;
+                s.emplace_back(c);
             }
             c = nextChar(false);
         }

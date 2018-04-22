@@ -1075,7 +1075,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                     {
                         // String found
                         string str = (const char *)m_lexSymbols.get(e->m_symbol);
-                        int strLen = int(str.size());
+                        int strLen = int(m_lexSymbols.length(e->m_symbol));
                         m_address += strLen;
                         ++e;
                     }
@@ -3375,7 +3375,9 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
         }
         else if (e->m_type == T::String)
         {
-            for (const char* str = (const char *)m_lexSymbols.get(e->m_symbol); *str != 0; ++str)
+            const char* str = (const char *)m_lexSymbols.get(e->m_symbol);
+            const char* end = str + m_lexSymbols.length(e->m_symbol);
+            for (; str != end; ++str)
             {
                 emit8(*str);
             }

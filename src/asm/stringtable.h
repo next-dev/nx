@@ -60,11 +60,12 @@ public:
             const char* s = m_strings.data() + m_headers[hdr].m_data;
             if (ignoreCase)
             {
-                if (_strnicmp(s, start, size_t(end - start)) == 0) return i64(hdr);
+                // #todo: use case insensititve memcmp
+                if (_memicmp(s, start, size_t(end - start)) == 0) return i64(hdr);
             }
             else
             {
-                if (strncmp(s, start, size_t(end - start)) == 0) return i64(hdr);
+                if (memcmp(s, start, size_t(end - start)) == 0) return i64(hdr);
             }
             hdr = m_headers[hdr].m_next;
         }
@@ -72,7 +73,7 @@ public:
         // Not found!
         size_t data = m_strings.size();
         size_t hdrIndex = m_headers.size();
-        m_headers.emplace_back(Header{ data, m_hashTable[i] });
+        m_headers.emplace_back(Header{ data, size_t(end - start), m_hashTable[i] });
         m_hashTable[i] = hdrIndex;
         while (start != end)
         {
@@ -88,6 +89,11 @@ public:
     const u8* const get(i64 handle) const
     {
         return (const u8*)(m_strings.data() + m_headers[handle].m_data);
+    }
+
+    size_t length(i64 handle) const
+    {
+        return m_headers[handle].m_size;
     }
 
     static u64 hash(const char* str, bool ignoreCase)
@@ -133,8 +139,9 @@ public:
 private:
     struct Header
     {
-        size_t      m_data;
-        size_t      m_next;
+        size_t      m_data;     // Index into string blob
+        size_t      m_size;     // Length of string
+        size_t      m_next;     // Next header with the same hash
     };
 
     std::vector<size_t>     m_hashTable;        // Fixed size table containing initial offsets into headers table
