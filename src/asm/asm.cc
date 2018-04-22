@@ -1517,9 +1517,6 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Addr
     // #todo: introduce types (value, address, page, offset etc) into expressions.
 
     using T = Lex::Element::Type;
-    static int count = 0;
-    ++count;
-    if (count == 14) DebugBreak();
 
     //
     // Step 1 - convert to reverse polish notation using the Shunting Yard algorithm
