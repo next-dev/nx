@@ -211,6 +211,27 @@ private:
 
     // Files
     fs::path            m_tempPath;
+
+    // Key storage
+    struct KeyInfo
+    {
+        bool                isKey;
+        bool                pressed;
+        bool                shift;
+        bool                ctrl;
+        bool                alt;
+        sf::Keyboard::Key   code;
+
+        KeyInfo(bool isKey, bool pressed, bool shift, bool ctrl, bool alt, sf::Keyboard::Key key)
+            : isKey(isKey)
+            , pressed(pressed)
+            , shift(shift)
+            , ctrl(ctrl)
+            , alt(alt)
+            , code(key)
+        {}
+    };
+    vector<KeyInfo>         m_keys;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

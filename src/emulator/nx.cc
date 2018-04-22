@@ -18,6 +18,8 @@
 #   include "ResourcePath.hpp"
 #endif
 
+#define NX_DEBUG_PLAY_KEYS  (0)
+
 //----------------------------------------------------------------------------------------------------------------------
 // Model selection
 //----------------------------------------------------------------------------------------------------------------------
@@ -695,6 +697,47 @@ void Nx::run()
         //
         while (m_window.pollEvent(event))
         {
+#if NX_DEBUG_PLAY_KEYS
+            static bool sentKeys = false;
+            if (!sentKeys)
+            {
+                sentKeys = true;
+
+                NxFile f;
+                if (f.load("debug.keys"))
+                {
+                    if (f.hasSection('KEYS'))
+                    {
+                        const BlockSection& blk = f['KEYS'];
+
+                        u32 size = blk.peek32(0);
+                        for (int i = 0; i < (int)size; ++i)
+                        {
+                            bool isKey = blk.peek8(4 + i * 7 + 0) != 0;
+                            bool pressed = blk.peek8(4 + i * 7 + 1) != 0;
+                            bool shift = blk.peek8(4 + i * 7 + 2) != 0;
+                            bool ctrl = blk.peek8(4 + i * 7 + 3) != 0;
+                            bool alt = blk.peek8(4 + i * 7 + 4) != 0;
+                            sf::Keyboard::Key key = (sf::Keyboard::Key)blk.peek16(4 + i * 7 + 5);
+
+                            m_keys.emplace_back(isKey, pressed, shift, ctrl, alt, key);
+                        }
+
+                        for (const auto& ki : m_keys)
+                        {
+                            if (ki.isKey)
+                            {
+                                Overlay::currentOverlay()->key(ki.code, ki.pressed, ki.shift, ki.ctrl, ki.alt);
+                            }
+                            else
+                            {
+                                Overlay::currentOverlay()->text(char(ki.code));
+                            }
+                        }
+                    }
+                }
+            }
+#endif
             switch (event.type)
             {
             case sf::Event::Closed:
@@ -730,10 +773,25 @@ void Nx::run()
                 if (m_quit)
                 {
                     m_window.close();
+                    NxFile keyFile;
+                    BlockSection blk('KEYS');
+                    blk.poke32(u32(m_keys.size()));
+                    for (const auto& k : m_keys)
+                    {
+                        blk.poke8(k.isKey ? 1 : 0);
+                        blk.poke8(k.pressed ? 1 : 0);
+                        blk.poke8(k.shift ? 1 : 0);
+                        blk.poke8(k.ctrl ? 1 : 0);
+                        blk.poke8(k.alt ? 1 : 0);
+                        blk.poke16(u16(k.code));
+                    }
+                    keyFile.addSection(blk, int(7 * m_keys.size() + 4));
+                    keyFile.save("debug.keys");
                 }
                 break;
 
             case sf::Event::KeyPressed:
+                m_keys.emplace_back(true, true, event.key.shift, event.key.control, event.key.alt, event.key.code);
                 // Forward the key controls to the right mode handler
                 if (!event.key.shift && event.key.control && !event.key.alt)
                 {
@@ -763,11 +821,13 @@ void Nx::run()
                 break;
 
             case sf::Event::KeyReleased:
+                m_keys.emplace_back(true, false, event.key.shift, event.key.control, event.key.alt, event.key.code);
                 // Forward the key controls to the right mode handler
                 Overlay::currentOverlay()->key(event.key.code, false, event.key.shift, event.key.control, event.key.alt);
                 break;
                     
             case sf::Event::TextEntered:
+                m_keys.emplace_back(false, false, false, false, false, (sf::Keyboard::Key)event.text.unicode);
                 Overlay::currentOverlay()->text((char)event.text.unicode);
                 break;
 
