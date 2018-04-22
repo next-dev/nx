@@ -36,6 +36,16 @@ Start:
         ld    (hl),%01100000    ; Black ink, green paper, bright
         ld    bc,31
         ldir
-                                
 
-        jp    $                
+        ; Output the string
+        ld    de,titleString
+        ld    hl,$0700
+        call  printString
+
+        jp    $
+
+titleString:
+        db    "Hex Loader\0"
+
+printString:
+        

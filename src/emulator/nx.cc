@@ -18,7 +18,9 @@
 #   include "ResourcePath.hpp"
 #endif
 
-#define NX_DEBUG_PLAY_KEYS  (0)
+#define NX_DEBUG_PLAY_KEYS      (0)
+#define NX_DEBUG_RECORD_KEYS    (0)
+#define NX_DEBUG_BACKUP_KEYS    0
 
 //----------------------------------------------------------------------------------------------------------------------
 // Model selection
@@ -723,8 +725,11 @@ void Nx::run()
                             m_keys.emplace_back(isKey, pressed, shift, ctrl, alt, key);
                         }
 
+                        int i = 0;
+                        int num = (int)size - NX_DEBUG_BACKUP_KEYS;
                         for (const auto& ki : m_keys)
                         {
+                            if (i++ == num) break;
                             if (ki.isKey)
                             {
                                 Overlay::currentOverlay()->key(ki.code, ki.pressed, ki.shift, ki.ctrl, ki.alt);
@@ -773,6 +778,8 @@ void Nx::run()
                 if (m_quit)
                 {
                     m_window.close();
+
+#if NX_DEBUG_RECORD_KEYS
                     NxFile keyFile;
                     BlockSection blk('KEYS');
                     blk.poke32(u32(m_keys.size()));
@@ -787,6 +794,7 @@ void Nx::run()
                     }
                     keyFile.addSection(blk, int(7 * m_keys.size() + 4));
                     keyFile.save("debug.keys");
+#endif
                 }
                 break;
 

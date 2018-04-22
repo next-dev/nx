@@ -392,14 +392,14 @@ void EditorData::newline(bool indentFlag)
     {
         int line = getCurrentLine();
         DataPos p = getLinePos(line);
-        while (getChar(p++) == ' ')
+        while (getChar(p++) == ' ' && p <= m_cursor)
         {
             ++indent;
         }
     }
 
     // Remove any spaces before the newline
-    while (m_cursor > 0 && m_buffer[(int)m_cursor - 1] == ' ') leftChar(1);
+    while (m_cursor > 0 && m_buffer[(int)m_cursor - 1] == ' ') backspace(1);
 
     // Insert a new line
     insert(0x0a);
@@ -567,11 +567,15 @@ bool EditorData::ensureSpace(int numChars)
     {
         int delta = (numChars / m_increaseSize + 1) * m_increaseSize;
         int oldSize = (int)m_buffer.size();
+        int len = (int)(m_buffer.end() - (m_buffer.begin() + (int)m_endBuffer));
         m_buffer.resize(oldSize + delta);
         result = true;
     
         // Move text afterwards forward
-        int len = (int)(m_buffer.end() - (m_buffer.begin() + (int)m_endBuffer));
+        for (int i = getCurrentLine()+1; i < (int)m_lines.size(); ++i)
+        {
+            m_lines[i] += delta;
+        }
         move(m_buffer.begin() + (int)m_endBuffer, m_buffer.begin() + oldSize, m_buffer.end() - len);
         m_endBuffer += delta;
     }
