@@ -1517,6 +1517,9 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Addr
     // #todo: introduce types (value, address, page, offset etc) into expressions.
 
     using T = Lex::Element::Type;
+    static int count = 0;
+    ++count;
+    if (count == 14) DebugBreak();
 
     //
     // Step 1 - convert to reverse polish notation using the Shunting Yard algorithm
@@ -1572,7 +1575,8 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Addr
                 !opStack.empty() &&
                 (((opInfo[(int)v.elem->m_type - (int)T::Plus].assoc == Assoc::Left) &&
                     (opInfo[(int)v.elem->m_type - (int)T::Plus].level == opInfo[(int)opStack.back().elem->m_type - (int)T::Plus].level)) ||
-                    ((opInfo[(int)v.elem->m_type - (int)T::Plus].level > opInfo[(int)opStack.back().elem->m_type - (int)T::Plus].level))))
+                    ((opInfo[(int)v.elem->m_type - (int)T::Plus].level > opInfo[(int)opStack.back().elem->m_type - (int)T::Plus].level))) &&
+                opStack.back().type != ValueType::OpenParen)
             {
                 output.emplace_back(opStack.back());
                 opStack.pop_back();

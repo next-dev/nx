@@ -219,7 +219,7 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
 
         case 1: // x, z = (0, 1)
             if (q) result(T::ADD, O::HL, regs16_1(p), 1);
-            else result(T::LD, regs16_1(p), O::Expression16, b2 + 16 * b3, 3);
+            else result(T::LD, regs16_1(p), O::Expression16, b2 + 256 * b3, 3);
             break;
 
         case 2: // x, z = (0, 2)
@@ -571,7 +571,7 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
         else
         {
             // LD R[z],rot/shift[y] (IX+d)
-            result(T::LD, regs8(z), rotShift(y), ixExpr(ix), i64(b3), 4);
+            result(T::LD, rotShift(y), regs8(z), 0, ixExpr(ix), i64(b3), 4);
         }
         break;
 
@@ -588,7 +588,7 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
         else
         {
             // LD R[z],RES y,(IX+d)
-            result(T::LD, regs8(z), T::RES, ixExpr(ix), i64(b3), 4);
+            result(T::LD, T::RES, regs8(z), i64(y), ixExpr(ix), i64(b3), 4);
         }
         break;
 
@@ -601,7 +601,7 @@ void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
         else
         {
             // LD R[z],SET y,(IX+d)
-            result(T::LD, regs8(z), T::SET, ixExpr(ix), i64(b3), 4);
+            result(T::LD, T::SET, regs8(z), i64(y), ixExpr(ix), i64(b3), 4);
         }
         break;
     }
@@ -771,67 +771,85 @@ std::string Disassembler::opCodeString(T type)
     return opCodeStrings[(int)type - (int)T::_KEYWORDS - 1];
 }
 
-std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2)
+// opCode2 is normally T::Unknown.  If not, param2 is the 1st operand value.
+//
+std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2)
 {
-    switch (type)
+    if (opCode2 == T::Unknown)
     {
-    case O::Expression:
-    case O::Expression4:
-        return intString((int)param, 0);
+        switch (type)
+        {
+        case O::Expression:
+        case O::Expression4:
+            return intString((int)param, 0);
 
-    case O::AddressedExpression:
-        return string("($") + hexWord(u16(param)) + ')';
+        case O::AddressedExpression:
+            return string("($") + hexWord(u16(param)) + ')';
 
-    case O::IX_Expression:
-        return string("(ix") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
+        case O::IX_Expression:
+            return string("(ix") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
 
-    case O::IY_Expression:
-        return string("(iy") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
+        case O::IY_Expression:
+            return string("(iy") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
 
-    case O::A:	                    return "a";
-    case O::B:	                    return "b";
-    case O::C:	                    return "c";
-    case O::D:	                    return "d";
-    case O::E:	                    return "e";
-    case O::H:	                    return "h";
-    case O::L:	                    return "l";
-    case O::I:	                    return "i";
-    case O::R:	                    return "r";
-    case O::AF:	                    return "af";
-    case O::AF_:	                return "af'";
-    case O::BC:	                    return "bc";
-    case O::DE:	                    return "de";
-    case O::HL:	                    return "hl";
-    case O::IX:	                    return "ix";
-    case O::IY:	                    return "iy";
-    case O::IXH:	                return "ixh";
-    case O::IXL:	                return "ixl";
-    case O::IYH:	                return "iyh";
-    case O::IYL:	                return "iyl";
-    case O::SP:	                    return "sp";
-    case O::NC:	                    return "nc";
-    case O::Z:	                    return "z";
-    case O::NZ:	                    return "nz";
-    case O::PO:	                    return "po";
-    case O::PE:	                    return "pe";
-    case O::M:	                    return "m";
-    case O::P:	                    return "p";
+        case O::A:	                    return "a";
+        case O::B:	                    return "b";
+        case O::C:	                    return "c";
+        case O::D:	                    return "d";
+        case O::E:	                    return "e";
+        case O::H:	                    return "h";
+        case O::L:	                    return "l";
+        case O::I:	                    return "i";
+        case O::R:	                    return "r";
+        case O::AF:	                    return "af";
+        case O::AF_:	                return "af'";
+        case O::BC:	                    return "bc";
+        case O::DE:	                    return "de";
+        case O::HL:	                    return "hl";
+        case O::IX:	                    return "ix";
+        case O::IY:	                    return "iy";
+        case O::IXH:	                return "ixh";
+        case O::IXL:	                return "ixl";
+        case O::IYH:	                return "iyh";
+        case O::IYL:	                return "iyl";
+        case O::SP:	                    return "sp";
+        case O::NC:	                    return "nc";
+        case O::Z:	                    return "z";
+        case O::NZ:	                    return "nz";
+        case O::PO:	                    return "po";
+        case O::PE:	                    return "pe";
+        case O::M:	                    return "m";
+        case O::P:	                    return "p";
 
-    case O::Address_BC:             return "(BC)";
-    case O::Address_DE:             return "(DE)";
-    case O::Address_HL:             return "(HL)";
-    case O::Address_SP:             return "(SP)";
-    case O::Address_C:              return "(C)";
+        case O::Address_BC:             return "(bc)";
+        case O::Address_DE:             return "(de)";
+        case O::Address_HL:             return "(hl)";
+        case O::Address_SP:             return "(sp)";
+        case O::Address_C:              return "(c)";
 
-    case O::Expression8:            return string("$") + hexByte(u8(param));
-    case O::Expression16:           return string("$") + hexWord(u16(param));
-    case O::AddressedExpression8:   return string("($") + hexByte(u8(param)) + ')';
+        case O::Expression8:            return string("$") + hexByte(u8(param));
+        case O::Expression16:           return string("$") + hexWord(u16(param));
+        case O::AddressedExpression8:   return string("($") + hexByte(u8(param)) + ')';
 
-    case O::F:	                    return "f";
+        case O::F:	                    return "f";
 
-    default:
-        assert(0);
-        return "???";
+        default:
+            assert(0);
+            return "???";
+        }
+    }
+    else
+    {
+        if (opCode2 == T::RES || opCode2 == T::SET)
+        {
+            // <OPCODE> n,<OPERAND STRING>
+            return opCodeString(opCode2) + " " + intString((int)param2, 0) + "," + operandString(type, param, T::Unknown, 0);
+        }
+        else
+        {
+            // <OPCODE> <OPERAND STRING>
+            return opCodeString(opCode2) + " " + operandString(type, param, T::Unknown, 0);
+        }
     }
 }
 
@@ -842,12 +860,78 @@ std::string Disassembler::opCodeString() const
 
 std::string Disassembler::operand1String() const
 {
-    return "";
+    return operandString(m_operand1, m_param1, T::Unknown, 0);
 }
 
 std::string Disassembler::operand2String() const
 {
-    return "";
+    return operandString(m_operand2, m_param2, m_opCode2, m_param1);
+}
+
+std::string Disassembler::operandString() const
+{
+    if (m_operand1 == O::None)
+    {
+        return "";
+    }
+    else
+    {
+        string s = operand1String();
+        if (m_operand2 == O::None)
+        {
+            return s;
+        }
+        else
+        {
+            return s + "," + operand2String();
+        }
+    }
+}
+
+void Disassembler::result(Lex::Element::Type opCode, int instructionSize)
+{
+    result(opCode, T::Unknown, O::None, 0, O::None, 0, instructionSize);
+}
+
+void Disassembler::result(Lex::Element::Type opCode, OperandType op1, int instructionSize)
+{
+    result(opCode, T::Unknown, op1, 0, O::None, 0, instructionSize);
+}
+
+void Disassembler::result(Lex::Element::Type opCode, OperandType op1, OperandType op2, int instructionSize)
+{
+    result(opCode, T::Unknown, op1, 0, op2, 0, instructionSize);
+}
+
+void Disassembler::result(Lex::Element::Type opCode, OperandType op1, i64 value1, int instructionSize)
+{
+    result(opCode, T::Unknown, op1, value1, O::None, 0, instructionSize);
+}
+
+void Disassembler::result(Lex::Element::Type opCode, OperandType op1, i64 value1, OperandType op2, int instructionSize)
+{
+    result(opCode, T::Unknown, op1, value1, op2, 0, instructionSize);
+}
+
+void Disassembler::result(Lex::Element::Type opCode, OperandType op1, OperandType op2, i64 value2, int instructionSize)
+{
+    result(opCode, T::Unknown, op1, 0, op2, value2, instructionSize);
+}
+
+void Disassembler::result(Lex::Element::Type opCode, OperandType op1, i64 value1, OperandType op2, i64 value2, int instructionSize)
+{
+    result(opCode, T::Unknown, op1, value1, op2, value2, instructionSize);
+}
+
+void Disassembler::result(Lex::Element::Type opCode, Lex::Element::Type opCode2, OperandType op1, i64 value1, OperandType op2, i64 value2, int instructionSize)
+{
+    m_opCode = opCode;
+    m_opCode2 = opCode2;
+    m_operand1 = op1;
+    m_operand2 = op2;
+    m_param1 = value1;
+    m_param2 = value2;
+    m_bytes.erase(m_bytes.begin() + instructionSize, m_bytes.end());
 }
 
 //----------------------------------------------------------------------------------------------------------------------

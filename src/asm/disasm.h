@@ -71,6 +71,7 @@ public:
     std::string opCodeString() const;
     std::string operand1String() const;
     std::string operand2String() const;
+    std::string operandString() const;
 
     Lex::Element::Type  opCodeValue() const { return m_opCode; }
     Lex::Element::Type  opCode2Value() const { return m_opCode2; }
@@ -87,7 +88,7 @@ private:
     void result(Lex::Element::Type opCode, OperandType op1, i64 value1, OperandType op2, int instructionSize);
     void result(Lex::Element::Type opCode, OperandType op1, OperandType op2, i64 value2, int instructionSize);
     void result(Lex::Element::Type opCode, OperandType op1, i64 value1, OperandType op2, i64 value2, int instructionSize);
-    void result(Lex::Element::Type opCode, OperandType op1, Lex::Element::Type opCode2, OperandType op2, i64 value2, int instructionSize);
+    void result(Lex::Element::Type opCode, Lex::Element::Type opCode2, OperandType op1, i64 value1, OperandType op2, i64 value2, int instructionSize);
 
 //     void result(std::string&& opCode, std::string&& operands, int instructionSize);
 //     void result(std::string&& opCode, int instructionSize);
@@ -96,7 +97,7 @@ private:
     void decode(u8 opCode, u8& x, u8& y, u8& z, u8& p, u8& q);
 
     static std::string opCodeString(Lex::Element::Type type);
-    static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2);
+    static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2);
 
     i64 byte(u8 b) const { return (i64)b; }
     i64 word(u8 l, u8 h) const { return (i64)l + 256 * (i64)h; }

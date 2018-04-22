@@ -204,8 +204,8 @@ void DisassemblyWindow::onDraw(Draw& draw)
 
             draw.attrRect(m_x, m_y + row, m_width, 1, colour);
             draw.printString(m_x + 2, m_y + row, d.addressAndBytes(a).c_str(), false, colour);
-            draw.printString(m_x + 21, m_y + row, d.opCode().c_str(), false, colour);
-            draw.printString(m_x + 26, m_y + row, d.operands().c_str(), false, colour);
+            draw.printString(m_x + 21, m_y + row, d.opCodeString().c_str(), false, colour);
+            draw.printString(m_x + 26, m_y + row, d.operandString().c_str(), false, colour);
 
             if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(a))
             {
