@@ -41,7 +41,7 @@ Start:
 
         ; Output the string
         ld    de,titleString
-        ld    hl,256*(16-(10/2))+0
+        ld    hl,+(16-(10/2))*256+0
         call  printString
 
         jp    $
