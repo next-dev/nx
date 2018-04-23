@@ -930,6 +930,11 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
                 state = 1;
                 break;
 
+            case T::OpenParen:
+                ++parenDepth;
+                state = 0;
+                break;
+
             default:
                 goto expr_failed;
             }
@@ -3112,6 +3117,11 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
             case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);    state = 1;  break;
             case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);  state = 1;  break;
             case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);     state = 1;  break;
+            case T::OpenParen:
+                expr.addOpen(e);
+                ++parenDepth;
+                state = 0;
+                break;
             default:
                 assert(0);
             }
