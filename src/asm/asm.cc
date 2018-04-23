@@ -2938,22 +2938,27 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
         {
         case T::C:
             op.type = OperandType::Address_C;
+            assert(e->m_type == T::CloseParen);
             break;
 
         case T::BC:
             op.type = OperandType::Address_BC;
+            assert(e->m_type == T::CloseParen);
             break;
 
         case T::DE:
             op.type = OperandType::Address_DE;
+            assert(e->m_type == T::CloseParen);
             break;
 
         case T::HL:
             op.type = OperandType::Address_HL;
+            assert(e->m_type == T::CloseParen);
             break;
 
         case T::SP:
             op.type = OperandType::Address_SP;
+            assert(e->m_type == T::CloseParen);
             break;
 
         case T::IX:
@@ -2968,6 +2973,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                 if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             }
             op.type = OperandType::IX_Expression;
+            assert(e->m_type == T::CloseParen);
             break;
 
         case T::IY:
@@ -2982,17 +2988,35 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                 if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             }
             op.type = OperandType::IY_Expression;
+            assert(e->m_type == T::CloseParen);
             break;
 
         default:
             // Must be an address expression
-            op.type = OperandType::AddressedExpression;
-            op.expr = buildExpression(--e);
-            if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+            {
+                const Lex::Element* startE = e - 2;
+                op.type = OperandType::AddressedExpression;
+                op.expr = buildExpression(--e);
+                assert(e->m_type == T::CloseParen);
+                if ((e + 1)->m_type == T::Newline)
+                {
+                    if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+                }
+                else
+                {
+                    // This is an expression, not an addressed expression because there are extraneous
+                    // tokens after the close parentheses matching the initial opening one.
+                    // Rebuild the expression, this time including the initial parentheses.
+                    op.type = OperandType::Expression;
+                    e = startE;
+                    op.expr = buildExpression(e);
+                    if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+                    --e;
+                }
+            }
             break;
         }
 
-        assert(e->m_type == T::CloseParen);
         ++e;
         break;
 
