@@ -16,6 +16,8 @@ Start:
         ld    (hl),a
         ld    bc,$1800
         ldir                    ; Clear pixels
+        ld    a,4
+        out   ($fe),a           ; Change border to green
 
         ; Title bar        
         ld    bc,32
