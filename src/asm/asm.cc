@@ -2998,7 +2998,8 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                 op.type = OperandType::AddressedExpression;
                 op.expr = buildExpression(--e);
                 assert(e->m_type == T::CloseParen);
-                if ((e + 1)->m_type == T::Newline)
+                Lex::Element::Type nextE = (e + 1)->m_type;
+                if (nextE == T::Newline || nextE == T::Comma)
                 {
                     if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
                 }
