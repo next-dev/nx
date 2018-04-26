@@ -29,7 +29,8 @@ using namespace std;
 #define NX_MAJOR_VERSION        0
 #define NX_MINOR_VERSION        0
 #define NX_PATCH_VERSION        7
-#define NX_DEV_PATCH            3
+#define NX_DEV_MINOR            3
+#define NX_DEV_PATCH            "A"
 //#define NX_DEV_TESTER           ""
 
 #define NX_STR2(x) #x
@@ -38,9 +39,11 @@ using namespace std;
 #if NX_MAJOR_VERSION == 0
 #   if NX_MINOR_VERSION == 0
 #       ifdef NX_DEV_TESTER
-#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_PATCH) " (" NX_DEV_TESTER ")"
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_MINOR) " (" NX_DEV_TESTER ")"
+#       elif defined(NX_DEV_PATCH)
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_MINOR) NX_DEV_PATCH
 #       else
-#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_PATCH)
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_MINOR)
 #       endif
 #   elif NX_MINOR_VERSION == 9
 #       define NX_VERSION "Beta." NX_STR(NX_PATCH_VERSION)
