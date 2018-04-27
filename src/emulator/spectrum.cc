@@ -902,6 +902,19 @@ bool Spectrum::hasUserBreakpointAt(u16 address)
     return (it != m_breakpoints.end() && it->type == BreakpointType::User);
 }
 
+vector<u16> Spectrum::getUserBreakpoints() const
+{
+    vector<u16> breakpoints;
+    for (const auto& br : m_breakpoints)
+    {
+        if (br.type == BreakpointType::User)
+        {
+            breakpoints.push_back(br.address);
+        }
+    }
+    return breakpoints;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Kempston Joystick emulation
 //----------------------------------------------------------------------------------------------------------------------

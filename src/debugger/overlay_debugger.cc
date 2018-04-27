@@ -64,6 +64,7 @@ Debugger::Debugger(Nx& nx)
         // Known commands
         return {
             "B   Toggle breakpoint",
+            "LB  List breakpoints",
             "C   Clear search terms",
             "F   Find byte(s)",
             "FW  Find word",
@@ -94,6 +95,23 @@ Debugger::Debugger(Nx& nx)
         else
         {
             return errors;
+        }
+
+        return errors;
+    });
+
+    //
+    // List breakpoints
+    //
+    m_commandWindow.registerCommand("LB", [this](vector<string> args) {
+        vector<string> errors = syntaxCheck(args, "", { "LB" });
+        if (errors.empty())
+        {
+            errors.emplace_back("Breakpoints:");
+            for (const auto& br : getSpeccy().getUserBreakpoints())
+            {
+                errors.emplace_back(stringFormat("  ${0}", hexWord(br)));
+            }
         }
 
         return errors;
