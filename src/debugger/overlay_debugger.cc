@@ -65,7 +65,8 @@ Debugger::Debugger(Nx& nx)
         return {
             "B   Toggle breakpoint",
             "LB  List breakpoints",
-            "C   Clear search terms",
+            "CB  Clear breakpoints",
+            "CF  Clear search terms",
             "F   Find byte(s)",
             "FW  Find word",
         };
@@ -118,10 +119,24 @@ Debugger::Debugger(Nx& nx)
     });
 
     //
+    // Clear breakpoints
+    //
+    m_commandWindow.registerCommand("CB", [this](vector<string> args) {
+        vector<string> errors = syntaxCheck(args, "", { "CB" });
+        if (errors.empty())
+        {
+            getSpeccy().clearUserBreakpoints();
+            errors.emplace_back("Cleared all breakpoints.");
+        }
+
+        return errors;
+    });
+
+    //
     // Clear command
     //
-    m_commandWindow.registerCommand("C", [this](vector<string> args) {
-        vector<string> errors = syntaxCheck(args, "", { "C" });
+    m_commandWindow.registerCommand("CF", [this](vector<string> args) {
+        vector<string> errors = syntaxCheck(args, "", { "CF" });
         if (errors.empty())
         {
             m_findAddresses.clear();

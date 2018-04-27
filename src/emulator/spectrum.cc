@@ -915,6 +915,14 @@ vector<u16> Spectrum::getUserBreakpoints() const
     return breakpoints;
 }
 
+void Spectrum::clearUserBreakpoints()
+{
+    decltype(m_breakpoints) newbps;
+    copy_if(m_breakpoints.begin(), m_breakpoints.end(), back_inserter(newbps), 
+        [](const auto& br) -> bool { return br.type != BreakpointType::User; });
+    swap(m_breakpoints, newbps);
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Kempston Joystick emulation
 //----------------------------------------------------------------------------------------------------------------------

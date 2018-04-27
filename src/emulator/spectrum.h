@@ -201,6 +201,7 @@ public:
     void            addTemporaryBreakpoint  (u16 address);
     bool            hasUserBreakpointAt     (u16 address);
     vector<u16>     getUserBreakpoints      () const;
+    void            clearUserBreakpoints    ();
 
 private:
     //
