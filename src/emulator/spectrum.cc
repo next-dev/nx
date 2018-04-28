@@ -129,11 +129,12 @@ u32 Spectrum::convertAddress(size_t ramOffset)
 
     case Model::ZX128:
     case Model::ZXPlus2:
+    case Model::ZXNext:
         {
-            int page = int(ramOffset) / kPageSize;
-            int add = int(ramOffset) % kPageSize;
+            int page = int(ramOffset) / getBankSize();
+            int add = int(ramOffset) % getBankSize();
 
-            return (u32(page) << 16) + u32(add);
+            return (u32(page) * getBankSize()) + u32(add);
         }
         break;
 
@@ -166,7 +167,7 @@ string Spectrum::addressName(u32 address, bool moreInfo)
             {
                 if (m_slots[i] == page)
                 {
-                    s += stringFormat(" (${0})", hexWord(add + (i * kPageSize)));
+                    s += stringFormat(" (${0})", hexWord(add + (i * getBankSize())));
                 }
             }
         }
@@ -274,19 +275,22 @@ void Spectrum::initMemory()
     {
     case Model::ZX48:
         m_ram.resize(KB(64));
-        m_pageNames = {
+        m_bankNames = {
             "ROM",
             "$4000",
             "$8000",
             "$C000",
         };
         m_slots = { 0, 1, 2, 3 };
+        m_bankSize = 0x4000;
+        m_videoBank = m_shadowVideoBank = 1;
         break;
 
     case Model::ZX128:
     case Model::ZXPlus2:
-        m_ram.resize(kPageSize * 10);      // 8*16K RAM, 2*16K ROM
-        m_pageNames = {
+        m_bankSize = 0x4000;
+        m_ram.resize(m_bankSize * 10);      // 8*16K RAM, 2*16K ROM
+        m_bankNames = {
             "Bank 0",
             "Bank 1",
             "Bank 2",
@@ -299,6 +303,23 @@ void Spectrum::initMemory()
             "ROM 1 (Basic)",
         };
         m_slots = { 9, 5, 2, 0 };
+        m_videoBank = 5;
+        m_shadowVideoBank = 7;
+        break;
+
+    case Model::ZXNext:
+        m_bankSize = 0x2000;
+        m_ram.resize(getBankSize() * (96 + 2));
+        m_bankNames.clear();
+        for (int i = 0; i < 96; ++i)
+        {
+            m_bankNames.emplace_back(string("Bank ") + intString(i, 0));
+        }
+        m_bankNames.emplace_back("ROM (part 1)");
+        m_bankNames.emplace_back("ROM (part 2)");
+        m_slots = { 96, 97, 10, 11, 4, 5, 0, 1 };
+        m_videoBank = 10;
+        m_shadowVideoBank = 14;
         break;
     }
     m_contention.resize(70930);
@@ -340,27 +361,34 @@ void Spectrum::initMemory()
     switch (m_model)
     {
     case Model::ZX48:
-        load(0, gRom48, kPageSize);
+        load(0, gRom48, getBankSize());
         break;
 
     case Model::ZX128:
-        load(0, gRom128_1, kPageSize);
-        page(0, 8);
-        load(0, gRom128_0, kPageSize);
+        load(0, gRom128_1, getBankSize());
+        bank(0, 8);
+        load(0, gRom128_0, getBankSize());
         break;
 
     case Model::ZXPlus2:
-        load(0, gRomPlus2_1, kPageSize);
-        page(0, 8);
-        load(0, gRomPlus2_0, kPageSize);
+        load(0, gRomPlus2_1, getBankSize());
+        bank(0, 8);
+        load(0, gRomPlus2_0, getBankSize());
         break;
+
+    case Model::ZXNext:
+        load(0, gRom48, getBankSize() * 2);
+        break;
+
+    default:
+        assert(0);
     }
     setRomWriteState(false);
 }
 
 u8 Spectrum::peek(u16 address)
 {
-    return m_ram[m_slots[address / kPageSize] * kPageSize + (address % kPageSize)];
+    return m_ram[m_slots[address / getBankSize()] * getBankSize() + (address % getBankSize())];
 }
 
 u8 Spectrum::peek(u16 address, TState& t)
@@ -376,24 +404,24 @@ u16 Spectrum::peek16(u16 address, TState& t)
 
 void Spectrum::poke(u16 address, u8 x)
 {
-    if (m_romWritable || address >= kPageSize)
+    if (m_romWritable || address >= getRomSize())
     {
-        m_ram[m_slots[address / kPageSize] * kPageSize + (address % kPageSize)] = x;
+        m_ram[m_slots[address / getBankSize()] * getBankSize() + (address % getBankSize())] = x;
     }
 }
 
-u8 Spectrum::pagePeek(u16 page, u16 address) const
+u8 Spectrum::bankPeek(u16 bank, u16 address) const
 {
-    assert(page < getNumPages());
-    assert(address < kPageSize);
-    return m_ram[page * kPageSize + (address % kPageSize)];
+    assert(bank < getNumBanks());
+    assert(address < getBankSize());
+    return m_ram[bank * getBankSize() + (address % getBankSize())];
 }
 
-void Spectrum::pagePoke(u16 page, u16 address, u8 byte)
+void Spectrum::bankPoke(u16 bank, u16 address, u8 byte)
 {
-    assert(page < getNumPages());
-    assert(address < kPageSize);
-    m_ram[page * kPageSize + (address % kPageSize)] = byte;
+    assert(bank < getNumBanks());
+    assert(address < getBankSize());
+    m_ram[bank * getBankSize() + (address % getBankSize())] = byte;
 }
 
 void Spectrum::poke(u16 address, u8 x, TState& t)
@@ -412,7 +440,7 @@ void Spectrum::poke16(u16 address, u16 w, TState& t)
 void Spectrum::load(u16 address, const void* buffer, i64 size)
 {
     i64 clampedSize = min((i64)address + size, (i64)65536) - address;
-    u32 realAddress = m_slots[address/kPageSize] * kPageSize + (address % kPageSize);
+    u32 realAddress = m_slots[address/getBankSize()] * getBankSize() + (address % getBankSize());
     copy((u8*)buffer, (u8*)buffer + size, m_ram.begin() + realAddress);
 }
 
@@ -446,29 +474,29 @@ TState Spectrum::contention(TState tStates)
     return m_contention[tStates];
 }
 
-void Spectrum::page(int slot, int page)
+void Spectrum::bank(int slot, int bank)
 {
-    assert(slot >= 0 && slot < kNumSlots);
-    assert(page >= 0 && page < (m_ram.size() / kPageSize));
+    assert(slot >= 0 && slot < getNumSlots());
+    assert(bank >= 0 && bank < (m_ram.size() / getBankSize()));
 
-    m_slots[slot] = page;
+    m_slots[slot] = bank;
 }
 
-int Spectrum::getPage(int slot) const
+int Spectrum::getBank(int slot) const
 {
     assert(slot >= 0 && slot < 4);
     return m_slots[slot];
 }
 
-u16 Spectrum::getNumPages() const
+u16 Spectrum::getNumBanks() const
 {
-    return u16(m_ram.size() / kPageSize);
+    return u16(m_ram.size() / getBankSize());
 }
 
 string& Spectrum::slotName(int slot)
 {
-    assert(slot >= 0 && slot < kNumSlots);
-    return m_pageNames[m_slots[slot]];
+    assert(slot >= 0 && slot < getNumSlots());
+    return m_bankNames[m_slots[slot]];
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -645,11 +673,12 @@ void Spectrum::out(u16 port, u8 x, TState& t)
 // Video
 //----------------------------------------------------------------------------------------------------------------------
 
-void Spectrum::initVideo()
-{
-    m_videoTexture.create(kWindowWidth, kWindowHeight);
-    m_videoSprite.setTexture(m_videoTexture);
+static const u16 kDoNotDraw = 0xffff;
+static const u16 kBorder = 0xfffe;
 
+// This needs to be called every time the video bank changes
+void Spectrum::recalcVideoMaps()
+{
     m_videoMap.resize(getFrameTime());
 
     // Start of display area is 14336.  We wait 4 t-states before we draw 8 pixels.  The left border is 24 pixels wide.
@@ -659,16 +688,16 @@ void Spectrum::initVideo()
     // Initialise the t-state->address map
     //
     // Values will be:
-    //      0       Do not draw
-    //      1       Border colour
-    //      0x4000+ Pixel address
+    //      0xffff  Do not draw
+    //      0xfffe  Border colour
+    //      0x0000+ Pixel address
     //
     int t = 0;
 
     // Vertical retrace period (and top border outside window)
     for (t = 0; t < m_startTState; ++t)
     {
-        m_videoMap[t] = 0;
+        m_videoMap[t] = kDoNotDraw;
     }
 
     // Calculate line timings
@@ -689,9 +718,9 @@ void Spectrum::initVideo()
     while (t < (m_startTState + (kBorderHeight * 224)))
     {
         // The line is: border (w/2t), screen (128t), border (w/2t) = 128+wt
-        for (int i = 0; i < ta; ++i) m_videoMap[t++] = 0;
-        for (int i = ta; i < 176 - ta; ++i) m_videoMap[t++] = 1;
-        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = 0;
+        for (int i = 0; i < ta; ++i) m_videoMap[t++] = kDoNotDraw;
+        for (int i = ta; i < 176 - ta; ++i) m_videoMap[t++] = kBorder;
+        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = kDoNotDraw;
     }
 
     // Build middle of display
@@ -701,8 +730,8 @@ void Spectrum::initVideo()
     while (t < m_startTState + (kBorderHeight * 224) + (kScreenHeight * 224))
     {
         // Left border
-        for (int i = 0; i < ta; ++i) m_videoMap[t++] = 0;
-        for (int i = ta; i < tb; ++i) m_videoMap[t++] = 1;
+        for (int i = 0; i < ta; ++i) m_videoMap[t++] = kDoNotDraw;
+        for (int i = ta; i < tb; ++i) m_videoMap[t++] = kBorder;
 
         // Screen line
         for (int i = tb; i < tb + 128; ++i)
@@ -710,12 +739,12 @@ void Spectrum::initVideo()
             // Every 4 t-states (8 pixels), we recalculate the address
             if (i % 4 == 0)
             {
-                // Pixel address is 010S SRRR CCCX XXXX, where Y = SSCCCRRR
-                // Attr address is  0101 10YY YYYX XXXX
+                // Pixel offset is 000S SRRR CCCX XXXX, where Y = SSCCCRRR
+                // Attr offset is  0001 10YY YYYX XXXX
                 addr =
                     // Hi byte
                     // SS-------------+   RRR------+   
-                    ((((y & 0xc0) >> 3) | (y & 0x07) | (0x40)) << 8) |
+                    ((((y & 0xc0) >> 3) | (y & 0x07)) << 8) |
                     // Lo byte
                     // X-------------+   CCC-------------+
                     (((x >> 3) & 0x1f) | ((y & 0x38) << 2));
@@ -726,24 +755,31 @@ void Spectrum::initVideo()
         ++y;
 
         // Right border
-        for (int i = tb + 128; i < 176 - ta; ++i) m_videoMap[t++] = 1;
+        for (int i = tb + 128; i < 176 - ta; ++i) m_videoMap[t++] = kBorder;
 
         // Horizontal retrace + out of screen border
-        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = 0;
+        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = kDoNotDraw;
     }
 
     // Bottom border
     while (t < m_startTState + (kBorderHeight * 224) + (kScreenHeight * 224) + (kBorderHeight * 224))
     {
-        for (int i = 0; i < ta; ++i) m_videoMap[t++] = 0;
-        for (int i = ta; i < 176 - ta; ++i) m_videoMap[t++] = 1;
-        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = 0;
+        for (int i = 0; i < ta; ++i) m_videoMap[t++] = kDoNotDraw;
+        for (int i = ta; i < 176 - ta; ++i) m_videoMap[t++] = kBorder;
+        for (int i = 176 - ta; i < 224; ++i) m_videoMap[t++] = kDoNotDraw;
     }
 
     while (t < getFrameTime())
     {
-        m_videoMap[t++] = 0;
+        m_videoMap[t++] = kDoNotDraw;
     }
+}
+
+void Spectrum::initVideo()
+{
+    m_videoTexture.create(kWindowWidth, kWindowHeight);
+    m_videoSprite.setTexture(m_videoTexture);
+    recalcVideoMaps();
 }
 
 void Spectrum::renderVideo()
@@ -775,23 +811,28 @@ void Spectrum::updateVideo()
     // It takes 4 t-states to write 1 byte.
     int elapsedTStates = int(tState + 1 - m_drawTState);
     int numBytes = (elapsedTStates >> 2) + ((elapsedTStates % 4) > 0 ? 1 : 0);
-    int vramPage = m_model == Model::ZX48
-        ? 1
-        : m_shadowScreen ? 7 : 5;
+    int vramBank = m_model == Model::ZX48
+        ? m_videoBank
+        : m_shadowScreen ? m_shadowVideoBank : m_videoBank;
+    int bankSize = getBankSize();
 
     for (int i = 0; i < numBytes; ++i)
     {
-        if (m_videoMap[m_drawTState] > 1)
+        if (m_videoMap[m_drawTState] < kBorder)
         {
             // Pixel address
-            // TODO: video map address are 0-based, move special codes to different range.
+            // #todo: refactor bank sizes to log-2?
             u16 paddr = m_videoMap[m_drawTState];
-            u8 pixelData = pagePeek(vramPage, paddr - 0x4000);
+            u16 bank = (u16)vramBank + (paddr / (u16)bankSize);
+            u16 offset = paddr % (u16)bankSize;
+            u8 pixelData = bankPeek(bank, offset);
 
             // Calculate attribute address
-            // 010S SRRR CCCX XXXX --> 0101 10SS CCCX XXXX
-            u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + 0x5800;
-            u8 attr = pagePeek(vramPage, aaddr - 0x4000);
+            // 000S SRRR CCCX XXXX --> 0001 10SS CCCX XXXX
+            u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + 0x1800;
+            bank = (u16)vramBank + (aaddr / (u16)bankSize);
+            offset = aaddr % (u16)bankSize;
+            u8 attr = bankPeek(bank, offset);
 
             u8 lastPixelData = pixelData;
             u8 lastAttrData = attr;
@@ -826,7 +867,7 @@ void Spectrum::updateVideo()
                 pixelData <<= 1;
             }
         } // pixel data
-        else if (m_videoMap[m_drawTState] == 1)
+        else if (m_videoMap[m_drawTState] == kBorder)
         {
             u32 border = colours[getBorderColour()];
             for (int b = 0; b < 8; ++b)

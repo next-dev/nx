@@ -103,6 +103,7 @@ public:
 
     // Obtain a reference to the current machine.
     Spectrum& getSpeccy() { return *m_machine; }
+    const Spectrum& getSpeccy() const { return *m_machine; }
 
     // Obtain a reference to the debugger.
     Debugger& getDebugger() { return m_debugger; }
@@ -159,6 +160,9 @@ public:
     bool getZoom() const { return m_zoom; }
     
 private:
+    // Window
+    string getTitle() const;
+
     // Loading
     bool loadSnaSnapshot(string fileName);
     bool loadZ80Snapshot(string fileName);

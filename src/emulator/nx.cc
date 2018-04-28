@@ -27,8 +27,8 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 ModelWindow::ModelWindow(Nx& nx)
-    : Window(nx, 1, 1, 20, 2 + (int)Model::COUNT, "Select model", Colour::Black, Colour::White, true)
-    , m_models({ Model::ZX48, Model::ZX128, Model::ZXPlus2 })
+    : Window(nx, 1, 1, 30, 2 + (int)Model::COUNT, "Select model", Colour::Black, Colour::White, true)
+    , m_models({ Model::ZX48, Model::ZX128, Model::ZXPlus2, Model::ZXNext })
     , m_selectedModel(-1)
 {
 
@@ -40,6 +40,7 @@ void ModelWindow::onDraw(Draw& draw)
         "ZX Spectrum 48K",
         "ZX Spectrum 128K",
         "ZX Spectrum +2",
+        "ZX Spectrum Next (dev version)"
     };
 
     assert(m_models.size() == (int)Model::COUNT);
@@ -586,7 +587,7 @@ Nx::Nx(int argc, char** argv)
     , m_disassemblerOverlay(*this)
 
     //--- Rendering -----------------------------------------------------------------
-    , m_window(sf::VideoMode(kWindowWidth * (kDefaultScale + 1), kWindowHeight * (kDefaultScale + 1)), "NX " NX_VERSION,
+    , m_window(sf::VideoMode(kWindowWidth * (kDefaultScale + 1), kWindowHeight * (kDefaultScale + 1)), getTitle().c_str(),
                sf::Style::Titlebar | sf::Style::Close)
 
     //--- Peripherals ---------------------------------------------------------------
@@ -652,6 +653,28 @@ Nx::Nx(int argc, char** argv)
 Nx::~Nx()
 {
     delete m_machine;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Title
+//----------------------------------------------------------------------------------------------------------------------
+
+string Nx::getTitle() const
+{
+    string title = "NX " NX_VERSION " [";
+
+    switch (getSpeccy().getModel())
+    {
+    case Model::ZX48:       title += "48K]";        break;
+    case Model::ZX128:      title += "128K]";       break;
+    case Model::ZXPlus2:    title += "+2]";         break;
+    case Model::ZXNext:     title += "Next (dev)]"; break;
+    default:
+        assert(0);
+        title += "]";
+    }
+
+    return title;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1190,7 +1213,7 @@ bool Nx::loadNxSnapshot(string fileName)
                 const BlockSection& r128 = f['R128'];
                 for (int i = 0; i < 8; ++i)
                 {
-                    m_machine->page(3, i);
+                    m_machine->bank(3, i);
                     m_machine->load(0xc000, r128.data().data() + (i * KB(16)), KB(16));
                 }
             }
@@ -1303,12 +1326,12 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
 
         // Build the last value in $7ffd
         u8 io = 0;
-        assert(m_machine->getPage(1) == 5);
-        assert(m_machine->getPage(2) == 2);
-        assert(m_machine->getPage(3) >= 0 && m_machine->getPage(3) < 8);
-        io = u8(m_machine->getPage(3));
+        assert(m_machine->getBank(1) == 5);
+        assert(m_machine->getBank(2) == 2);
+        assert(m_machine->getBank(3) >= 0 && m_machine->getBank(3) < 8);
+        io = u8(m_machine->getBank(3));
         if (m_machine->isShadowScreen()) io |= 0x08;
-        if (m_machine->getPage(0) == 9) io |= 0x10;
+        if (m_machine->getBank(0) == 9) io |= 0x10;
         if (m_machine->isPagingDisabled()) io |= 0x20;
 
         s128.poke8(io);
@@ -1317,16 +1340,16 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
         // Save out the memory
         BlockSection r128('R128');
         TState t = 0;
-        int oldSlot3 = m_machine->getPage(3);
+        int oldSlot3 = m_machine->getBank(3);
         for (int i = 0; i < 8; ++i)
         {
-            m_machine->page(3, i);
+            m_machine->bank(3, i);
             for (u16 byte = 0xc000; byte != 0x0000; ++byte)
             {
                 r128.poke8(m_machine->peek(byte, t));
             }
         }
-        m_machine->page(3, oldSlot3);
+        m_machine->bank(3, oldSlot3);
         f.addSection(r128, 131072);
     }
     else if (model == Model::ZX48)
@@ -1438,6 +1461,7 @@ void Nx::switchModel(Model model)
 {
     m_emulator.switchModel(model);
     getSpeccy().reset(model);
+    m_window.setTitle(getTitle().c_str());
 }
 
 //----------------------------------------------------------------------------------------------------------------------

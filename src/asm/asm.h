@@ -71,11 +71,12 @@ private:
     };
 
     Model                   m_model;
-    array<u8, kNumSlots>    m_slots;
+    vector<u8>              m_slots;
     vector<Byte>            m_memory;
     vector<Address>         m_addresses;
     u8                      m_currentPass;
     u16                     m_offset;
+    int                     m_pageSize;
 };
 
 using Labels = vector<pair<string, MemoryMap::Address>>;

@@ -61,18 +61,25 @@ void MemoryMap::clear(Spectrum& speccy)
 {
     size_t ramSize;
     m_model = speccy.getModel();
+    m_pageSize = speccy.getBankSize();
     switch (m_model)
     {
     case Model::ZX48:
         ramSize = KB(48);
-        m_slots = { 0, 1, 2, 3 };
+        m_slots.resize(4);
         m_offset = 16384;
         break;
 
     case Model::ZX128:
     case Model::ZXPlus2:
         ramSize = KB(128);
-        m_slots = { 0, 5, 2, 0 };
+        m_slots.resize(4);
+        m_offset = 0;
+        break;
+
+    case Model::ZXNext:
+        ramSize = KB(768);
+        m_slots.resize(8);
         m_offset = 0;
         break;
 
@@ -80,9 +87,9 @@ void MemoryMap::clear(Spectrum& speccy)
         assert(0);
     }
 
-    for (int i = 0; i < kNumSlots; ++i)
+    for (int i = 0; i < (int)m_slots.size(); ++i)
     {
-        m_slots[i] = speccy.getPage(i);
+        m_slots[i] = speccy.getBank(i);
     }
 
     m_memory.resize(ramSize);
@@ -124,12 +131,12 @@ void MemoryMap::addZ80Range(u16 start, u16 end)
 
     for (u16 i = start; i < end; ++i)
     {
-        u16 slot = i / kPageSize;
-        u16 offset = i % kPageSize;
+        u16 slot = i / m_pageSize;
+        u16 offset = i % m_pageSize;
 
         assert(slot >= 0 && slot < m_slots.size());
 
-        Address addr = m_slots[slot] * kPageSize + offset;
+        Address addr = m_slots[slot] * m_pageSize + offset;
 
         m_addresses.push_back(addr);
     }
@@ -153,7 +160,7 @@ void MemoryMap::upload(Spectrum& speccy)
     {
         if (b.written())
         {
-            speccy.pagePoke(a / kPageSize, a % kPageSize, b);
+            speccy.bankPoke(a / m_pageSize, a % m_pageSize, b);
         }
         ++a;
     }
@@ -305,13 +312,13 @@ void Assembler::dumpSymbolTable()
     {
         string symbol = (const char *)m_lexSymbols.get(symPair.first);
 
-        int page = symPair.second.m_addr / kPageSize;
-        int offset = symPair.second.m_addr % kPageSize;
+        int page = symPair.second.m_addr / m_speccy.getBankSize();
+        int offset = symPair.second.m_addr % m_speccy.getBankSize();
         string addressString;
 
-        for (int slot = 0; slot < kNumSlots; ++slot)
+        for (int slot = 0; slot < m_speccy.getNumSlots(); ++slot)
         {
-            int loadedPage = m_speccy.getPage(slot);
+            int loadedPage = m_speccy.getBank(slot);
             if (page == loadedPage)
             {
                 // Show string as Z80 address

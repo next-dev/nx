@@ -15,9 +15,6 @@
 #include <string>
 #include <vector>
 
-static const int kNumSlots = 4;
-static const u16 kPageSize = 0x4000;
-
 //----------------------------------------------------------------------------------------------------------------------
 // Model
 //----------------------------------------------------------------------------------------------------------------------
@@ -29,7 +26,7 @@ enum class Model
     ZXPlus2,
     //ZXPlus2A,
     //ZXPlus3,
-    //ZXNext,
+    ZXNext,
 
     COUNT
 };
@@ -161,15 +158,18 @@ public:
     // Memory interface
     //------------------------------------------------------------------------------------------------------------------
 
-    void            page                (int slot, int page);
-    int             getPage             (int slot) const;
-    u16             getNumPages         () const;
+    int             getBankSize         () const    { return m_bankSize; }
+    int             getNumSlots         () const    { return (int)m_slots.size(); }
+    int             getRomSize          () const    { return 0x4000; }
+    void            bank                (int slot, int bank);
+    int             getBank             (int slot) const;
+    u16             getNumBanks         () const;
     string&         slotName            (int slot);
     bool            isContended         (u16 addr) const;
     TState          contention          (TState t);
     void            poke                (u16 address, u8 x);
-    u8              pagePeek            (u16 page, u16 address) const;
-    void            pagePoke            (u16 page, u16 address, u8 byte);
+    u8              bankPeek            (u16 bank, u16 address) const;
+    void            bankPoke            (u16 bank, u16 address, u8 byte);
     void            load                (u16 address, const vector<u8>& buffer);
     void            load                (u16 address, const void* buffer, i64 size);
     void            setRomWriteState    (bool writable);
@@ -179,6 +179,12 @@ public:
     vector<u32>     findString          (string str);
     u32             convertAddress      (size_t ramOffset);
     string          addressName         (u32 address, bool moreInfo);
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Video interface
+    //------------------------------------------------------------------------------------------------------------------
+
+    void            recalcVideoMaps     ();
 
     //------------------------------------------------------------------------------------------------------------------
     // I/O interface
@@ -252,16 +258,22 @@ private:
 private:
     // Model
     Model                       m_model;
+    u16                         m_bankSize;
+
+
 
     // Clock state
     TState                      m_tState;
 
     // Video state
+    int                         m_videoBank;
+    int                         m_shadowVideoBank;
     u32*                        m_image;
     sf::Texture                 m_videoTexture;
     sf::Sprite                  m_videoSprite;
     u8                          m_frameCounter;
     vector<u16>                 m_videoMap;         // Maps t-states to addresses
+    vector<u16>                 m_shadowVideoMap;   // Maps t-states to addresses
     int                         m_videoWrite;       // Write point into 2D image array
     TState                      m_startTState;      // Starting t-state for top-left of window
     TState                      m_drawTState;       // Current t-state that has been draw to
@@ -271,8 +283,8 @@ private:
     Tape*                       m_tape;
 
     // Memory state
-    array<u8, kNumSlots>        m_slots;
-    vector<string>              m_pageNames;
+    vector<u8>                  m_slots;
+    vector<string>              m_bankNames;
     vector<u8>                  m_ram;
     vector<u8>                  m_contention;
     bool                        m_romWritable;
