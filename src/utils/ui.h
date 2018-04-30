@@ -110,6 +110,7 @@ public:
 protected:
     Nx& getEmulator();
     Spectrum& getSpeccy();
+    const Spectrum& getSpeccy() const;
 
 private:
     static Overlay*     ms_currentOverlay;

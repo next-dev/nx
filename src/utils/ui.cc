@@ -146,6 +146,11 @@ Spectrum& Overlay::getSpeccy()
     return getEmulator().getSpeccy();
 }
 
+const Spectrum& Overlay::getSpeccy() const
+{
+    return getEmulator().getSpeccy();
+}
+
 void Overlay::error(string msg)
 {
     m_errorString = msg;

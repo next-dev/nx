@@ -73,6 +73,39 @@ Debugger::Debugger(Nx& nx)
     });
 
     //
+    // Data breakpoint command
+    //
+
+    m_commandWindow.registerCommand("DB", [this](vector<string> args) {
+        vector<string> errors = syntaxCheck(args, "ww", { "DB", "address", "len" });
+        if (errors.empty())
+        {
+            u16 addr = 0;
+            u16 len = 0;
+            bool parsedAddr = parseWord(args[0], addr);
+            bool parsedLen = parseWord(args[1], len);
+
+            if (parsedAddr && parsedLen)
+            {
+                getSpeccy().toggleDataBreakpoint(addr, len);
+                errors.emplace_back(
+                    stringFormat(getSpeccy().hasDataBreakpoint(addr, len)
+                        ? "Data breakpoint set at ${0}-${1}."
+                        : "Data breakpoint reset at ${0}-${1}.",
+                        hexWord(addr),
+                        hexWord(addr + len - 1));
+            }
+            else
+            {
+                if (!parsedAddr) errors.emplace_back(stringFormat("Invalid address: '{0}'.", args[0]);
+                if (!parsedLen) errors.emplace_back(stringFormat("Invalid length: '{0}'.", args[1]);
+            }
+        }
+
+        return errors;
+    });
+
+    //
     // Breakpoint command
     //
     m_commandWindow.registerCommand("B", [this](vector<string> args) {
@@ -92,10 +125,6 @@ Debugger::Debugger(Nx& nx)
             {
                 errors.emplace_back(stringFormat("Invalid address: '{0}'.", args[0]));
             }
-        }
-        else
-        {
-            return errors;
         }
 
         return errors;

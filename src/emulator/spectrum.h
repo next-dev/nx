@@ -205,9 +205,14 @@ public:
 
     void            toggleBreakpoint        (u16 address);
     void            addTemporaryBreakpoint  (u16 address);
-    bool            hasUserBreakpointAt     (u16 address);
+    bool            hasUserBreakpointAt     (u16 address) const;
     vector<u16>     getUserBreakpoints      () const;
     void            clearUserBreakpoints    ();
+    void            toggleDataBreakpoint    (u16 address, u16 len);
+    void            hasDataBreakpoint       (u16 address, u16 len) const;
+    vector<pair<u16,u16>>
+                    getDataBreakpoints      () const;
+    void            clearDataBreakpoints() const;
 
 private:
     //
