@@ -180,6 +180,9 @@ private:
     // Window scale
     void setScale(int scale);
 
+    // Data breakpoints
+    void dataBreak();
+
 private:
     Spectrum*           m_machine;
     Ui                  m_ui;

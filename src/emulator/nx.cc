@@ -565,7 +565,7 @@ void Emulator::switchModel(Model model)
 //----------------------------------------------------------------------------------------------------------------------
 
 Nx::Nx(int argc, char** argv)
-    : m_machine(new Spectrum(std::bind(&Nx::frame, this)))   // #todo: Allow the debugger to switch Spectrums, via proxy
+    : m_machine(new Spectrum(std::bind(&Nx::frame, this), std::bind(&Nx::dataBreak, this)))   // #todo: Allow the debugger to switch Spectrums, via proxy
     , m_quit(false)
     , m_frameCounter(0)
     , m_zoom(false)
@@ -895,6 +895,15 @@ void Nx::frame()
         m_debugger.getDisassemblyWindow().setCursor(m_machine->getZ80().PC());
         togglePause(true);
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Data breakpoints
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::dataBreak()
+{
+    togglePause(true);
 }
 
 //----------------------------------------------------------------------------------------------------------------------

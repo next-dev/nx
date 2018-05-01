@@ -14,7 +14,7 @@
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-Spectrum::Spectrum(function<void()> frameFunc)
+Spectrum::Spectrum(function<void()> frameFunc, function<void()> dataBreakFunc)
     //--- Clock state ----------------------------------------------------
     : m_model(Model::ZX48)
     , m_tState(0)
@@ -45,6 +45,9 @@ Spectrum::Spectrum(function<void()> frameFunc)
     //--- 128K paging ----------------------------------------------------
     , m_pagingDisabled(false)
     , m_shadowScreen(false)
+
+    //--- Breakpoints state ----------------------------------------------
+    , m_dataBreakFunc(dataBreakFunc)
 
     //--- Kempston -------------------------------------------------------
     , m_kempstonJoystick(false)
@@ -404,6 +407,14 @@ u16 Spectrum::peek16(u16 address, TState& t)
 
 void Spectrum::poke(u16 address, u8 x)
 {
+    for (const auto& br : m_dataBreakpoints)
+    {
+        if (address >= br.address && address < (br.address + br.len))
+        {
+            m_dataBreakFunc();
+        }
+    }
+
     if (m_romWritable || address >= getRomSize())
     {
         m_ram[m_slots[address / getBankSize()] * getBankSize() + (address % getBankSize())] = x;
