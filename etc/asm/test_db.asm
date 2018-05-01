@@ -6,6 +6,7 @@ Start:
         ld    hl,data
         ld    a,(hl)
         cpl
+        inc   hl
         ld    (hl),a
         ret
 

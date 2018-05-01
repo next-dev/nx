@@ -14,7 +14,7 @@
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
-Spectrum::Spectrum(function<void()> frameFunc, function<void()> dataBreakFunc)
+Spectrum::Spectrum(function<void()> frameFunc)
     //--- Clock state ----------------------------------------------------
     : m_model(Model::ZX48)
     , m_tState(0)
@@ -47,7 +47,7 @@ Spectrum::Spectrum(function<void()> frameFunc, function<void()> dataBreakFunc)
     , m_shadowScreen(false)
 
     //--- Breakpoints state ----------------------------------------------
-    , m_dataBreakFunc(dataBreakFunc)
+    , m_break(false)
 
     //--- Kempston -------------------------------------------------------
     , m_kempstonJoystick(false)
@@ -229,9 +229,10 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
             updateTape(m_tState - startTState);
             m_audio.updateBeeper(m_tState, m_speaker, m_tapeEar ? 1 : 0);
             //m_audio.updateBeeper(m_tState, m_tapeEar ? 1 : 0);
-            if ((runMode == RunMode::Normal) && shouldBreak(m_z80.PC()))
+            if ((runMode == RunMode::Normal) && (shouldBreak(m_z80.PC()) || m_break))
             {
                 breakpointHit = true;
+                m_break = false;
                 break;
             }
         }
@@ -411,7 +412,7 @@ void Spectrum::poke(u16 address, u8 x)
     {
         if (address >= br.address && address < (br.address + br.len))
         {
-            m_dataBreakFunc();
+            m_break = true;
         }
     }
 
@@ -495,7 +496,7 @@ void Spectrum::bank(int slot, int bank)
 
 int Spectrum::getBank(int slot) const
 {
-    assert(slot >= 0 && slot < 4);
+    assert(slot >= 0 && slot < getNumSlots());
     return m_slots[slot];
 }
 

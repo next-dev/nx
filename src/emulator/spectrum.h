@@ -88,7 +88,7 @@ public:
     // Construction/Destruction
     //------------------------------------------------------------------------------------------------------------------
 
-    Spectrum(function<void()> frameFunc, function<void()> dataBreakFunc);
+    Spectrum(function<void()> frameFunc);
     virtual ~Spectrum();
 
     //------------------------------------------------------------------------------------------------------------------
@@ -318,7 +318,7 @@ private:
     // Debugger state
     vector<Breakpoint>          m_breakpoints;
     vector<DataBreakpoint>      m_dataBreakpoints;
-    function<void()>            m_dataBreakFunc;
+    bool                        m_break;
 
     // Kempston
     bool                        m_kempstonJoystick;

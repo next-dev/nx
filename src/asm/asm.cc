@@ -322,7 +322,7 @@ void Assembler::dumpSymbolTable()
             if (page == loadedPage)
             {
                 // Show string as Z80 address
-                addressString = stringFormat("${0}", hexWord(u16(slot * KB(16) + offset)));
+                addressString = stringFormat("${0}", hexWord(u16(slot * m_speccy.getBankSize() + offset)));
                 break;
             }
         }
