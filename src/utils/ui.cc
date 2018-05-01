@@ -141,6 +141,11 @@ Nx& Overlay::getEmulator()
     return m_nx;
 }
 
+const Nx& Overlay::getEmulator() const
+{
+    return m_nx;
+}
+
 Spectrum& Overlay::getSpeccy()
 {
     return getEmulator().getSpeccy();

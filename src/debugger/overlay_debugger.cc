@@ -63,12 +63,13 @@ Debugger::Debugger(Nx& nx)
     m_commandWindow.registerCommand("?", [this](vector<string> args) -> vector<string> {
         // Known commands
         return {
-            "B   Toggle breakpoint",
-            "LB  List breakpoints",
-            "CB  Clear breakpoints",
-            "CF  Clear search terms",
-            "F   Find byte(s)",
-            "FW  Find word",
+            "B  <addr>        Toggle breakpoint",
+            "DB <addr> <len>  Toggle data breakpoint"
+            "LB               List breakpoints",
+            "CB               Clear breakpoints",
+            "CF               Clear search terms",
+            "F  <byte>...     Find byte(s)",
+            "FW <word>        Find word",
         };
     });
 
@@ -77,28 +78,39 @@ Debugger::Debugger(Nx& nx)
     //
 
     m_commandWindow.registerCommand("DB", [this](vector<string> args) {
-        vector<string> errors = syntaxCheck(args, "ww", { "DB", "address", "len" });
+        vector<string> errors = syntaxCheck(args, "w?w", { "DB", "address", "len" });
         if (errors.empty())
         {
             u16 addr = 0;
-            u16 len = 0;
+            u16 len = 1;
             bool parsedAddr = parseWord(args[0], addr);
-            bool parsedLen = parseWord(args[1], len);
+            bool parsedLen = args.size() == 1 ? true : parseWord(args[1], len);
 
             if (parsedAddr && parsedLen)
             {
                 getSpeccy().toggleDataBreakpoint(addr, len);
-                errors.emplace_back(
-                    stringFormat(getSpeccy().hasDataBreakpoint(addr, len)
-                        ? "Data breakpoint set at ${0}-${1}."
-                        : "Data breakpoint reset at ${0}-${1}.",
-                        hexWord(addr),
-                        hexWord(addr + len - 1));
+                if (len == 1)
+                {
+                    errors.emplace_back(
+                        stringFormat(getSpeccy().hasDataBreakpoint(addr, len)
+                            ? "Data breakpoint set at ${0}."
+                            : "Data breakpoint reset at ${0}.",
+                            hexWord(addr)));
+                }
+                else
+                {
+                    errors.emplace_back(
+                        stringFormat(getSpeccy().hasDataBreakpoint(addr, len)
+                            ? "Data breakpoint set at ${0}-${1}."
+                            : "Data breakpoint reset at ${0}-${1}.",
+                            hexWord(addr),
+                            hexWord(addr + len - 1)));
+                }
             }
             else
             {
-                if (!parsedAddr) errors.emplace_back(stringFormat("Invalid address: '{0}'.", args[0]);
-                if (!parsedLen) errors.emplace_back(stringFormat("Invalid length: '{0}'.", args[1]);
+                if (!parsedAddr) errors.emplace_back(stringFormat("Invalid address: '{0}'.", args[0]));
+                if (!parsedLen) errors.emplace_back(stringFormat("Invalid length: '{0}'.", args[1]));
             }
         }
 
@@ -142,6 +154,18 @@ Debugger::Debugger(Nx& nx)
             {
                 errors.emplace_back(stringFormat("  ${0}", hexWord(br)));
             }
+            errors.emplace_back("Data breakpoints:");
+            for (const auto& br : getSpeccy().getDataBreakpoints())
+            {
+                if (br.len == 1)
+                {
+                    errors.emplace_back(stringFormat("  ${0}", hexWord(br.address)));
+                }
+                else
+                {
+                    errors.emplace_back(stringFormat("  ${0}-${1}", hexWord(br.address), hexWord(br.address + br.len - 1)));
+                }
+            }
         }
 
         return errors;
@@ -155,6 +179,7 @@ Debugger::Debugger(Nx& nx)
         if (errors.empty())
         {
             getSpeccy().clearUserBreakpoints();
+            getSpeccy().clearDataBreakpoints();
             errors.emplace_back("Cleared all breakpoints.");
         }
 
@@ -269,118 +294,194 @@ Debugger::Debugger(Nx& nx)
 // Command handling
 //----------------------------------------------------------------------------------------------------------------------
 
+//
+// Syntax check uses a simple VM to parse the arguments:
+//
+//  Each command is: <modifier>?<type>
+//
+//  Where modifier is:
+//
+//      '?': type is optional
+//      '*': can have 0 or more types
+//      '+': can have 1 or more types
+//
+//  Where type is:
+//
+//      'w': 16-bit word
+//      'b': 8-bit byte
+//      's': 8-bit bytes or strings
+//
+
 vector<string> Debugger::syntaxCheck(const vector<string>& args, const char* format, vector<string> desc)
 {
     vector<string> errors;
-    char plus = 0;
-    char star = 0;
 
-    // Check number of arguments
-    for (int i = 0, count = 0; format[i] != 0;)
+    int fi = 0;
+    int ai = 0;
+
+    enum class SyntaxState
     {
-        // Check overflow of arguments
-        if (count >= args.size())
+        Normal,
+        Optional,
+        Star,
+        Plus,
+    } state = SyntaxState::Normal;
+
+    for (const string& arg : args)
+    {
+        ++ai;
+
+        //
+        // Check for mods first
+        //
+        if (format[fi] == '?' ||
+            format[fi] == '*' ||
+            format[fi] == '+')
         {
-            if (!plus && !star) errors.emplace_back(stringFormat("Bad number of args."));
+            switch (format[fi++])
+            {
+            case '?': state = SyntaxState::Optional;    break;
+            case '*': state = SyntaxState::Star;        break;
+            case '+': state = SyntaxState::Plus;        break;
+
+            case '\0':
+                // End of format - too soon!
+                errors.emplace_back("Too few arguments!");
+                break;
+            }
+
+            if (errors.empty()) continue;
+        }
+
+        enum class ArgType
+        {
+            Error,
+            Integer,
+            String,
+        };
+
+        //
+        // Figure out the type
+        //
+        ArgType type = ArgType::Error;
+        int t = 0;
+
+        if (arg[0] == '$' || (arg[0] >= '0' && arg[0] <= '9'))
+        {
+            // Value is hexadecimal
+            if (!parseNumber(arg, t))
+            {
+                errors.emplace_back(stringFormat("Argument {0} is invalid: '{1}'.", ai, arg));
+                break;
+            }
+            type = ArgType::Integer;
+        }
+        else if (arg[0] == '"')
+        {
+            type = ArgType::String;
+        }
+        else
+        {
+            errors.emplace_back(stringFormat("Argument {0} is invalid: '{1}'.", ai, arg));
             break;
         }
 
-        const string& arg = args[count];
-        switch (format[i])
+        bool validArg = true;
+        switch (format[fi])
         {
-        case 'w':   // Address expected
-        case 'b':   // Byte expected
+        case 'w':
+        case 'b':
             {
-                if (arg[0] == '$')
+                if (type == ArgType::Integer)
                 {
-                    // Value is hexadecimal
-                    int h = 1;
-                    for (; arg[h] != 0; ++h)
+                    int maxValue = format[fi] == 'w' ? 65535 : 255;
+                    if (t < 0 || t > maxValue)
                     {
-                        if (!isxdigit(arg[h]))
-                        {
-                            if (!star) errors.emplace_back(stringFormat("Invalid hex value for argument {0}.", i+1));
-                            star = 0;
-                            break;
-                        }
-                    }
-                    if (h > (format[i] == 'w' ? 5 : 3))
-                    {
-                        if (!star) errors.emplace_back(stringFormat("Argument {0} too large.", i+1));
-                        star = 0;
+                        //errors.emplace_back(stringFormat("Argument {0} is too large.", ai));
+                        validArg = false;
+                        break;
                     }
                 }
                 else
                 {
-                    // Value is decimal
-                    int t = 0;
-                    for (int d = 0; arg[d] != 0; ++d)
-                    {
-                        if (!isdigit(arg[d]))
-                        {
-                            if (!star) errors.emplace_back(stringFormat("Invalid decimal value for argument {0}.", i+1));
-                            star = 0;
-                            break;
-                        }
-                        t *= 10;
-                        t += arg[d] - '0';
-                    }
-                    if (t > 65535)
-                    {
-                        if (!star) errors.emplace_back(stringFormat("Argument {0} too large.", i+1));
-                        star = 0;
-                    }
+                    validArg = false;
                 }
             }
-            ++count;
             break;
 
         case 's':
-            ++count;
-            break;
-
-        case '+':
-            assert(plus == 0);
-            assert(star == 0);
-            plus = format[i+1];
-            break;
-
-        case '*':
-            assert(plus == 0);
-            assert(star == 0);
-            star = format[++i];
+            {
+                if (type == ArgType::Integer)
+                {
+                    if (t > 255)
+                    {
+                        validArg = false;
+                        break;
+                    }
+                }
+                else if (type != ArgType::String)
+                {
+                    validArg = false;
+                }
+            }
             break;
 
         default:
             assert(0);
+        }
+
+        //
+        // Check if we can be invalid or not
+        //
+        if (validArg)
+        {
+            switch (state)
+            {
+            case SyntaxState::Normal:   ++fi;                               break;
+            case SyntaxState::Optional: state = SyntaxState::Normal; ++fi;  break;
+            case SyntaxState::Plus:     state = SyntaxState::Star;          break;
+            case SyntaxState::Star:                                         break;
+            }
+        }
+        else
+        {
+            switch(state)
+            {
+            case SyntaxState::Normal:
+                errors.emplace_back(stringFormat("Argument {0} is invalid: '{1}'.", ai, arg));
+                ++fi;
+                break;
+
+            case SyntaxState::Optional:
+            case SyntaxState::Star:
+                state = SyntaxState::Normal;
+                ++fi;
+                break;
+
+            case SyntaxState::Plus:
+                errors.emplace_back(stringFormat("Argument {0} is invalid: '{1}'.", ai, arg));
+                state = SyntaxState::Normal;
+                ++fi;
+                break;
+            }
+        }
+
+        //
+        // If we have errors, describe the command
+        //
+        if (!errors.empty())
+        {
+            // An error occurred
+            vector<string> lines = describeCommand(format, desc);
+            errors.insert(errors.end(), lines.begin(), lines.end());
             break;
-        }
-
-        if (!errors.empty()) break;
-
-        if (plus)
-        {
-            if (format[i] == '+')
-            {
-                ++i;
-            }
-            else
-            {
-                star = plus;
-                plus = 0;
-            }
-        }
-        if (!plus && !star)
-        {
-            ++i;
         }
     }
 
-    if (!errors.empty())
+    // #todo: Check to see if the format is complete
+    if (errors.empty())
     {
-        // An error occurred
-        vector<string> lines = describeCommand(format, desc);
-        errors.insert(errors.end(), lines.begin(), lines.end());
+
     }
 
     return errors;

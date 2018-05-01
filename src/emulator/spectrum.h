@@ -208,11 +208,18 @@ public:
     bool            hasUserBreakpointAt     (u16 address) const;
     vector<u16>     getUserBreakpoints      () const;
     void            clearUserBreakpoints    ();
+
+    struct DataBreakpoint
+    {
+        u16     address;
+        u16     len;
+    };
+
     void            toggleDataBreakpoint    (u16 address, u16 len);
-    void            hasDataBreakpoint       (u16 address, u16 len) const;
-    vector<pair<u16,u16>>
-                    getDataBreakpoints      () const;
-    void            clearDataBreakpoints() const;
+    bool            hasDataBreakpoint       (u16 address, u16 len) const;
+    const vector<DataBreakpoint>&
+                    getDataBreakpoints      () const { return m_dataBreakpoints; }
+    void            clearDataBreakpoints    () { m_dataBreakpoints.clear(); }
 
 private:
     //
@@ -256,9 +263,10 @@ private:
         u16             address;
     };
 
-    vector<Breakpoint>::iterator    findBreakpoint          (u16 address);
-    bool                            shouldBreak             (u16 address);
+    vector<Breakpoint>::const_iterator      findBreakpoint          (u16 address) const;
+    bool                                    shouldBreak             (u16 address);
 
+    vector<DataBreakpoint>::const_iterator  findDataBreakpoint  (u16 address, u16 len) const;
 
 private:
     // Model
@@ -309,6 +317,7 @@ private:
 
     // Debugger state
     vector<Breakpoint>          m_breakpoints;
+    vector<DataBreakpoint>      m_dataBreakpoints;
 
     // Kempston
     bool                        m_kempstonJoystick;

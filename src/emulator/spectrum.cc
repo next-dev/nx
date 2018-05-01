@@ -892,14 +892,20 @@ void Spectrum::updateVideo()
 // Breakpoints
 //----------------------------------------------------------------------------------------------------------------------
 
-vector<Spectrum::Breakpoint>::iterator Spectrum::findBreakpoint(u16 address)
+vector<Spectrum::Breakpoint>::const_iterator Spectrum::findBreakpoint(u16 address) const
 {
-    for (auto it = m_breakpoints.begin(); it != m_breakpoints.end(); ++it)
-    {
-        if (it->address == address) return it;
-    }
+    return find_if(m_breakpoints.begin(), m_breakpoints.end(),
+        [address](const auto& br) -> bool {
+            return br.address == address;
+        });
+}
 
-    return m_breakpoints.end();
+vector<Spectrum::DataBreakpoint>::const_iterator Spectrum::findDataBreakpoint(u16 address, u16 len) const
+{
+    return find_if(m_dataBreakpoints.begin(), m_dataBreakpoints.end(),
+        [address, len](const auto& br) -> bool {
+            return br.address == address && br.len == len;
+        });
 }
 
 void Spectrum::toggleBreakpoint(u16 address)
@@ -912,6 +918,19 @@ void Spectrum::toggleBreakpoint(u16 address)
     else
     {
         m_breakpoints.erase(it);
+    }
+}
+
+void Spectrum::toggleDataBreakpoint(u16 address, u16 len)
+{
+    auto it = findDataBreakpoint(address, len);
+    if (it == m_dataBreakpoints.end())
+    {
+        m_dataBreakpoints.emplace_back(DataBreakpoint{ address, len });
+    }
+    else
+    {
+        m_dataBreakpoints.erase(it);
     }
 }
 
@@ -937,10 +956,16 @@ bool Spectrum::shouldBreak(u16 address)
     return result;
 }
 
-bool Spectrum::hasUserBreakpointAt(u16 address)
+bool Spectrum::hasUserBreakpointAt(u16 address) const
 {
     auto it = findBreakpoint(address);
     return (it != m_breakpoints.end() && it->type == BreakpointType::User);
+}
+
+bool Spectrum::hasDataBreakpoint(u16 address, u16 len) const
+{
+    auto it = findDataBreakpoint(address, len);
+    return (it != m_dataBreakpoints.end());
 }
 
 vector<u16> Spectrum::getUserBreakpoints() const

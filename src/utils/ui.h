@@ -108,7 +108,8 @@ public:
     bool renderErrors(Draw& draw);
 
 protected:
-    Nx& getEmulator();
+    Nx & getEmulator();
+    const Nx& getEmulator() const;
     Spectrum& getSpeccy();
     const Spectrum& getSpeccy() const;
 
