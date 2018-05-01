@@ -15,7 +15,7 @@
 
 
 DisassemblyWindow::DisassemblyWindow(Nx& nx)
-    : SelectableWindow(nx, 1, 22, 43, 30, "Disassembly", Colour::Black, Colour::White)
+    : SelectableWindow(nx, 1, 22, 43, 30, "Disassembly (Alt-1)", Colour::Black, Colour::White)
     , m_topAddress(0x8000)
     , m_address(0x8000)
     , m_firstLabel(0)

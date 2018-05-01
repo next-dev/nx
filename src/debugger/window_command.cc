@@ -10,7 +10,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 CommandWindow::CommandWindow(Nx& nx)
-    : SelectableWindow(nx, 45, 22, 34, 30, "Command Window", Colour::Blue, Colour::Black)
+    : SelectableWindow(nx, 45, 22, 34, 30, "Command Window (Alt-3)", Colour::Blue, Colour::Black)
     , m_commandEditor(46, 23, 32, 28, Draw::attr(Colour::White, Colour::Black, false), false, 1024, 1024,
         bind(&CommandWindow::onEnter, this, placeholders::_1))
 {

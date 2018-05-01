@@ -64,7 +64,7 @@ Debugger::Debugger(Nx& nx)
         // Known commands
         return {
             "B  <addr>        Toggle breakpoint",
-            "DB <addr> <len>  Toggle data breakpoint"
+            "DB <addr> <len>  Toggle data breakpoint",
             "LB               List breakpoints",
             "CB               Clear breakpoints",
             "CF               Clear search terms",
@@ -595,6 +595,26 @@ void Debugger::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool
                 if (--m_currentAddress < 0) m_currentAddress = max(0, (int)m_findAddresses.size() - 1);
                 m_memoryDumpWindow.gotoAddress(m_findAddresses[m_currentAddress]);
             }
+            break;
+
+        default:
+            SelectableWindow::getSelected().keyPress(key, down, shift, ctrl, alt);
+        }
+    }
+    else if (!shift && !ctrl && alt)
+    {
+        switch (key)
+        {
+        case K::Num1:
+            getDisassemblyWindow().Select();
+            break;
+
+        case K::Num2:
+            getMemoryDumpWindow().Select();
+            break;
+
+        case K::Num3:
+            getCommandWindow().Select();
             break;
 
         default:

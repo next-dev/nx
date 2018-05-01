@@ -14,7 +14,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 MemoryDumpWindow::MemoryDumpWindow(Nx& nx)
-    : SelectableWindow(nx, 1, 1, 43, 20, "Memory Viewer", Colour::Black, Colour::White)
+    : SelectableWindow(nx, 1, 1, 43, 20, "Memory Viewer (Alt-2)", Colour::Black, Colour::White)
     , m_address(0x8000)
     , m_gotoEditor(6, 2, 37, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 40, 0)
     , m_enableGoto(0)
