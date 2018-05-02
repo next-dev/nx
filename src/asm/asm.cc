@@ -160,7 +160,7 @@ void MemoryMap::upload(Spectrum& speccy)
     {
         if (b.written())
         {
-            speccy.bankPoke(a / m_pageSize, a % m_pageSize, b);
+            speccy.fullPoke(a / m_pageSize, a % m_pageSize, b);
         }
         ++a;
     }

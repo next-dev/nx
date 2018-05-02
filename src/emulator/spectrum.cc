@@ -422,14 +422,14 @@ void Spectrum::poke(u16 address, u8 x)
     }
 }
 
-u8 Spectrum::bankPeek(u16 bank, u16 address) const
+u8 Spectrum::fullPeek(u16 bank, u16 address) const
 {
     assert(bank < getNumBanks());
     assert(address < getBankSize());
     return m_ram[bank * getBankSize() + (address % getBankSize())];
 }
 
-void Spectrum::bankPoke(u16 bank, u16 address, u8 byte)
+void Spectrum::fullPoke(u16 bank, u16 address, u8 byte)
 {
     assert(bank < getNumBanks());
     assert(address < getBankSize());
@@ -837,14 +837,14 @@ void Spectrum::updateVideo()
             u16 paddr = m_videoMap[m_drawTState];
             u16 bank = (u16)vramBank + (paddr / (u16)bankSize);
             u16 offset = paddr % (u16)bankSize;
-            u8 pixelData = bankPeek(bank, offset);
+            u8 pixelData = fullPeek(bank, offset);
 
             // Calculate attribute address
             // 000S SRRR CCCX XXXX --> 0001 10SS CCCX XXXX
             u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + 0x1800;
             bank = (u16)vramBank + (aaddr / (u16)bankSize);
             offset = aaddr % (u16)bankSize;
-            u8 attr = bankPeek(bank, offset);
+            u8 attr = fullPeek(bank, offset);
 
             u8 lastPixelData = pixelData;
             u8 lastAttrData = attr;
