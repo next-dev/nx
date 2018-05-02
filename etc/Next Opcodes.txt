@@ -32,3 +32,17 @@
 804B: ED 93 PIXELDN
 804D: ED 95 SETAE
 804F: ED 27 FE TEST $FE
+
+ldix            ldix
+ldirx           lirx
+lddx            lddx
+lddrx           ldrx
+ldpirx          ldpx
+ldirscale       scal
+outinb          otnb
+swapnib         snib
+mirror          mirr
+nextreg         nxtr
+pixeldn         pxdn
+pixelad         pxad
+setae           stae

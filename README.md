@@ -74,16 +74,21 @@ These controls are only valid when no other window is showing.
 
 | Key              | Description                                                      |
 |------------------|------------------------------------------------------------------|
-| `                | Leave debugger mode                                              |
-| Up/Down          | Scroll through current window                                    |
-| PgUp/PgDn        | Page through current window                                      |
-| Tab              | Cycle through current window                                     |
+| `                | Leave debugger mode.                                             |
+| Up/Down          | Scroll through current window.                                   |
+| PgUp/PgDn        | Page through current window.                                     |
+| Tab              | Cycle through current window.                                    |
+| F3               | Jump to next search element.                                     |
+| Shift-F3         | Jump to previous search element.                                 |
 | F5               | Toggle pause.  Pausing while running will bring up the debugger. |
 | Ctrl+F5          | Run to.  Will stop the debugger at that point if running.        |
 | F6               | Step over.  Will pause when running.                             |
 | F7               | Step in.  Will pause when running.                               |
 | F8               | Step out.  Will pause when running.                              |
 | F9               | Toggle breakpoint.                                               |
+| Alt+1            | Select disassembly view.                                         |
+| Alt+2            | Select memory view.                                              |
+| Alt+3            | Select command view.                                             |
 
 When pausing from a running state, if interrupts are enabled,
 the debugger will always stop inside the interrupt handler since emulator keys are polled after a frame interrupt
@@ -102,6 +107,8 @@ While in the editor these controls are available:
 | Ctrl+Tab         | Switch buffers.                                                        |
 | Ctrl+B           | Build current file.                                                    |
 | Ctrl+R           | Run current file.  Requires an 'OPT START' option in the source.       |
+| F4               | Jump to next error.                                                    |
+| Shift+F4         | Jump to previous error.                                                |
 
 Some of the usual controls via cursor keys, page up/down, home & end work.  Currently the
 assembler does not exist.

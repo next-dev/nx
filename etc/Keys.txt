@@ -1,24 +1,29 @@
-KEY     EMULATOR        DEBUGGER
+KEY         EMULATOR                    DEBUGGER                ASSEMBLER
 
-~       Debugger        Emulator
+~           Debugger                    Emulator
 F1
 F2
-F3
-F4      Tape browser
-F5      Toggle Pause    Toggle Pause
-C+F5                    Run to
-F6                      Step over
-F7                      Step in
+F3                                      Find next
+S+F3                                    Find previous
+F4          Tape browser                                        Next error
+S+F4                                                            Previous error
+F5          Toggle Pause                Toggle Pause
+C+F5                                    Run to
+F6                                      Step over
+F7                                      Step in
 F8
-F9                      Toggle breakpoint
+F9                                      Toggle breakpoint
 F10
 F11
 F12
 
-Ctrl+1  Small window
-Ctrl+2  Large window
-Ctrl+K  Toggle Kempston Joystick
-Ctrl+O  Open file
-Ctrl+R  Reset machine
-Ctrl+T  Toggle tape browser
-Ctrl+Z  Zoom! (Maximum speed)
+Ctrl+1      Small window
+Ctrl+2      Large window
+Ctrl+A      Go to editor/assembler
+Ctrl+B                                                          Build
+Ctrl+K      Toggle Kempston Joystick
+Ctrl+O      Open file
+Ctrl+R      Reset machine                                       Run
+Ctrl+T      Toggle tape browser
+Ctrl+Z      Zoom! (Maximum speed)
+Ctrl+TAB    Select model                                        Select file
