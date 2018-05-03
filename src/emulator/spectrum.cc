@@ -11,6 +11,51 @@
 #include <random>
 
 //----------------------------------------------------------------------------------------------------------------------
+// Memory addressing
+//----------------------------------------------------------------------------------------------------------------------
+
+Bank::Bank(MemGroup group, u16 bank)
+    : m_group(group)
+    , m_bank(bank)
+{
+
+}
+
+Bank::Bank(const Bank& other)
+    : m_group(other.m_group)
+    , m_bank(other.m_bank)
+{
+
+}
+
+Bank& Bank::operator= (const Bank& other)
+{
+    m_group = other.m_group;
+    m_bank = other.m_bank;
+    return *this;
+}
+
+MemAddr::MemAddr(Bank bank, u16 offset)
+    : m_bank(bank)
+    , m_offset(offset)
+{
+
+}
+
+MemAddr::MemAddr(MemGroup group, int realAddress)
+    : m_bank(group, u16(realAddress / kBankSize))
+    , m_offset(u16(realAddress % kBankSize))
+{
+
+}
+
+Z80MemAddr::Z80MemAddr(u16 addr)
+    : m_address(addr)
+{
+
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -90,16 +135,17 @@ void Spectrum::setRomWriteState(bool writable)
     m_romWritable = writable;
 }
 
-vector<u32> Spectrum::findSequence(vector<u8> seq)
+vector<MemAddr> Spectrum::findSequence(vector<u8> seq)
 {
     auto it = m_ram.begin();
-    vector<u32> addresses;
+    vector<MemAddr> addresses;
     while (it != m_ram.end())
     {
         it = std::search(it, m_ram.end(), seq.begin(), seq.end());
         if (it != m_ram.end())
         {
-            addresses.emplace_back(convertAddress(std::distance(m_ram.begin(), it)));
+            auto ramIndex = std::distance(m_ram.begin(), it);
+            addresses.emplace_back(MemGroup::RAM, int(ramIndex));
             std::advance(it, seq.size());
         }
     }
@@ -107,44 +153,36 @@ vector<u32> Spectrum::findSequence(vector<u8> seq)
     return addresses;
 }
 
-vector<u32> Spectrum::findByte(u8 byte)
+vector<MemAddr> Spectrum::findByte(u8 byte)
 {
     return findSequence({ byte });
 }
 
-vector<u32> Spectrum::findWord(u16 word)
+vector<MemAddr> Spectrum::findWord(u16 word)
 {
     return findSequence({ u8(word % 256), u8(word / 256) });
 }
 
-vector<u32> Spectrum::findString(string str)
+vector<MemAddr> Spectrum::findString(string str)
 {
     return findSequence(vector<u8>(str.begin(), str.end()));
 }
 
-u32 Spectrum::convertAddress(size_t ramOffset)
+MemAddr Spectrum::convertAddress(Z80MemAddr addr) const
 {
-    switch (m_model)
-    {
-    case Model::ZX48:
-        return u32(ramOffset);
-        break;
+    int slot = addr / kBankSize;
+    int offset = addr % kBankSize;
 
-    case Model::ZX128:
-    case Model::ZXPlus2:
-    case Model::ZXNext:
-        {
-            int page = int(ramOffset) / getBankSize();
-            int add = int(ramOffset) % getBankSize();
+    return MemAddr(m_slots[slot], offset);
+}
 
-            return (u32(page) * getBankSize()) + u32(add);
-        }
-        break;
-
-    default:
-        assert(0);
-        return u32(ramOffset);
-    }
+Z80MemAddr Spectrum::convertAddress(MemAddr addr) const
+{
+    assert(addr.bank().getGroup() == MemGroup::RAM);
+    auto it = find(m_slots.begin(), m_slots.end(), addr.bank().getBankIndex());
+    assert(it != m_slots.end());
+    int slot = int(distance(m_slots.begin(), it));
+    return Z80MemAddr(u16(slot * kBankSize + addr.offset()));
 }
 
 string Spectrum::addressName(u32 address, bool moreInfo)

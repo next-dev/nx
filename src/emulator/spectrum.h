@@ -33,6 +33,8 @@ class Bank
 {
 public:
     Bank(MemGroup group, u16 bank);
+    Bank(const Bank& other);
+    Bank& operator= (const Bank& other);
 
     MemGroup getGroup() const { return m_group; }
     u16 getBankIndex() const { return m_bank; }
@@ -55,33 +57,16 @@ class MemAddr
 {
 public:
     MemAddr(Bank bank, u16 offset);
+    MemAddr(MemGroup group, int realAddress);
 
     Bank bank() const       { return m_bank; }
     u16 offset() const      { return m_offset;}
 
-    i64 realAddress() const { return m_bank.getBankIndex() * kBankSize + m_offset; }
+    int realAddress() const { return m_bank.getBankIndex() * kBankSize + m_offset; }
 
 private:
     Bank        m_bank;
     u16         m_offset;
-};
-
-//
-// Z80MemAddr
-//
-// This is an address that address the 64K that the Z80 can see.  This address needs to be converted via the
-// Spectrum instance to a MemAddr before it can be used (because the Spectrum instance has the slot configuration).
-//
-
-class Z80MemAddr
-{
-public:
-    Z80MemAddr(u16 addr);
-
-    operator u16() const { return m_address; }
-
-private:
-    u16     m_address;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -227,8 +212,6 @@ public:
     // Memory interface
     //------------------------------------------------------------------------------------------------------------------
 
-    int                 getBankSize         () const    { return m_bankSize; }
-    int                 getNumSlots         () const    { return (int)m_slots.size(); }
     int                 getRomSize          () const    { return 0x4000; }
     void                bank                (int slot, int bank);
     int                 getBank             (int slot) const;
@@ -242,10 +225,10 @@ public:
     void                load                (Z80MemAddr addr, const vector<u8>& buffer);
     void                load                (Z80MemAddr addr, const void* buffer, i64 size);
     void                setRomWriteState    (bool writable);
-    vector<Z80MemAddr>  findSequence        (vector<u8> seq);
-    vector<Z80MemAddr>  findByte            (u8 byte);
-    vector<Z80MemAddr>  findWord            (u16 word);
-    vector<Z80MemAddr>  findString          (string str);
+    vector<MemAddr>     findSequence        (vector<u8> seq);
+    vector<MemAddr>     findByte            (u8 byte);
+    vector<MemAddr>     findWord            (u16 word);
+    vector<MemAddr>     findString          (string str);
     MemAddr             convertAddress      (Z80MemAddr addr) const;
     Z80MemAddr          convertAddress      (MemAddr addr) const;
     string              addressName         (MemAddr address, bool moreInfo);
@@ -336,7 +319,7 @@ private:
     vector<Breakpoint>::const_iterator      findBreakpoint          (MemAddr address) const;
     bool                                    shouldBreak             (MemAddr address);
 
-    vector<DataBreakpoint>::const_iterator  findDataBreakpoint  (MemAddr address, u16 len) const;
+    vector<DataBreakpoint>::const_iterator  findDataBreakpoint      (MemAddr address, u16 len) const;
 
 private:
     // Model
@@ -363,7 +346,7 @@ private:
     Tape*                       m_tape;
 
     // Memory state
-    vector<u16>                 m_slots;
+    vector<Bank>                m_slots;
     vector<string>              m_bankNames;
     vector<u8>                  m_ram;
     vector<u8>                  m_contention;
