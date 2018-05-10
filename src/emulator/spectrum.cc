@@ -541,12 +541,36 @@ void Spectrum::load(Z80MemAddr address, const vector<u8>& buffer)
 
 bool Spectrum::isContended(MemAddr addr) const
 {
-    return ((addr & 0xc000) == 0x4000);
+    // #todo: Cache the slot contention state on switch.  (Switch addr back to Z80MemAddr).
+    Bank bank = addr.bank();
+    MemGroup group = bank.getGroup();
+
+    if (group == MemGroup::RAM)
+    {
+        int b = bank.getIndex();
+
+        switch (getModel())
+        {
+        case Model::ZX48:
+            return b < 2;
+
+        case Model::ZX128:
+        case Model::ZXPlus2:
+            return (b & 2) == 2;
+
+        case Model::ZXNext:
+            return false;
+
+        default: assert(0);
+        }
+    }
+    return false;
 }
 
-void Spectrum::contend(u16 address, TState delay, int num, TState& t)
+void Spectrum::contend(Z80MemAddr address, TState delay, int num, TState& t)
 {
-    if (isContended(address))
+    MemAddr addr = convertAddress(address);
+    if (isContended(addr))
     {
         for (int i = 0; i < num; ++i)
         {
@@ -564,23 +588,22 @@ TState Spectrum::contention(TState tStates)
     return m_contention[tStates];
 }
 
-void Spectrum::setSlot(int slot, int bank)
+void Spectrum::setSlot(int slot, Bank bank)
 {
-    assert(slot >= 0 && slot < getNumSlots());
-    assert(bank >= 0 && bank < (m_ram.size() / getBankSize()));
-
+    assert(slot >= 0 && slot < 8);
+    assert(bank.getIndex() >= 0 && bank.getIndex() < getNumBanks());
     m_slots[slot] = bank;
 }
 
 int Spectrum::getBank(int slot) const
 {
     assert(slot >= 0 && slot < getNumSlots());
-    return m_slots[slot];
+    return m_slots[slot].getIndex();
 }
 
 u16 Spectrum::getNumBanks() const
 {
-    return u16(m_ram.size() / getBankSize());
+    return u16(m_ram.size() / kBankSize);
 }
 
 string& Spectrum::slotName(int slot)
