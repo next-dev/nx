@@ -37,7 +37,7 @@ public:
     Bank& operator= (const Bank& other);
 
     MemGroup getGroup() const { return m_group; }
-    u16 getBankIndex() const { return m_bank; }
+    u16 getIndex() const { return m_bank; }
 
 private:
     MemGroup    m_group;
@@ -62,7 +62,17 @@ public:
     Bank bank() const       { return m_bank; }
     u16 offset() const      { return m_offset;}
 
-    int realAddress() const { return m_bank.getBankIndex() * kBankSize + m_offset; }
+    int realAddress() const { return m_bank.getIndex() * kBankSize + m_offset; }
+
+    bool operator== (const MemAddr& addr) const;
+    bool operator!= (const MemAddr& addr) const;
+    bool operator< (const MemAddr& addr) const;
+    bool operator> (const MemAddr& addr) const;
+    bool operator<= (const MemAddr& addr) const;
+    bool operator>= (const MemAddr& addr) const;
+
+    MemAddr operator+ (int offset) const;
+    MemAddr operator- (int offset) const;
 
 private:
     Bank        m_bank;
@@ -213,15 +223,13 @@ public:
     //------------------------------------------------------------------------------------------------------------------
 
     int                 getRomSize          () const    { return 0x4000; }
-    void                bank                (int slot, int bank);
+    void                setSlot             (int slot, Bank bank);
     int                 getBank             (int slot) const;
     u16                 getNumBanks         () const;
     string&             slotName            (int slot);
     bool                isContended         (u16 addr) const;
     TState              contention          (TState t);
-    void                poke                (u16 address, u8 x);
-    u8                  fullPeek            (MemAddr addr) const;
-    void                fullPoke            (MemAddr addr, u8 byte);
+    void                poke                (Z80MemAddr address, u8 x);
     void                load                (Z80MemAddr addr, const vector<u8>& buffer);
     void                load                (Z80MemAddr addr, const void* buffer, i64 size);
     void                setRomWriteState    (bool writable);
@@ -264,7 +272,7 @@ public:
 
     struct DataBreakpoint
     {
-        u16     address;
+        MemAddr address;
         u16     len;
     };
 
@@ -279,6 +287,8 @@ private:
     // Memory
     //
     void            initMemory          ();
+    vector<u8>&     getMemoryGroup      (MemGroup group);
+    u8&             memRef              (MemAddr addr);
 
     //
     // Video
@@ -347,7 +357,7 @@ private:
 
     // Memory state
     vector<Bank>                m_slots;
-    vector<string>              m_bankNames;
+    vector<u8>                  m_rom;
     vector<u8>                  m_ram;
     vector<u8>                  m_contention;
     bool                        m_romWritable;

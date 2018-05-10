@@ -179,7 +179,7 @@ MemAddr Spectrum::convertAddress(Z80MemAddr addr) const
 Z80MemAddr Spectrum::convertAddress(MemAddr addr) const
 {
     assert(addr.bank().getGroup() == MemGroup::RAM);
-    auto it = find(m_slots.begin(), m_slots.end(), addr.bank().getBankIndex());
+    auto it = find(m_slots.begin(), m_slots.end(), addr.bank().getIndex());
     assert(it != m_slots.end());
     int slot = int(distance(m_slots.begin(), it));
     return Z80MemAddr(u16(slot * kBankSize + addr.offset()));
@@ -201,7 +201,7 @@ string Spectrum::addressName(MemAddr address)
     //
     // For the Next, 16-bit offsets range from (0000-1fff).  Otherwise, (0000-3fff)
     //
-    u8 bank = u8(address.bank().getBankIndex());
+    u8 bank = u8(address.bank().getIndex());
     u16 offset = u16(address.offset());
 
     switch (m_model)
@@ -347,50 +347,57 @@ void Spectrum::initMemory()
     switch (m_model)
     {
     case Model::ZX48:
-        m_ram.resize(KB(64));
-        m_bankNames = {
-            "ROM",
-            "$4000",
-            "$8000",
-            "$C000",
+        m_ram.resize(KB(48));
+        m_rom.resize(KB(16));
+        m_slots = {
+            { MemGroup::ROM, 0 },
+            { MemGroup::ROM, 1 },
+            { MemGroup::RAM, 0 },
+            { MemGroup::RAM, 1 },
+            { MemGroup::RAM, 2 },
+            { MemGroup::RAM, 3 },
+            { MemGroup::RAM, 4 },
+            { MemGroup::RAM, 5 },
         };
-        m_slots = { 0, 1, 2, 3 };
-        m_bankSize = 0x4000;
-        m_videoBank = m_shadowVideoBank = 1;
+        m_videoBank = m_shadowVideoBank = 2;
         break;
 
     case Model::ZX128:
     case Model::ZXPlus2:
-        m_bankSize = 0x4000;
-        m_ram.resize(m_bankSize * 10);      // 8*16K RAM, 2*16K ROM
-        m_bankNames = {
-            "Bank 0",
-            "Bank 1",
-            "Bank 2",
-            "Bank 3",
-            "Bank 4",
-            "Bank 5",
-            "Bank 6",
-            "Bank 7",
-            "ROM 0 (Editor)",
-            "ROM 1 (Basic)",
+        m_ram.resize(KB(128));
+        m_rom.resize(KB(32));
+        m_slots = {
+            // 128K ROM
+            { MemGroup::ROM, 2 },
+            { MemGroup::ROM, 3 },
+            // RAM
+            { MemGroup::RAM, 10 },
+            { MemGroup::RAM, 11 },
+            { MemGroup::RAM, 4  },
+            { MemGroup::RAM, 5  },
+            { MemGroup::RAM, 0  },
+            { MemGroup::RAM, 1  },
         };
-        m_slots = { 9, 5, 2, 0 };
-        m_videoBank = 5;
-        m_shadowVideoBank = 7;
+        m_videoBank = 10;
+        m_shadowVideoBank = 14;
         break;
 
     case Model::ZXNext:
-        m_bankSize = 0x2000;
-        m_ram.resize(getBankSize() * (96 + 2));
-        m_bankNames.clear();
-        for (int i = 0; i < 96; ++i)
-        {
-            m_bankNames.emplace_back(string("Bank ") + intString(i, 0));
-        }
-        m_bankNames.emplace_back("ROM (part 1)");
-        m_bankNames.emplace_back("ROM (part 2)");
-        m_slots = { 96, 97, 10, 11, 4, 5, 0, 1 };
+        m_ram.resize(kBankSize * 96);
+        m_rom.resize(KB(16));
+
+        m_slots = {
+            // 48K ROM
+            { MemGroup::ROM, 0 },
+            { MemGroup::ROM, 1 },
+            // RAM
+            { MemGroup::RAM, 10 },
+            { MemGroup::RAM, 11 },
+            { MemGroup::RAM, 4  },
+            { MemGroup::RAM, 5  },
+            { MemGroup::RAM, 0  },
+            { MemGroup::RAM, 1  },
+        };
         m_videoBank = 10;
         m_shadowVideoBank = 14;
         break;
@@ -434,23 +441,29 @@ void Spectrum::initMemory()
     switch (m_model)
     {
     case Model::ZX48:
-        load(0, gRom48, getBankSize());
+        load(0, gRom48, KB(16));
         break;
 
     case Model::ZX128:
-        load(0, gRom128_1, getBankSize());
-        bank(0, 8);
-        load(0, gRom128_0, getBankSize());
+        // Load in the 128K ROM
+        load(0, gRom128_1, KB(16));
+        // Switch to 48K ROM and load
+        setSlot(0, Bank(MemGroup::ROM, 0));
+        setSlot(1, Bank(MemGroup::ROM, 1));
+        load(0, gRom128_0, KB(16));
         break;
 
     case Model::ZXPlus2:
-        load(0, gRomPlus2_1, getBankSize());
-        bank(0, 8);
-        load(0, gRomPlus2_0, getBankSize());
+        // Load in the +2 ROM
+        load(0, gRomPlus2_1, KB(16));
+        // Switch to 48K ROM and load
+        setSlot(0, Bank(MemGroup::ROM, 0));
+        setSlot(1, Bank(MemGroup::ROM, 1));
+        load(0, gRomPlus2_0, KB(16));
         break;
 
     case Model::ZXNext:
-        load(0, gRom48, getBankSize() * 2);
+        load(0, gRom48, KB(16));
         break;
 
     default:
@@ -459,78 +472,74 @@ void Spectrum::initMemory()
     setRomWriteState(false);
 }
 
-u8 Spectrum::peek(u16 address)
+u8& Spectrum::memRef(MemAddr addr)
 {
-    return m_ram[m_slots[address / getBankSize()] * getBankSize() + (address % getBankSize())];
+    vector<u8>& memGroup = getMemoryGroup(addr.bank().getGroup());
+    return memGroup[addr.bank().getIndex() * kBankSize + addr.offset()];
 }
 
-u8 Spectrum::peek(u16 address, TState& t)
+u8 Spectrum::peek(Z80MemAddr address)
+{
+    MemAddr addr = convertAddress(address);
+    return memRef(addr);
+}
+
+u8 Spectrum::peek(Z80MemAddr address, TState& t)
 {
     contend(address, 3, 1, t);
     return peek(address);
 }
 
-u16 Spectrum::peek16(u16 address, TState& t)
+u16 Spectrum::peek16(Z80MemAddr address, TState& t)
 {
     return peek(address, t) + 256 * peek(address + 1, t);
 }
 
-void Spectrum::poke(u16 address, u8 x)
+void Spectrum::poke(Z80MemAddr address, u8 x)
 {
+    MemAddr addr = convertAddress(address);
     for (const auto& br : m_dataBreakpoints)
     {
-        if (address >= br.address && address < (br.address + br.len))
+        if ((addr >= br.address) && (address < (br.address + br.len)))
         {
             m_break = true;
         }
     }
 
-    if (m_romWritable || address >= getRomSize())
+    if (m_romWritable || addr.bank().getGroup() == MemGroup::ROM)
     {
-        m_ram[m_slots[address / getBankSize()] * getBankSize() + (address % getBankSize())] = x;
+        memRef(addr) == x;
     }
 }
 
-u8 Spectrum::fullPeek(u16 bank, u16 address) const
-{
-    assert(bank < getNumBanks());
-    assert(address < getBankSize());
-    return m_ram[bank * getBankSize() + (address % getBankSize())];
-}
-
-void Spectrum::fullPoke(u16 bank, u16 address, u8 byte)
-{
-    assert(bank < getNumBanks());
-    assert(address < getBankSize());
-    m_ram[bank * getBankSize() + (address % getBankSize())] = byte;
-}
-
-void Spectrum::poke(u16 address, u8 x, TState& t)
+void Spectrum::poke(Z80MemAddr address, u8 x, TState& t)
 {
     contend(address, 3, 1, t);
     poke(address, x);
 }
 
-void Spectrum::poke16(u16 address, u16 w, TState& t)
+void Spectrum::poke16(Z80MemAddr address, u16 w, TState& t)
 {
     Reg r(w);
     poke(address, r.l, t);
     poke(address + 1, r.h, t);
 }
 
-void Spectrum::load(u16 address, const void* buffer, i64 size)
+void Spectrum::load(Z80MemAddr address, const void* buffer, i64 size)
 {
-    i64 clampedSize = min((i64)address + size, (i64)65536) - address;
-    u32 realAddress = m_slots[address/getBankSize()] * getBankSize() + (address % getBankSize());
-    copy((u8*)buffer, (u8*)buffer + size, m_ram.begin() + realAddress);
+    MemAddr addr = convertAddress(address);
+    vector<u8>& memGroup = getMemoryGroup(addr);
+
+    copy((u8*)buffer, (u8*)buffer + size,
+        memGroup.begin() + (addr.bank().getIndex() * kBankSize + addr.offset()));
 }
 
-void Spectrum::load(u16 address, const vector<u8>& buffer)
+void Spectrum::load(Z80MemAddr address, const vector<u8>& buffer)
 {
     load(address, buffer.data(), buffer.size());
 }
 
-bool Spectrum::isContended(u16 addr) const
+bool Spectrum::isContended(MemAddr addr) const
 {
     return ((addr & 0xc000) == 0x4000);
 }
@@ -555,7 +564,7 @@ TState Spectrum::contention(TState tStates)
     return m_contention[tStates];
 }
 
-void Spectrum::bank(int slot, int bank)
+void Spectrum::setSlot(int slot, int bank)
 {
     assert(slot >= 0 && slot < getNumSlots());
     assert(bank >= 0 && bank < (m_ram.size() / getBankSize()));

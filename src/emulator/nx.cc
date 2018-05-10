@@ -1213,7 +1213,7 @@ bool Nx::loadNxSnapshot(string fileName)
                 const BlockSection& r128 = f['R128'];
                 for (int i = 0; i < 8; ++i)
                 {
-                    m_machine->bank(3, i);
+                    m_machine->setSlot(3, i);
                     m_machine->load(0xc000, r128.data().data() + (i * KB(16)), KB(16));
                 }
             }
@@ -1343,13 +1343,13 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
         int oldSlot3 = m_machine->getBank(3);
         for (int i = 0; i < 8; ++i)
         {
-            m_machine->bank(3, i);
+            m_machine->setSlot(3, i);
             for (u16 byte = 0xc000; byte != 0x0000; ++byte)
             {
                 r128.poke8(m_machine->peek(byte, t));
             }
         }
-        m_machine->bank(3, oldSlot3);
+        m_machine->setSlot(3, oldSlot3);
         f.addSection(r128, 131072);
     }
     else if (model == Model::ZX48)
