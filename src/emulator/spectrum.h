@@ -231,7 +231,7 @@ public:
     vector<MemAddr>     findString          (string str);
     MemAddr             convertAddress      (Z80MemAddr addr) const;
     Z80MemAddr          convertAddress      (MemAddr addr) const;
-    string              addressName         (MemAddr address, bool moreInfo);
+    string              addressName         (MemAddr address);
 
     //------------------------------------------------------------------------------------------------------------------
     // Video interface

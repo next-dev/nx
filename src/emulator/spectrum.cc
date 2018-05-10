@@ -185,37 +185,68 @@ Z80MemAddr Spectrum::convertAddress(MemAddr addr) const
     return Z80MemAddr(u16(slot * kBankSize + addr.offset()));
 }
 
-string Spectrum::addressName(u32 address, bool moreInfo)
+string Spectrum::addressName(MemAddr address)
 {
-    u16 page = u16(address / KB(64));
-    u16 add = u16(address % KB(64));
     string s;
 
-    if (m_model == Model::ZX128 || m_model == Model::ZXPlus2)
-    {
-        if (page < 8)
-        {
-            s = stringFormat("{0}:{1}", page, hexWord(u16(add)));
-        }
-        else
-        {
-            s = stringFormat("ROM{0}:{1}", page - 8, hexWord(u16(add)));
-        }
+    // Memory format for RAM:
+    //
+    //  BB:AAAA     - B = 8-bit bank, A = 16-bit offset
+    //  AAAA        - For 48K, A = 16-bit address (4000-ffff)
+    //
+    // Memory format for ROM:
+    //
+    // RX:AAAA      - X = Rom index
+    // AAAA         - For 48K, A = 16-bit address (0000-3fff)
+    //
+    // For the Next, 16-bit offsets range from (0000-1fff).  Otherwise, (0000-3fff)
+    //
+    u8 bank = u8(address.bank().getBankIndex());
+    u16 offset = u16(address.offset());
 
-        if (moreInfo)
+    switch (m_model)
+    {
+    case Model::ZX48:
+        s = stringFormat("{0}", hexWord(convertAddress(address)));
+        break;
+
+    case Model::ZX128:
+    case Model::ZXPlus2:
         {
-            for (int i = 0; i < 4; ++i)
+            switch (address.bank().getGroup())
             {
-                if (m_slots[i] == page)
-                {
-                    s += stringFormat(" (${0})", hexWord(add + (i * getBankSize())));
-                }
+            case MemGroup::RAM:
+                s = stringFormat("{0}:{1}",
+                    hexByte(bank / 2),
+                    hexWord(u16(0x2000)*(bank % 1) + offset));
+                break;
+            case MemGroup::ROM:
+                s = stringFormat("R{0}:{1}",
+                    hexNibble(bank / 2),
+                    hexWord(u16(0x2000)*(bank % 1) + offset));
+                break;
+            default: assert(0);
             }
         }
-    }
-    else
-    {
-        s = stringFormat("${0}", hexWord(u16(add)));
+        break;
+
+    case Model::ZXNext:
+        switch (address.bank().getGroup())
+        {
+        case MemGroup::RAM:
+            s = stringFormat("{0}:{1}", hexByte(bank), hexWord(offset));
+            break;
+
+        case MemGroup::ROM:
+            s = stringFormat("R{0}:{1}", hexByte(bank), hexWord(offset));
+            break;
+
+        default: assert(0);
+        }
+        break;
+
+    default:
+        assert(0);
     }
 
     return s;
@@ -267,7 +298,7 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
             updateTape(m_tState - startTState);
             m_audio.updateBeeper(m_tState, m_speaker, m_tapeEar ? 1 : 0);
             //m_audio.updateBeeper(m_tState, m_tapeEar ? 1 : 0);
-            if ((runMode == RunMode::Normal) && (shouldBreak(m_z80.PC()) || m_break))
+            if ((runMode == RunMode::Normal) && (shouldBreak(convertAddress(Z80MemAddr(m_z80.PC()))) || m_break))
             {
                 breakpointHit = true;
                 m_break = false;
