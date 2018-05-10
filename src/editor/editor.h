@@ -241,6 +241,7 @@ public:
     void save(string fileName = string());
 
     void setPosition(int xCell, int yCell, int width, int height);
+    int getLineNumberGap(Draw& draw) const;
 
 private:
     EditorData          m_data;
@@ -259,6 +260,7 @@ private:
     bool                m_ioAllowed;
     EnterFunction       m_onEnter;
     bool                m_showLineNumbers;
+    int                 m_lineNumberWidthCache;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

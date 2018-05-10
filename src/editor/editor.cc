@@ -811,24 +811,30 @@ void Editor::render(Draw& draw, int line, int lineNumberGap)
     }
 }
 
-void Editor::renderAll(Draw& draw)
+int Editor::getLineNumberGap(Draw& draw) const
 {
-    int lineNumberGap = 0;
     if (m_showLineNumbers)
     {
-        int width = (int)log((float)getData().getNumLines());
+        int width = (int)ceilf(log10f((float)getData().getNumLines())) + 1;
         string maxInteger = string(width, '9');
-        int cellWidth = draw.squashedStringWidth(maxInteger);
-        lineNumberGap = cellWidth;
+        return draw.squashedStringWidth(maxInteger);
     }
+    else
+    {
+        return 0;
+    }
+}
 
+void Editor::renderAll(Draw& draw)
+{
+    m_lineNumberWidthCache = getLineNumberGap(draw);
     int line = m_topLine;
     int y = m_y;
     int endY = y + m_height;
 
     for (; y < endY; ++y)
     {
-        render(draw, line++, lineNumberGap);
+        render(draw, line++, m_lineNumberWidthCache);
     }
 }
 
@@ -866,7 +872,7 @@ void Editor::ensureVisibleCursor()
             m_lineOffset = std::max(0, m_lineOffset - K_LINE_SKIP);
             continue;
         }
-        else if (x >= (m_lineOffset + m_width))
+        else if (x >= (m_lineOffset + (m_width - m_lineNumberWidthCache)))
         {
             m_lineOffset = std::min(m_data.lineLength(m_data.getCurrentLine()) - 1, m_lineOffset + K_LINE_SKIP);
             continue;
