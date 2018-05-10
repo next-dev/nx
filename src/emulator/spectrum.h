@@ -227,7 +227,7 @@ public:
     int                 getBank             (int slot) const;
     u16                 getNumBanks         () const;
     string&             slotName            (int slot);
-    bool                isContended         (Z80MemAddr addr) const;
+    bool                isContended         (MemAddr addr) const;
     TState              contention          (TState t);
     void                poke                (Z80MemAddr address, u8 x);
     void                load                (Z80MemAddr addr, const vector<u8>& buffer);
