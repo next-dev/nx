@@ -179,7 +179,7 @@ MemAddr Spectrum::convertAddress(Z80MemAddr addr) const
 Z80MemAddr Spectrum::convertAddress(MemAddr addr) const
 {
     assert(addr.bank().getGroup() == MemGroup::RAM);
-    auto it = find(m_slots.begin(), m_slots.end(), addr.bank().getIndex());
+    auto it = find(m_slots.begin(), m_slots.end(), addr.bank());
     assert(it != m_slots.end());
     int slot = int(distance(m_slots.begin(), it));
     return Z80MemAddr(u16(slot * kBankSize + addr.offset()));
@@ -343,22 +343,21 @@ extern const u8 gRomPlus2_1[16384];
 void Spectrum::initMemory()
 {
     setRomWriteState(true);
+    m_slots.resize(8);
 
     switch (m_model)
     {
     case Model::ZX48:
         m_ram.resize(KB(48));
         m_rom.resize(KB(16));
-        m_slots = {
-            { MemGroup::ROM, 0 },
-            { MemGroup::ROM, 1 },
-            { MemGroup::RAM, 0 },
-            { MemGroup::RAM, 1 },
-            { MemGroup::RAM, 2 },
-            { MemGroup::RAM, 3 },
-            { MemGroup::RAM, 4 },
-            { MemGroup::RAM, 5 },
-        };
+        setSlot(0, Bank(MemGroup::ROM, 0));
+        setSlot(1, Bank(MemGroup::ROM, 1));
+        setSlot(2, Bank(MemGroup::RAM, 0));
+        setSlot(3, Bank(MemGroup::RAM, 1));
+        setSlot(4, Bank(MemGroup::RAM, 2));
+        setSlot(5, Bank(MemGroup::RAM, 3));
+        setSlot(6, Bank(MemGroup::RAM, 4));
+        setSlot(7, Bank(MemGroup::RAM, 5));
         m_videoBank = m_shadowVideoBank = 2;
         break;
 
@@ -366,18 +365,14 @@ void Spectrum::initMemory()
     case Model::ZXPlus2:
         m_ram.resize(KB(128));
         m_rom.resize(KB(32));
-        m_slots = {
-            // 128K ROM
-            { MemGroup::ROM, 2 },
-            { MemGroup::ROM, 3 },
-            // RAM
-            { MemGroup::RAM, 10 },
-            { MemGroup::RAM, 11 },
-            { MemGroup::RAM, 4  },
-            { MemGroup::RAM, 5  },
-            { MemGroup::RAM, 0  },
-            { MemGroup::RAM, 1  },
-        };
+        setSlot(0, Bank(MemGroup::ROM, 2));
+        setSlot(1, Bank(MemGroup::ROM, 3));
+        setSlot(2, Bank(MemGroup::RAM, 10));
+        setSlot(3, Bank(MemGroup::RAM, 11));
+        setSlot(4, Bank(MemGroup::RAM, 4));
+        setSlot(5, Bank(MemGroup::RAM, 5));
+        setSlot(6, Bank(MemGroup::RAM, 0));
+        setSlot(7, Bank(MemGroup::RAM, 1));
         m_videoBank = 10;
         m_shadowVideoBank = 14;
         break;
@@ -385,19 +380,14 @@ void Spectrum::initMemory()
     case Model::ZXNext:
         m_ram.resize(kBankSize * 96);
         m_rom.resize(KB(16));
-
-        m_slots = {
-            // 48K ROM
-            { MemGroup::ROM, 0 },
-            { MemGroup::ROM, 1 },
-            // RAM
-            { MemGroup::RAM, 10 },
-            { MemGroup::RAM, 11 },
-            { MemGroup::RAM, 4  },
-            { MemGroup::RAM, 5  },
-            { MemGroup::RAM, 0  },
-            { MemGroup::RAM, 1  },
-        };
+        setSlot(0, Bank(MemGroup::ROM, 0));
+        setSlot(1, Bank(MemGroup::ROM, 1));
+        setSlot(2, Bank(MemGroup::RAM, 10));
+        setSlot(3, Bank(MemGroup::RAM, 11));
+        setSlot(4, Bank(MemGroup::RAM, 4));
+        setSlot(5, Bank(MemGroup::RAM, 5));
+        setSlot(6, Bank(MemGroup::RAM, 0));
+        setSlot(7, Bank(MemGroup::RAM, 1));
         m_videoBank = 10;
         m_shadowVideoBank = 14;
         break;
@@ -500,7 +490,7 @@ void Spectrum::poke(Z80MemAddr address, u8 x)
     MemAddr addr = convertAddress(address);
     for (const auto& br : m_dataBreakpoints)
     {
-        if ((addr >= br.address) && (address < (br.address + br.len)))
+        if ((addr >= br.address) && (addr < (br.address + br.len)))
         {
             m_break = true;
         }
@@ -508,7 +498,7 @@ void Spectrum::poke(Z80MemAddr address, u8 x)
 
     if (m_romWritable || addr.bank().getGroup() == MemGroup::ROM)
     {
-        memRef(addr) == x;
+        memRef(addr) = x;
     }
 }
 
@@ -528,7 +518,7 @@ void Spectrum::poke16(Z80MemAddr address, u16 w, TState& t)
 void Spectrum::load(Z80MemAddr address, const void* buffer, i64 size)
 {
     MemAddr addr = convertAddress(address);
-    vector<u8>& memGroup = getMemoryGroup(addr);
+    vector<u8>& memGroup = getMemoryGroup(addr.bank().getGroup());
 
     copy((u8*)buffer, (u8*)buffer + size,
         memGroup.begin() + (addr.bank().getIndex() * kBankSize + addr.offset()));
@@ -567,6 +557,11 @@ bool Spectrum::isContended(MemAddr addr) const
     return false;
 }
 
+bool Spectrum::isContended(u16 port) const
+{
+    return (port >= 0x4000 && port < 0x8000);
+}
+
 void Spectrum::contend(Z80MemAddr address, TState delay, int num, TState& t)
 {
     MemAddr addr = convertAddress(address);
@@ -593,11 +588,22 @@ void Spectrum::setSlot(int slot, Bank bank)
     assert(slot >= 0 && slot < 8);
     assert(bank.getIndex() >= 0 && bank.getIndex() < getNumBanks());
     m_slots[slot] = bank;
+
+    // Generate the bank name
+    string bn;
+    switch (bank.getGroup())
+    {
+    case MemGroup::ROM: bn = "ROM"; break;
+    case MemGroup::RAM: bn = "RAM"; break;
+    default: assert(0);
+    }
+
+    m_bankNames[bank.getIndex()] += stringFormat(" {0}", bank.getIndex());
 }
 
 int Spectrum::getBank(int slot) const
 {
-    assert(slot >= 0 && slot < getNumSlots());
+    assert(slot >= 0 && slot < 8);
     return m_slots[slot].getIndex();
 }
 
@@ -608,8 +614,8 @@ u16 Spectrum::getNumBanks() const
 
 string& Spectrum::slotName(int slot)
 {
-    assert(slot >= 0 && slot < getNumSlots());
-    return m_bankNames[m_slots[slot]];
+    assert(slot >= 0 && slot < 8);
+    return m_bankNames[m_slots[slot].getIndex()];
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -755,9 +761,11 @@ void Spectrum::out(u16 port, u8 x, TState& t)
             u8 rom = x & 0x10;
             u8 disable = x & 0x20;
 
-            m_slots[3] = int(page);
+            setSlot(6, Bank(MemGroup::RAM, page * 2));
+            setSlot(7, Bank(MemGroup::RAM, page * 2 + 1));
             m_shadowScreen = (shadow != 0);
-            m_slots[0] = int(rom) ? 9 : 8;
+            setSlot(0, Bank(MemGroup::ROM, rom ? 2 : 0));
+            setSlot(1, Bank(MemGroup::ROM, rom ? 3 : 1));
             m_pagingDisabled = (disable != 0);
         }
     }
@@ -927,7 +935,6 @@ void Spectrum::updateVideo()
     int vramBank = m_model == Model::ZX48
         ? m_videoBank
         : m_shadowScreen ? m_shadowVideoBank : m_videoBank;
-    int bankSize = getBankSize();
 
     for (int i = 0; i < numBytes; ++i)
     {
@@ -936,16 +943,16 @@ void Spectrum::updateVideo()
             // Pixel address
             // #todo: refactor bank sizes to log-2?
             u16 paddr = m_videoMap[m_drawTState];
-            u16 bank = (u16)vramBank + (paddr / (u16)bankSize);
-            u16 offset = paddr % (u16)bankSize;
-            u8 pixelData = fullPeek(bank, offset);
+            u16 bank = (u16)vramBank + (paddr / kBankSize);
+            u16 offset = paddr % kBankSize;
+            u8 pixelData = memRef(MemAddr(Bank(MemGroup::RAM, bank), offset));
 
             // Calculate attribute address
             // 000S SRRR CCCX XXXX --> 0001 10SS CCCX XXXX
             u16 aaddr = ((paddr & 0x1800) >> 3) + (paddr & 0x00ff) + 0x1800;
-            bank = (u16)vramBank + (aaddr / (u16)bankSize);
-            offset = aaddr % (u16)bankSize;
-            u8 attr = fullPeek(bank, offset);
+            bank = (u16)vramBank + (aaddr / kBankSize);
+            offset = aaddr % kBankSize;
+            u8 attr = memRef(MemAddr(Bank(MemGroup::RAM, bank), offset));
 
             u8 lastPixelData = pixelData;
             u8 lastAttrData = attr;
@@ -1005,7 +1012,7 @@ void Spectrum::updateVideo()
 // Breakpoints
 //----------------------------------------------------------------------------------------------------------------------
 
-vector<Spectrum::Breakpoint>::const_iterator Spectrum::findBreakpoint(u16 address) const
+vector<Spectrum::Breakpoint>::const_iterator Spectrum::findBreakpoint(MemAddr address) const
 {
     return find_if(m_breakpoints.begin(), m_breakpoints.end(),
         [address](const auto& br) -> bool {
@@ -1013,7 +1020,7 @@ vector<Spectrum::Breakpoint>::const_iterator Spectrum::findBreakpoint(u16 addres
         });
 }
 
-vector<Spectrum::DataBreakpoint>::const_iterator Spectrum::findDataBreakpoint(u16 address, u16 len) const
+vector<Spectrum::DataBreakpoint>::const_iterator Spectrum::findDataBreakpoint(MemAddr address, u16 len) const
 {
     return find_if(m_dataBreakpoints.begin(), m_dataBreakpoints.end(),
         [address, len](const auto& br) -> bool {
@@ -1021,7 +1028,7 @@ vector<Spectrum::DataBreakpoint>::const_iterator Spectrum::findDataBreakpoint(u1
         });
 }
 
-void Spectrum::toggleBreakpoint(u16 address)
+void Spectrum::toggleBreakpoint(MemAddr address)
 {
     auto it = findBreakpoint(address);
     if (it == m_breakpoints.end())
@@ -1034,7 +1041,7 @@ void Spectrum::toggleBreakpoint(u16 address)
     }
 }
 
-void Spectrum::toggleDataBreakpoint(u16 address, u16 len)
+void Spectrum::toggleDataBreakpoint(MemAddr address, u16 len)
 {
     auto it = findDataBreakpoint(address, len);
     if (it == m_dataBreakpoints.end())
@@ -1047,7 +1054,7 @@ void Spectrum::toggleDataBreakpoint(u16 address, u16 len)
     }
 }
 
-void Spectrum::addTemporaryBreakpoint(u16 address)
+void Spectrum::addTemporaryBreakpoint(MemAddr address)
 {
     auto it = findBreakpoint(address);
     if (it == m_breakpoints.end())
@@ -1056,7 +1063,7 @@ void Spectrum::addTemporaryBreakpoint(u16 address)
     }
 }
 
-bool Spectrum::shouldBreak(u16 address)
+bool Spectrum::shouldBreak(MemAddr address)
 {
     if (m_breakpoints.size() == 0) return false;
     auto it = findBreakpoint(address);
@@ -1069,21 +1076,21 @@ bool Spectrum::shouldBreak(u16 address)
     return result;
 }
 
-bool Spectrum::hasUserBreakpointAt(u16 address) const
+bool Spectrum::hasUserBreakpointAt(MemAddr address) const
 {
     auto it = findBreakpoint(address);
     return (it != m_breakpoints.end() && it->type == BreakpointType::User);
 }
 
-bool Spectrum::hasDataBreakpoint(u16 address, u16 len) const
+bool Spectrum::hasDataBreakpoint(MemAddr address, u16 len) const
 {
     auto it = findDataBreakpoint(address, len);
     return (it != m_dataBreakpoints.end());
 }
 
-vector<u16> Spectrum::getUserBreakpoints() const
+vector<MemAddr> Spectrum::getUserBreakpoints() const
 {
-    vector<u16> breakpoints;
+    vector<MemAddr> breakpoints;
     for (const auto& br : m_breakpoints)
     {
         if (br.type == BreakpointType::User)

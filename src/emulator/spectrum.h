@@ -32,12 +32,16 @@ enum class MemGroup
 class Bank
 {
 public:
+    Bank() : m_group(MemGroup::RAM), m_bank(0) {}
     Bank(MemGroup group, u16 bank);
     Bank(const Bank& other);
     Bank& operator= (const Bank& other);
 
     MemGroup getGroup() const { return m_group; }
     u16 getIndex() const { return m_bank; }
+
+    bool operator== (const Bank& bank) const    { return m_group == bank.m_group && m_bank == bank.m_bank; }
+    bool operator!= (const Bank& bank) const    { return m_group != bank.m_group || m_bank != bank.m_bank; }
 
 private:
     MemGroup    m_group;
@@ -58,6 +62,9 @@ class MemAddr
 public:
     MemAddr(Bank bank, u16 offset);
     MemAddr(MemGroup group, int realAddress);
+
+    MemAddr(const MemAddr& memAddr);
+    MemAddr& operator= (const MemAddr& memAddr);
 
     Bank bank() const       { return m_bank; }
     u16 offset() const      { return m_offset;}
@@ -228,6 +235,7 @@ public:
     u16                 getNumBanks         () const;
     string&             slotName            (int slot);
     bool                isContended         (MemAddr addr) const;
+    bool                isContended         (u16 port) const;
     TState              contention          (TState t);
     void                poke                (Z80MemAddr address, u8 x);
     void                load                (Z80MemAddr addr, const vector<u8>& buffer);
@@ -267,7 +275,7 @@ public:
     void            toggleBreakpoint        (MemAddr address);
     void            addTemporaryBreakpoint  (MemAddr address);
     bool            hasUserBreakpointAt     (MemAddr address) const;
-    vector<u16>     getUserBreakpoints      () const;
+    vector<MemAddr> getUserBreakpoints      () const;
     void            clearUserBreakpoints    ();
 
     struct DataBreakpoint
@@ -323,7 +331,7 @@ private:
     struct Breakpoint
     {
         BreakpointType  type;
-        u16             address;
+        MemAddr         address;
     };
 
     vector<Breakpoint>::const_iterator      findBreakpoint          (MemAddr address) const;
@@ -357,6 +365,7 @@ private:
 
     // Memory state
     vector<Bank>                m_slots;
+    vector<string>              m_bankNames;
     vector<u8>                  m_rom;
     vector<u8>                  m_ram;
     vector<u8>                  m_contention;
