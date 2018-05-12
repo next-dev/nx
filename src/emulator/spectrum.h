@@ -42,6 +42,10 @@ public:
 
     bool operator== (const Bank& bank) const    { return m_group == bank.m_group && m_bank == bank.m_bank; }
     bool operator!= (const Bank& bank) const    { return m_group != bank.m_group || m_bank != bank.m_bank; }
+    bool operator< (const Bank& bank) const     { assert(m_group == bank.m_group); return m_bank < bank.m_bank; }
+    bool operator> (const Bank& bank) const     { assert(m_group == bank.m_group); return m_bank > bank.m_bank; }
+    bool operator<= (const Bank& bank) const    { assert(m_group == bank.m_group); return m_bank <= bank.m_bank; }
+    bool operator>= (const Bank& bank) const    { assert(m_group == bank.m_group); return m_bank >= bank.m_bank; }
 
 private:
     MemGroup    m_group;
@@ -60,6 +64,9 @@ class Z80MemAddr;
 class MemAddr
 {
 public:
+    // Default points to first RAM address.
+    MemAddr() : m_bank(), m_offset(0) {}
+
     MemAddr(Bank bank, u16 offset);
     MemAddr(MemGroup group, int realAddress);
 
@@ -69,7 +76,7 @@ public:
     Bank bank() const       { return m_bank; }
     u16 offset() const      { return m_offset;}
 
-    int realAddress() const { return m_bank.getIndex() * kBankSize + m_offset; }
+    int index() const { return m_bank.getIndex() * kBankSize + m_offset; }
 
     bool operator== (const MemAddr& addr) const;
     bool operator!= (const MemAddr& addr) const;
@@ -80,6 +87,12 @@ public:
 
     MemAddr operator+ (int offset) const;
     MemAddr operator- (int offset) const;
+    int operator- (MemAddr addr) const;
+
+    MemAddr operator++();
+    MemAddr& operator++(int);
+    MemAddr operator--();
+    MemAddr& operator--(int);
 
 private:
     Bank        m_bank;
@@ -247,7 +260,9 @@ public:
     vector<MemAddr>     findString          (string str);
     MemAddr             convertAddress      (Z80MemAddr addr) const;
     Z80MemAddr          convertAddress      (MemAddr addr) const;
+    bool                isZ80Address        (MemAddr addr) const;
     string              addressName         (MemAddr address);
+    u8&                 memRef              (MemAddr addr);
 
     //------------------------------------------------------------------------------------------------------------------
     // Video interface
@@ -296,7 +311,6 @@ private:
     //
     void            initMemory          ();
     vector<u8>&     getMemoryGroup      (MemGroup group);
-    u8&             memRef              (MemAddr addr);
 
     //
     // Video

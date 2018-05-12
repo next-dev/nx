@@ -14,6 +14,7 @@
 #include <map>
 #include <optional>
 #include <vector>
+#include <variant>
 
 //----------------------------------------------------------------------------------------------------------------------
 // MemoryMap
@@ -33,16 +34,14 @@ class MemoryMap
 public:
     MemoryMap(Spectrum& speccy);
 
-    using Address = u32;
-
     //
     // Interface parameters
     //
     void clear(Spectrum& speccy);
     void setPass(int pass);
     void resetRange();
-    void addRange(Address start, Address end);
-    void addZ80Range(u16 start, u16 end);
+    void addRange(MemAddr start, MemAddr end);
+    void addZ80Range(Spectrum& speccy, Z80MemAddr start, Z80MemAddr end);
 
     //
     // Memory writing
@@ -52,7 +51,7 @@ public:
     bool poke16(int address, u16 word);
     void upload(Spectrum& speccy);
     bool isValidAddress(int i) const { return i >= 0 && i < int(m_addresses.size()); }
-    Address getAddress(int i) const { assert(isValidAddress(i)); return m_addresses[i]; }
+    MemAddr getAddress(int i) const { assert(isValidAddress(i)); return m_addresses[i]; }
 
 private:
     class Byte
@@ -71,15 +70,63 @@ private:
     };
 
     Model                   m_model;
-    vector<u8>              m_slots;
     vector<Byte>            m_memory;
-    vector<Address>         m_addresses;
+    vector<MemAddr>         m_addresses;
     u8                      m_currentPass;
-    u16                     m_offset;
-    int                     m_pageSize;
 };
 
-using Labels = vector<pair<string, MemoryMap::Address>>;
+using Labels = vector<pair<string, MemAddr>>;
+
+//----------------------------------------------------------------------------------------------------------------------
+// ExprValue
+// Stores an expression's value and type
+//----------------------------------------------------------------------------------------------------------------------
+
+class ExprValue
+{
+public:
+    ExprValue();
+    ExprValue(i64 value);
+    ExprValue(MemAddr value);
+
+    ExprValue(const ExprValue& other);
+    ExprValue& operator= (const ExprValue& other);
+
+    enum class Type
+    {
+        Invalid,
+        Integer,
+        Address,
+    };
+
+    Type getType() const;
+    operator i64() const;
+    operator MemAddr() const;
+
+    //
+    // Operations
+    //
+    ExprValue operator+ (const ExprValue& other) const;
+    ExprValue operator- (const ExprValue& other) const;
+    ExprValue operator* (const ExprValue& other) const;
+    ExprValue operator/ (const ExprValue& other) const;
+    ExprValue operator% (const ExprValue& other) const;
+    ExprValue operator| (const ExprValue& other) const;
+    ExprValue operator& (const ExprValue& other) const;
+    ExprValue operator^ (const ExprValue& other) const;
+    ExprValue operator<< (const ExprValue& other) const;
+    ExprValue operator>> (const ExprValue& other) const;
+
+    //
+    // Convenience casts
+    //
+    u8 r8() const { assert(m_type == Type::Integer); return u8(get<i64>(m_value)); }
+    u16 r16() const { assert(m_type == Type::Integer); return u16(get<i64>(m_value)); }
+
+private:
+    Type m_type;
+    variant<i64, MemAddr> m_value;
+};
 
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -106,8 +153,8 @@ public:
     i64 getSymbol(const u8* start, const u8* end, bool ignoreCase) { return m_lexSymbols.addRange((const char*)start, (const char *)end, ignoreCase); }
     optional<i64> calculateExpression(const vector<u8>& exprData);
 
-    optional<i64> lookUpLabel(i64 symbol);
-    optional<i64> lookUpValue(i64 symbol);
+    optional<MemAddr> lookUpLabel(i64 symbol) const;
+    optional<ExprValue> lookUpValue(i64 symbol) const;
 
     Labels getLabels() const;
 
@@ -132,7 +179,7 @@ public:
 
     struct Options
     {
-        MemoryMap::Address      m_startAddress;
+        MemAddr     m_startAddress;
     };
 
     const Options& getOptions() const { return m_options; }
@@ -147,7 +194,7 @@ private:
     bool assembleFile1(Path fileName);
     bool assembleFile2(Path fileName);
 
-    bool addSymbol(i64 symbol, MemoryMap::Address address);
+    bool addSymbol(i64 symbol, MemAddr address);
     bool addValue(i64 symbol, i64 value);
 
     void dumpLex(const Lex& l);
@@ -233,15 +280,15 @@ private:
         void addClose(const Lex::Element* e);
         void set(i64 result) { m_result = result; }
 
-        bool eval(Assembler& assembler, Lex& lex, MemoryMap::Address currentAddress);
+        bool eval(Assembler& assembler, Lex& lex, MemAddr currentAddress);
 
-        i64 result() const { return m_result; }
-        u8 r8() const { return u8(m_result); }
-        u16 r16() const { return u16(m_result); }
+        ExprValue result() const { return m_result; }
+        u8 r8() const { assert(m_result.getType() == ExprValue::Type::Integer); return m_result.r8(); }
+        u16 r16() const { assert(m_result.getType() == ExprValue::Type::Integer); return m_result.r16(); }
 
     private:
         vector<Value>   m_queue;
-        i64             m_result;
+        ExprValue       m_result;
     };
 
     struct Operand
@@ -256,6 +303,8 @@ private:
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
     optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr);
     Path findFile(Path givenPath);
+    optional<MemAddr> getZ80AddressFromExpression(Lex& lex, const Lex::Element* e, ExprValue expr);
+    bool CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand operand, i64 a, i64 b);
 
     //
     // Directives
@@ -293,10 +342,10 @@ private:
 
     struct SymbolInfo
     {
-        MemoryMap::Address  m_addr;
+        MemAddr     m_addr;
 
-        SymbolInfo() : m_addr(0) {}
-        SymbolInfo(MemoryMap::Address addr) : m_addr(addr) {}
+        SymbolInfo() : m_addr() {}
+        SymbolInfo(MemAddr addr) : m_addr(addr) {}
     };
 
     map<string, Lex>            m_sessions;
@@ -306,11 +355,11 @@ private:
 
     // Symbols (labels)
     map<i64, SymbolInfo>        m_symbolTable;
-    map<i64, i64>               m_values;
+    map<i64, ExprValue>         m_values;
     StringTable                 m_lexSymbols;   // Symbols shared by all Lex instances
 
     // Variables
-    map<i64, i64>               m_variables;
+    map<i64, ExprValue>         m_variables;
 
     //
     // Database generated by the passes
