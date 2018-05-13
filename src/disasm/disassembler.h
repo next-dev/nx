@@ -51,13 +51,13 @@ public:
 
     struct Line
     {
-        LineType                type;
-        int                     commandIndex;   // Index of command that generated this line
-        MemoryMap::Address      startAddress;
-        MemoryMap::Address      endAddress;
-        string                  text;
+        LineType    type;
+        int         commandIndex;   // Index of command that generated this line
+        MemAddr     startAddress;
+        MemAddr     endAddress;
+        string      text;
 
-        Line(LineType type, int commandIndex, MemoryMap::Address start, MemoryMap::Address end, string text)
+        Line(LineType type, int commandIndex, MemAddr start, MemAddr end, string text)
             : type(type)
             , commandIndex(commandIndex)
             , startAddress(start)

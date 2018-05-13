@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <editor/editor.h>
 #include <asm/asm.h>
+#include <editor/editor.h>
+#include <emulator/spectrum.h>
 
 #include <string>
 
@@ -20,7 +21,7 @@ public:
     MemoryDumpWindow(Nx& nx);
 
     void zoomMode(bool flag);
-    void gotoAddress(MemoryMap::Address addr);
+    void gotoAddress(MemAddr addr);
     bool allowExit() const { return m_enableGoto == 0 && !m_editMode; }
 
 protected:
@@ -164,8 +165,8 @@ public:
     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
     CommandWindow&      getCommandWindow() { return m_commandWindow; }
 
-    const vector<MemoryMap::Address>&   getFindAddresses() const { return m_findAddresses; }
-    int                                 getFindWidth() const { return m_findWidth; }
+    const vector<MemAddr>&  getFindAddresses() const { return m_findAddresses; }
+    int                     getFindWidth() const { return m_findWidth; }
 
 private:
     // Command utilities
@@ -184,7 +185,7 @@ private:
 
     bool                        m_zoomMode;
 
-    vector<MemoryMap::Address>  m_findAddresses;
+    vector<MemAddr>             m_findAddresses;
     int                         m_currentAddress;
     int                         m_findWidth;
 };
