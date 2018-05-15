@@ -603,7 +603,7 @@ Nx::Nx(int argc, char** argv)
 #ifdef __APPLE__
     m_tempPath = resourcePath();
 #else
-    m_tempPath = fs::path(argv[0]).parent_path();
+    m_tempPath = Path(argv[0]).parent();
 #endif
     setScale(kDefaultScale);
     m_machine->getVideoSprite().setScale(float(kDefaultScale + 1), float(kDefaultScale + 1));
