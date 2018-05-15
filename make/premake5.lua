@@ -33,6 +33,7 @@ solution "nx"
 
 	configuration "Release"
 		defines { "NDEBUG" }
+        flags { "FatalWarnings" }
 		optimize "full"
 
 	-- Projects
@@ -43,11 +44,15 @@ solution "nx"
 		files {
             "../src/**.h",
 			"../src/**.cc",
+            "../src/**.c",
+            "../src/**.ico",
+            "../src/**.rc",
             "../README.md",
-            "../etc/keys.txt"
+            "../etc/keys.txt",
 		}
         includedirs {
             "../include",
+            "../src",
         }
         links {
             "flac.lib",
@@ -100,6 +105,7 @@ solution "nx"
 		configuration "Win*"
 			defines {
 				"WIN32",
+                "_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING",
 			}
 			flags {
 				--"StaticRuntime",
@@ -109,3 +115,5 @@ solution "nx"
             linkoptions {
                 "/ignore:4099"
             }
+            buildoptions { "/std:c++17" }
+

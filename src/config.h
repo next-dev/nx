@@ -8,6 +8,8 @@
 
 // Show a console on Win32 platform
 #define NX_DEBUG_CONSOLE        0
+// Debug the editor buffer
+#define NX_DEBUG_EDITOR         0
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -15,20 +17,34 @@ namespace std {}
 
 using namespace std;
 
+// We usually want to output if the debug console is open
+#if NX_DEBUG_CONSOLE
+#   include <iostream>
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // Version information
 //----------------------------------------------------------------------------------------------------------------------
 
-#define NX_MINOR_VERSION        0
 #define NX_MAJOR_VERSION        0
-#define NX_PATCH_VERSION        3
+#define NX_MINOR_VERSION        0
+#define NX_PATCH_VERSION        7
+#define NX_DEV_MINOR            2
+#define NX_DEV_PATCH            "B"
+//#define NX_DEV_TESTER           ""
 
 #define NX_STR2(x) #x
 #define NX_STR(x) NX_STR2(x)
 
 #if NX_MAJOR_VERSION == 0
 #   if NX_MINOR_VERSION == 0
-#       define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION)
+#       ifdef NX_DEV_TESTER
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_MINOR) " (" NX_DEV_TESTER ")"
+#       elif defined(NX_DEV_PATCH)
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_MINOR) NX_DEV_PATCH
+#       else
+#           define NX_VERSION "Dev." NX_STR(NX_PATCH_VERSION) "." NX_STR(NX_DEV_MINOR)
+#       endif
 #   elif NX_MINOR_VERSION == 9
 #       define NX_VERSION "Beta." NX_STR(NX_PATCH_VERSION)
 #   else
@@ -73,7 +89,7 @@ const int kBorderHeight = (kWindowHeight - kScreenHeight) / 2;
 static const int kUiWidth = kWindowWidth * 2;
 static const int kUiHeight = kWindowHeight * 2;
 
-const int kDefaultScale = 2;
+const int kDefaultScale = 3;
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
