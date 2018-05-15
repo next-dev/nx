@@ -187,6 +187,14 @@ namespace {
 
         return output;
     }
+    
+    template <int N, typename T>
+    inline void internalStringFormat(int index, string values[N], T t)
+    {
+        std::ostringstream ss;
+        ss << t;
+        values[index] = ss.str();
+    }
 
     template <int N, typename T, typename ...Args>
     inline void internalStringFormat(int index, string values[N], T t, Args... args)
@@ -194,9 +202,9 @@ namespace {
         std::ostringstream ss;
         ss << t;
         values[index] = ss.str();
-        internalStringFormat<N>(index + 1, values, args...);
+        internalStringFormat<N, Args...>(index + 1, values, args...);
     }
-
+    
     template <int N>
     inline void internalStringFormat(int index, string values[N])
     {
@@ -221,7 +229,9 @@ template <typename... Args>
 inline void debugOutput(Args... args)
 {
     string s = StringFormat(args...);
+#ifdef WIN32
     OutputDebugStringA(s.c_str());
+#endif
 }
 
 inline std::string fromWString(const std::wstring& ws)

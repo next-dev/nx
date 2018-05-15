@@ -2,4 +2,7 @@ _*/
 data/tests.results
 xcode/nx/DerivedData
 xcuserdata/
+xcshareddata/
 *.aps
+build/
+
