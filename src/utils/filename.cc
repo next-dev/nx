@@ -25,6 +25,11 @@ Path fullFileName(Path originalFileName, Path newFileName)
 // Path class
 //----------------------------------------------------------------------------------------------------------------------
 
+Path::Path()
+{
+    setPath("/");
+}
+
 Path::Path(string osPath)
     : m_isRelative(false)
 {
@@ -49,7 +54,7 @@ void Path::setPath(string osPath)
     string elem;
     for (auto c : osPath)
     {
-        if (c == '/' || c == '\\' && elem.size() > 0)
+        if (((c == '/') || (c == '\\')) && (elem.size() > 0))
         {
             if (elem.size() > 0) m_elems.push_back(elem);
             elem.clear();
@@ -91,6 +96,11 @@ Path Path::operator / (const Path& path)
     return p;
 }
 
+Path Path::operator / (const string& str)
+{
+    return operator /(Path(str));
+}
+
 string Path::osPath() const
 {
 #ifdef _WIN32
@@ -123,4 +133,17 @@ Path Path::parent() const
     assert(p.m_elems.size() != 0);
     p.m_elems.erase(p.m_elems.end() - 1);
     return p;
+}
+
+bool Path::hasExtension() const
+{
+    if (m_elems.size() == 0) return false;
+    return m_elems.back().find('.') != 	string::npos;
+}
+
+string Path::extension() const
+{
+    assert(m_elems.size() > 0);
+    size_t i = m_elems.back().find('.');
+    return m_elems.back().substr(i);
 }

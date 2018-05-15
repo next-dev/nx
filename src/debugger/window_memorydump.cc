@@ -127,7 +127,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
 
 void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    if (!m_enableGoto || !m_gotoEditor.key(key, down, shift, ctrl, alt) && !down)
+    if ((!m_enableGoto || !m_gotoEditor.key(key, down, shift, ctrl, alt)) && !down)
     {
         // An editor didn't handle the key so handle it here
         using K = sf::Keyboard::Key;
@@ -289,7 +289,6 @@ void MemoryDumpWindow::onText(char ch)
             case 13:
             {
                 m_enableGoto = 0;
-                u16 t = 0;
 
                 vector<u8> exprData = m_gotoEditor.getData().getData();
                 if (exprData.size() == 0)

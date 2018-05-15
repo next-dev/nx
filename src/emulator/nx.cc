@@ -470,7 +470,7 @@ void Emulator::openFile()
     {
         if (!getEmulator().openFile(fileName))
         {
-            MessageBoxA(0, "Unable to load!", "ERROR", MB_ICONERROR | MB_OK);
+            tinyfd_messageBox("ERROR", "Unable to load!", "ok", "error", 0);
         }
     }
 
@@ -494,7 +494,7 @@ void Emulator::saveFile()
     {
         if (!getEmulator().saveFile(fileName))
         {
-            MessageBoxA(0, "Unable to save snapshot!", "ERROR", MB_ICONERROR | MB_OK);
+            tinyfd_messageBox("ERROR", "Unable to save snapshot!", "ok", "error", 0);
         }
     }
 
@@ -504,12 +504,12 @@ void Emulator::saveFile()
 bool Nx::openFile(string fileName)
 {
     // Get extension
-    fs::path path = fileName;
+    Path path = fileName;
 
-    if (path.has_extension())
+    if (path.hasExtension())
     {
-        string ext = path.extension().string();
-        transform(ext.begin(), ext.end(), ext.begin(), tolower);
+        string ext = path.extension();
+        transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
         if (ext == ".sna")
         {
             return loadSnaSnapshot(fileName);
@@ -534,14 +534,14 @@ bool Nx::openFile(string fileName)
 bool Nx::saveFile(string fileName)
 {
     // Get extension
-    fs::path path = fileName;
-    if (!path.has_extension())
+    Path path = fileName;
+    if (!path.hasExtension())
     {
         path = (fileName += ".nx");
     }
 
-    string ext = path.extension().string();
-    transform(ext.begin(), ext.end(), ext.begin(), tolower);
+    string ext = path.extension();
+    transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
     if (ext == ".sna")
     {
@@ -641,7 +641,7 @@ Nx::Nx(int argc, char** argv)
     updateSettings();
     if (!loadedFiles)
     {
-        loadNxSnapshot((m_tempPath / "cache.nx").string());
+        loadNxSnapshot((m_tempPath / "cache.nx").osPath());
     }
     m_emulator.select();
 }
@@ -776,7 +776,6 @@ void Nx::run()
                         "There are some unsaved changes in some edited files.  Do you wish to save "
                         "these files before continuing?",
                         "yesnocancel", "question", 0);
-                    bool skipThisFile = false;
                     switch (result)
                     {
                     case 0:     // Cancel - stop everything!
@@ -878,7 +877,7 @@ void Nx::run()
     }
 
     // Shutdown
-    saveNxSnapshot((m_tempPath / "cache.nx").string(), true);
+    saveNxSnapshot((m_tempPath / "cache.nx").osPath(), true);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1159,6 +1158,8 @@ bool Nx::loadNxSnapshot(string fileName)
         {
         case Model::ZXPlus2:
         case Model::ZX128:
+        case Model::ZXNext:
+            // #todo: Deal with NX file format for ZX-Next.
             if (f.checkSection('S128', 1))
             {
                 const BlockSection& s128 = f['S128'];
@@ -1222,6 +1223,9 @@ bool Nx::loadNxSnapshot(string fileName)
                 return false;
             }
             break;
+                
+        default:
+            assert(0);
         }
 
         if (f.checkSection('EMUL', 0))

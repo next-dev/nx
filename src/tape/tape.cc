@@ -263,7 +263,6 @@ u8 Tape::play(TState tStates)
 
 bool Tape::nextBit()
 {
-    bool result = false;
     m_state = State::Data;
 
     // Check for end of block

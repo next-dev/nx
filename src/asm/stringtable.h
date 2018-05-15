@@ -6,6 +6,13 @@
 #pragma once
 
 #include <types.h>
+#include <cstring>
+#include <memory>
+
+#ifdef __APPLE__
+#define _stricmp strcasecmp
+#define _memicmp strncasecmp
+#endif
 
 class StringTable
 {
@@ -98,7 +105,7 @@ public:
 
     static u64 hash(const char* str, bool ignoreCase)
     {
-        u64 h = 14695981039346656037;
+        u64 h = 14695981039346656037ull;
         while (*str != 0)
         {
             char c = *str++;
@@ -112,7 +119,7 @@ public:
 
     static u64 hash(const char* start, const char* end, bool ignoreCase)
     {
-        u64 h = 14695981039346656037;
+        u64 h = 14695981039346656037ull;
         while (start != end)
         {
             char c = *start++;

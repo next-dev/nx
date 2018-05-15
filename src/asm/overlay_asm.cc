@@ -155,6 +155,8 @@ void AssemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool c
         case K::Escape:
             m_nx.showEditor();
             break;
+                
+        default: break;
         }
     }
     if (m_offset > int(m_longestLine - 2)) m_offset = max(0, int(m_longestLine - 2));

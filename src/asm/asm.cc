@@ -1712,6 +1712,10 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Addr
                 FAIL();
             }
             break;
+            
+        default:
+            assert(0);
+            break;
         }
     }
 
@@ -1879,42 +1883,42 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 #define UNDEFINED()                             \
     error(lex, *s, "Unimplemented opcode.");    \
-    return false;
+    return nullptr;
 
 #define CHECK8()                                                        \
     if (srcOp.expr.result() < 0 || srcOp.expr.result() > 255) {         \
         error(lex, *srcE, "Expression out of range.  Must be 0-255.");  \
-        return false;                                                   \
+        return nullptr;                                                   \
     }
 
 #define CHECK16()                                                           \
     if (srcOp.expr.result() < 0 || srcOp.expr.result() > 65535) {           \
         error(lex, *srcE, "Expression out of range.  Must be 0-65535.");    \
-        return false;                                                       \
+        return nullptr;                                                       \
     }
 
 #define CHECK8_SIGNED()                                                         \
     if (srcOp.expr.result() < -128 || srcOp.expr.result() > 127) {              \
         error(lex, *srcE, "Expression out of range.  Must be -128 to +127.");   \
-        return false;                                                           \
+        return nullptr;                                                           \
     }
 
 #define CHECK8_DST()                                                    \
     if (dstOp.expr.result() < 0 || dstOp.expr.result() > 255) {         \
         error(lex, *dstE, "Expression out of range.  Must be 0-255.");  \
-        return false;                                                   \
+        return nullptr;                                                   \
     }
 
 #define CHECK16_DST()                                                       \
     if (dstOp.expr.result() < 0 || dstOp.expr.result() > 65535) {           \
         error(lex, *dstE, "Expression out of range.  Must be 0-65535.");    \
-        return false;                                                       \
+        return nullptr;                                                       \
     }
 
 #define CHECK8_DST_SIGNED()                                                     \
     if (dstOp.expr.result() < -128 || dstOp.expr.result() > 127) {              \
         error(lex, *dstE, "Expression out of range.  Must be -128 to +127.");   \
-        return false;                                                           \
+        return nullptr;                                                           \
     }
 
     // These values are used to generate the machine code for the instruction
@@ -2244,7 +2248,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             if (dstOp.expr.result() < 0 || dstOp.expr.result() > 7)
             {
                 error(lex, *dstE, "Invalid bit index.  Must be 0-7.");
-                return false;
+                return nullptr;
             }
             prefix = 0xcb;
             u8 xx = (opCode == T::BIT ? 1 : opCode == T::RES ? 2 : 3);
@@ -2318,7 +2322,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 if (indexOffset != 0)
                 {
                     error(lex, *dstE, "Index offsets are not allowed in JP instructions.  Remove the offset.");
-                    return false;
+                    return nullptr;
                 }
 
                 // We don't want to emit the offset later.
@@ -2397,7 +2401,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             (dstOp.expr.result() % 8) != 0)
         {
             error(lex, *dstE, "Invalid value for RST opcode.");
-            return false;
+            return nullptr;
         }
         XYZ(3, u8(dstOp.expr.result() / 8), 7);
         break;
@@ -2732,7 +2736,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 if (srcOp.expr.result() != 0)
                 {
                     error(lex, *srcE, "Invalid expression for OUT instruction.  Must be 0 or 8-bit register.");
-                    return false;
+                    return nullptr;
                 }
                 prefix = 0xed;
                 XYZ(1, 6, 1);
@@ -2774,7 +2778,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         if (dstOp.expr.result() < 0 || dstOp.expr.result() > 2)
         {
             error(lex, *dstE, "Invalid value of IM instruction.  Must be 0-2.");
-            return false;
+            return nullptr;
         }
         prefix = 0xed;
         switch (dstOp.expr.result())

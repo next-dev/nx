@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <config.h>
 #include <asm/disasm.h>
 #include <asm/lex.h>
 #include <asm/stringtable.h>
@@ -12,7 +13,11 @@
 
 #include <array>
 #include <map>
+#ifdef __APPLE__
+#include <experimental/optional>
+#else
 #include <optional>
+#endif
 #include <vector>
 
 //----------------------------------------------------------------------------------------------------------------------

@@ -24,6 +24,9 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
 
     case Model::ZX128:
     case Model::ZXPlus2:
+    case Model::ZXNext:
+            
+    default:
         assert(0);
     }
 

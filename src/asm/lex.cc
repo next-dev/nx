@@ -6,6 +6,10 @@
 #include <asm/lex.h>
 #include <utils/format.h>
 
+#ifdef __APPLE__
+#define _strnicmp strncasecmp
+#endif
+
 //----------------------------------------------------------------------------------------------------------------------
 // Lexical tables
 //----------------------------------------------------------------------------------------------------------------------
@@ -325,8 +329,6 @@ Lex::Element::Type Lex::next(Assembler& assembler)
     else if (gNameChar[c] == 1)
     {
         // Possible symbol or keyword
-        int l = 1;
-
         while (gNameChar[c]) c = nextChar();
         ungetChar();
 
