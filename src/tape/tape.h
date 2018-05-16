@@ -55,7 +55,7 @@ public:
                 u16     startAddress;
                 u16     dataLength;
             } b;
-        };
+        } u;
 
         u8      checkSum;
     };

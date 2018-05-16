@@ -196,9 +196,9 @@ void DisassemblerEditor::render(Draw& draw)
     m_longestLine = 0;
 
     // Colours
-    u8 bkgColour = Draw::attr(Colour::White, Colour::Black, false);
+    //u8 bkgColour = Draw::attr(Colour::White, Colour::Black, false);
     u8 commentColour = Draw::attr(Colour::Green, Colour::Black, true);
-    u8 labelColour = Draw::attr(Colour::Cyan, Colour::Black, true);
+    //u8 labelColour = Draw::attr(Colour::Cyan, Colour::Black, true);
     u8 rangeColour = Draw::attr(Colour::Black, Colour::Green, false);
     u8 cursorColour = Draw::attr(Colour::White, Colour::Blue, true) | 0x80;
 
@@ -441,6 +441,8 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
         case K::O:      // Open file
             openFile();
             break;
+                
+        default: break;
         }
     }
 
@@ -510,7 +512,6 @@ bool DisassemblerWindow::saveAll()
                 "There are some new files open in the editor that are unsaved.  Do you still wish to save "
                 "these files before continuing?",
                 "yesnocancel", "question", 0);
-            bool skipThisFile = false;
             switch (result)
             {
             case 0:     // Cancel - stop everything!
@@ -585,7 +586,7 @@ void DisassemblerOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool
     }
     else if (down && !shift && ctrl && !alt)
     {
-        bool buildSuccess = false;
+        //bool buildSuccess = false;
 
         if (key == K::B)
         {

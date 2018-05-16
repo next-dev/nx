@@ -14,12 +14,10 @@
 
 #include <SFML/Graphics.hpp>
 
-#include <experimental/filesystem>
+#include <algorithm>
 #include <map>
 #include <mutex>
 #include <thread>
-
-namespace fs = experimental::filesystem::v1;
 
 enum class Joystick
 {
@@ -82,7 +80,7 @@ private:
 
 private:
     // Keyboard state
-    vector<bool>        m_speccyKeys;
+    vector<u8>          m_speccyKeys;
     vector<u8>          m_keyRows;
     int                 m_counter;
 
@@ -214,7 +212,7 @@ private:
     TapeBrowser         m_tapeBrowser;
 
     // Files
-    fs::path            m_tempPath;
+    Path                m_tempPath;
 
     // Key storage
     struct KeyInfo

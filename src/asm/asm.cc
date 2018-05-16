@@ -1709,6 +1709,10 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
                 FAIL();
             }
             break;
+            
+        default:
+            assert(0);
+            break;
         }
     }
 
@@ -1896,18 +1900,17 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 #define UNDEFINED()                             \
     error(lex, *s, "Unimplemented opcode.");    \
-    return false;
+    return nullptr;
 
-#define CHECK8()                do { if (!CheckIntOpRange(lex, srcE, srcOp, 0, 255)) return false; } while(0)
-#define CHECK16()               do { if (!CheckIntOpRange(lex, srcE, srcOp, 0, 65535)) return false; } while(0)
-#define CHECK8_SIGNED()         do { if (!CheckIntOpRange(lex, srcE, srcOp, -128, 127)) return false; } while(0)
-#define CHECK16_SIGNED()        do { if (!CheckIntOpRange(lex, srcE, srcOp, -32768, 32767)) return false; } while(0)
+#define CHECK8()                do { if (!CheckIntOpRange(lex, srcE, srcOp, 0, 255)) return nullptr; } while(0)
+#define CHECK16()               do { if (!CheckIntOpRange(lex, srcE, srcOp, 0, 65535)) return nullptr; } while(0)
+#define CHECK8_SIGNED()         do { if (!CheckIntOpRange(lex, srcE, srcOp, -128, 127)) return nullptr; } while(0)
+#define CHECK16_SIGNED()        do { if (!CheckIntOpRange(lex, srcE, srcOp, -32768, 32767)) return nullptr; } while(0)
 
-#define CHECK8_DST()            do { if (!CheckIntOpRange(lex, dstE, dstOp, 0, 255)) return false; } while(0)
-#define CHECK16_DST()           do { if (!CheckIntOpRange(lex, dstE, dstOp, 0, 65535)) return false; } while(0)
-#define CHECK8_DST_SIGNED()     do { if (!CheckIntOpRange(lex, dstE, dstOp, -128, 127)) return false; } while(0)
-#define CHECK16_DST_SIGNED()    do { if (!CheckIntOpRange(lex, dstE, dstOp, -32768, 32767)) return false; } while(0)
-
+#define CHECK8_DST()            do { if (!CheckIntOpRange(lex, dstE, dstOp, 0, 255)) return nullptr; } while(0)
+#define CHECK16_DST()           do { if (!CheckIntOpRange(lex, dstE, dstOp, 0, 65535)) return nullptr; } while(0)
+#define CHECK8_DST_SIGNED()     do { if (!CheckIntOpRange(lex, dstE, dstOp, -128, 127)) return nullptr; } while(0)
+#define CHECK16_DST_SIGNED()    do { if (!CheckIntOpRange(lex, dstE, dstOp, -32768, 32767)) return nullptr; } while(0)
 
     // These values are used to generate the machine code for the instruction
     u8 indexPrefix = 0;
@@ -2236,7 +2239,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             if (dstOp.expr.result() < 0 || dstOp.expr.result() > 7)
             {
                 error(lex, *dstE, "Invalid bit index.  Must be 0-7.");
-                return false;
+                return nullptr;
             }
             prefix = 0xcb;
             u8 xx = (opCode == T::BIT ? 1 : opCode == T::RES ? 2 : 3);
@@ -2310,7 +2313,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 if (indexOffset != 0)
                 {
                     error(lex, *dstE, "Index offsets are not allowed in JP instructions.  Remove the offset.");
-                    return false;
+                    return nullptr;
                 }
 
                 // We don't want to emit the offset later.
@@ -2389,7 +2392,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             ((i64)dstOp.expr.result() % 8) != 0)
         {
             error(lex, *dstE, "Invalid value for RST opcode.");
-            return false;
+            return nullptr;
         }
         XYZ(3, u8((i64)dstOp.expr.result() / 8), 7);
         break;
@@ -2724,7 +2727,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 if (srcOp.expr.result() != 0)
                 {
                     error(lex, *srcE, "Invalid expression for OUT instruction.  Must be 0 or 8-bit register.");
-                    return false;
+                    return nullptr;
                 }
                 prefix = 0xed;
                 XYZ(1, 6, 1);
@@ -2766,7 +2769,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         if (dstOp.expr.result() < 0 || dstOp.expr.result() > 2)
         {
             error(lex, *dstE, "Invalid value of IM instruction.  Must be 0-2.");
-            return false;
+            return nullptr;
         }
         prefix = 0xed;
         switch (dstOp.expr.result())

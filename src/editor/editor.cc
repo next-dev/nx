@@ -1391,6 +1391,9 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
         case K::O:  // Open file
             openFile();
             break;
+                
+        default:
+            break;
         }
     }
 
@@ -1485,7 +1488,6 @@ bool EditorWindow::saveAll()
                 "There are some new files open in the editor that are unsaved.  Do you still wish to save "
                 "these files before continuing?",
                 "yesnocancel", "question", 0);
-            bool skipThisFile = false;
             switch (result)
             {
             case 0:     // Cancel - stop everything!

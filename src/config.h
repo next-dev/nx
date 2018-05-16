@@ -13,9 +13,12 @@
 
 //----------------------------------------------------------------------------------------------------------------------
 
-namespace std {}
+namespace std {
+    namespace experimental {}
+}
 
 using namespace std;
+using namespace std::experimental;
 
 // We usually want to output if the debug console is open
 #if NX_DEBUG_CONSOLE

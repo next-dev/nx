@@ -18,6 +18,7 @@ string fullFileName(string originalFileName, string newFileName);
 class Path
 {
 public:
+    Path();
     Path(string osPath);
 
     bool empty() const { return m_root.empty() && m_elems.size() == 0; }
@@ -31,8 +32,11 @@ public:
     bool valid() const;
     bool isRelative() const { return m_isRelative; }
     bool exists() const;
+    bool hasExtension() const;
+    string extension() const;
 
     Path operator / (const Path& path);
+    Path operator / (const string& path);
 
     string osPath() const;
     Path parent() const;

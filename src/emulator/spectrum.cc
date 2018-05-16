@@ -290,7 +290,7 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
     switch (runMode)
     {
     case RunMode::Normal:
-        while (m_tState < getFrameTime())
+        while (m_tState < frameTime)
         {
             startTState = m_tState;
             m_z80.step(m_tState);
@@ -320,9 +320,9 @@ bool Spectrum::update(RunMode runMode, bool& breakpointHit)
         break;
     }
 
-    if (m_tState >= getFrameTime())
+    if (m_tState >= frameTime)
     {
-        m_tState -= getFrameTime();
+        m_tState -= frameTime;
         m_z80.interrupt();
         result = true;
     }
@@ -390,6 +390,10 @@ void Spectrum::initMemory()
         setSlot(7, Bank(MemGroup::RAM, 1));
         m_videoBank = 10;
         m_shadowVideoBank = 14;
+        break;
+            
+    default:
+        assert(0);
         break;
     }
     m_contention.resize(70930);
@@ -954,7 +958,6 @@ void Spectrum::updateVideo()
             offset = aaddr % kBankSize;
             u8 attr = memRef(MemAddr(Bank(MemGroup::RAM, bank), offset));
 
-            u8 lastPixelData = pixelData;
             u8 lastAttrData = attr;
 
             // Bright is either 0x08 or 0x00
