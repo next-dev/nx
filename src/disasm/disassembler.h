@@ -26,7 +26,7 @@ class DisassemblerDoc
 public:
     DisassemblerDoc(Spectrum& speccy);
 
-    bool load(string fileName);
+    bool load(Spectrum& speccy, string fileName);
     bool save(string fileName);
     bool hasChanged() const { return m_changed; }
 
@@ -104,7 +104,7 @@ private:
     // Internal API
     //
 
-    void reset();
+    void reset(const Spectrum& speccy);
     void changed() { m_changed = true; }
 
 private:

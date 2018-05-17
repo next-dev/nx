@@ -30,18 +30,36 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
         assert(0);
     }
 
-    reset();
+    reset(speccy);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 // Internal functions
 //----------------------------------------------------------------------------------------------------------------------
 
-void DisassemblerDoc::reset()
+void DisassemblerDoc::reset(const Spectrum& speccy)
 {
     m_lines.clear();
     m_commands.clear();
-    m_lines.emplace_back(LineType::UnknownRange, -1, 0x4000, 0xffff, string{});
+
+    switch (speccy.getModel())
+    {
+    case Model::ZX48:
+        {
+            MemAddr start = speccy.convertAddress(Z80MemAddr(0x4000));
+            MemAddr end = speccy.convertAddress(Z80MemAddr(0xffff));
+            m_lines.emplace_back(LineType::UnknownRange, -1, start, end, string{});
+        }
+        break;
+
+    case Model::ZX128:
+    case Model::ZXPlus2:
+    case Model::ZXNext:
+
+    default:
+        assert(0);
+    }
+
     m_changed = false;
 }
 
@@ -55,7 +73,7 @@ bool DisassemblerDoc::processCommand(CommandType type, int line, i64 param1, str
     {
     case CommandType::FullComment:
         assert(line >= 0 && line <= int(m_lines.size()));
-        m_lines.emplace(m_lines.begin() + line, LineType::FullComment, commandIndex, 0, 0, text);
+        m_lines.emplace(m_lines.begin() + line, LineType::FullComment, commandIndex, MemAddr(), MemAddr(), text);
         break;
 
     case CommandType::LineComment:
@@ -150,9 +168,9 @@ void DisassemblerDoc::deleteLine(int line)
 //              13      ?       Text
 //----------------------------------------------------------------------------------------------------------------------
 
-bool DisassemblerDoc::load(string fileName)
+bool DisassemblerDoc::load(Spectrum& speccy, string fileName)
 {
-    reset();
+    reset(speccy);
 
     NxFile f;
     if (f.load(fileName))
