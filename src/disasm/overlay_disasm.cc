@@ -14,7 +14,8 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 DisassemblerEditor::DisassemblerEditor(Spectrum& speccy, int xCell, int yCell, int width, int height)
-    : m_data(speccy)
+    : m_speccy(&speccy)
+    , m_data(speccy)
     , m_x(xCell)
     , m_y(yCell)
     , m_width(width)
@@ -216,7 +217,7 @@ void DisassemblerEditor::render(Draw& draw)
         case T::UnknownRange:
             m_longestLine = m_width - 2;
             draw.attrRect(m_x+1, y, m_width-2, 1, rangeColour);
-            draw.printSquashedString(m_x+1, y, stringFormat("-- Unknown area: {0}-{1} --", hexWord(u16(line.startAddress)), hexWord(u16(line.endAddress))), rangeColour);
+            draw.printSquashedString(m_x+1, y, stringFormat("-- Unknown area: {0}-{1} --", m_speccy->addressName(line.startAddress), m_speccy->addressName(line.endAddress)), rangeColour);
             break;
 
         case T::FullComment:
@@ -397,7 +398,7 @@ void DisassemblerWindow::openFile(const string& fileName /* = string() */)
         newFile();
 
         DisassemblerEditor& thisEditor = getEditor();
-        if (thisEditor.getData().load(fn))
+        if (thisEditor.getData().load(m_nx.getSpeccy(), fn))
         {
             thisEditor.setFileName(fn);
         }
