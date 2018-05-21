@@ -74,15 +74,17 @@ BlockSection::BlockSection(const BlockSection& block)
 
 }
 
-BlockSection::BlockSection(FourCC fcc)
+BlockSection::BlockSection(FourCC fcc, int version)
     : m_fcc(fcc)
+    , m_version(version)
     , m_data()
 {
 
 }
 
-BlockSection::BlockSection(FourCC fcc, const u8* data, u32 size)
+BlockSection::BlockSection(FourCC fcc, int version, const u8* data, u32 size)
     : m_fcc(fcc)
+    , m_version(version)
     , m_data(data, data + size)
 {
 
@@ -101,6 +103,11 @@ u16 BlockSection::peek16(int i) const
 u32 BlockSection::peek32(int i) const
 {
     return u32(peek16(i)) + (u32(peek16(i + 2)) << 16);
+}
+
+MemAddr BlockSection::peekAddr(int i) const
+{
+    return MemAddr(MemGroup::RAM, (int)peek32(i));
 }
 
 i64 BlockSection::peek64(int i) const
@@ -139,6 +146,12 @@ void BlockSection::poke32(u32 dword)
     poke16(dword >> 16);
 }
 
+void BlockSection::pokeAddr(MemAddr addr)
+{
+    u32 a = (u32)addr.index();
+    poke32(a);
+}
+
 void BlockSection::poke64(i64 qword)
 {
     poke32(qword & 0xffffffff);
@@ -164,15 +177,11 @@ void BlockSection::pokeData(const vector<u8>& data)
     copy(data.begin(), data.end(), back_inserter(m_data));
 }
 
-void BlockSection::checkSize(u32 expectedSize) const
-{
-    NX_ASSERT((expectedSize == 0) || (m_data.size() == (size_t)expectedSize));
-}
-
 void BlockSection::write(vector<u8>& data) const
 {
     // Write header
     NxFile::writeFcc(data, m_fcc);
+    NxFile::write16(data, u16(m_version));
     NxFile::write32(data, (u32)m_data.size());
     data.insert(data.end(), m_data.begin(), m_data.end());
 }
@@ -232,15 +241,17 @@ bool NxFile::load(string fileName)
             while (i < f.size())
             {
                 // Read a block
-                if ((i + 8) > f.size()) return false;
+                if ((i + 10) > f.size()) return false;
                 FourCC blockFcc = readFcc(f, i);
                 i += 4;
+                int blockVersion = read16(f, i);
+                i += 2;
                 u32 blockSize = read32(f, i);
                 i += 4;
 
                 if ((i + (int)blockSize) > f.size()) return false;
                 m_index[blockFcc] = (int)m_sections.size();
-                m_sections.emplace_back(blockFcc, f.data() + i, blockSize);
+                m_sections.emplace_back(blockFcc, blockVersion, f.data() + i, blockSize);
                 i += blockSize;
             }
 
@@ -267,10 +278,10 @@ bool NxFile::save(string fileName)
     return saveFile(fileName, data);
 }
 
-void NxFile::addSection(const BlockSection& section, u32 expectedSize)
+void NxFile::addSection(const BlockSection& section)
 {
-    section.checkSize(expectedSize);
     FourCC fcc = section.getFcc();
+    assert(!hasSection(fcc));
     m_index[fcc] = (int)m_sections.size();
     m_sections.push_back(section);
 }
@@ -294,12 +305,16 @@ u32 NxFile::sizeSection(FourCC fcc)
     }
 }
 
-bool NxFile::checkSection(FourCC fcc, u32 expectedSize)
+int NxFile::versionSection(FourCC fcc)
 {
-    bool check = expectedSize
-        ? sizeSection(fcc) == expectedSize
-        : sizeSection(fcc) != -1;
-    return check;
+    auto it = m_index.find(fcc);
+    NX_ASSERT(it != m_index.end());
+    return m_sections[it->second].version();
+}
+
+bool NxFile::checkSection(FourCC fcc, int version)
+{
+    return sizeSection(fcc) != -1 && versionSection(fcc) == version;
 }
 
 const BlockSection& NxFile::operator[](FourCC fcc) const
@@ -312,12 +327,18 @@ const BlockSection& NxFile::operator[](FourCC fcc) const
     return m_sections[it->second];
 }
 
+u16 NxFile::read16(const vector<u8>& data, int index)
+{
+    return (u16(data[index]) |
+           (u16(data[index + 1]) << 8));
+}
+
 u32 NxFile::read32(const vector<u8>& data, int index)
 {
     return (u32(data[index]) |
-            (u32(data[index+1]) << 8) |
-            (u32(data[index+2]) << 16) |
-            (u32(data[index+3]) << 24));
+           (u32(data[index+1]) << 8) |
+           (u32(data[index+2]) << 16) |
+           (u32(data[index+3]) << 24));
 }
 
 FourCC NxFile::readFcc(const vector<u8>& data, int index)

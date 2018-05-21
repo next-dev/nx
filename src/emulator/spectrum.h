@@ -263,6 +263,8 @@ public:
     bool                isZ80Address        (MemAddr addr) const;
     string              addressName         (MemAddr address);
     u8&                 memRef              (MemAddr addr);
+    vector<u8>          getMmu              (MemGroup group, int index);
+    void                setMmu              (MemGroup group, int index, const vector<u8>& data);
 
     //------------------------------------------------------------------------------------------------------------------
     // Video interface

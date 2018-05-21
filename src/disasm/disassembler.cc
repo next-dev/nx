@@ -175,7 +175,7 @@ bool DisassemblerDoc::load(Spectrum& speccy, string fileName)
     NxFile f;
     if (f.load(fileName))
     {
-        if (f.checkSection('MM48', 65536))
+        if (f.checkSection('MM48', 0))
         {
             const BlockSection& mm48 = f['MM48'];
             mm48.peekData(0, m_mmap, 65536);
@@ -214,15 +214,15 @@ bool DisassemblerDoc::save(string fileName)
     //
     // MM48 section
     //
-    BlockSection mm48('MM48');
+    BlockSection mm48('MM48', 0);
     assert(m_mmap.size() == 65536);
     mm48.pokeData(m_mmap);
-    f.addSection(mm48, 65536);
+    f.addSection(mm48);
 
     //
     // DCMD section
     //
-    BlockSection dcmd('DCMD');
+    BlockSection dcmd('DCMD', 0);
     dcmd.poke32(u32(m_commands.size()));
     for (const auto& command : m_commands)
     {
@@ -231,7 +231,7 @@ bool DisassemblerDoc::save(string fileName)
         dcmd.poke64(command.param1);
         dcmd.pokeString(command.text);
     }
-    f.addSection(dcmd, 0);
+    f.addSection(dcmd);
     m_changed = false;
 
     return f.save(fileName);

@@ -13,8 +13,9 @@
 //
 //      Offset  Length  Description
 //      0       4       '????' - Block type
-//      4       4       Length of block
-//      8       ?       Block data
+//      4       2       Version
+//      6       4       Length of block
+//      10      ?       Block data
 //
 // BLOCK TYPES & FORMATS:
 //
@@ -23,10 +24,10 @@
 //          0       1       Model (0=48K, 1=128K, 2=+2, 3=+2A, 4=+3, 5=Next)
 //
 //          NOTE: The following blocks are expected with regard to the model selection:
-//              0   48K     Expects: SN48, RM48
-//              1   128K    Expects: SN48, S128, R128
+//              0   48K     Expects: SN48, MRAM
+//              1   128K    Expects: SN48, S128, MRAM
 //              2   +2      "        "     "     "
-//              3   +2A     Expects: SN48, S128, SPL3, R128
+//              3   +2A     Expects: SN48, S128, SPL3, MRAM
 //              4   +3      "        "     "     "     "
 //              5   Next    TBD
 //
@@ -62,23 +63,19 @@
 //          0       1       Last write to I/O port $1ffd
 //          
 //
-//      RM48 (length = 49152)
+//      MRAM (length = 49152, 131072 or greater)
 //          Offset  Length  Description
-//          0       49152   Contents of addresses 16384-65535
-//
-//      R128 (length = 131072)
-//          Offset  Length  Description
-//          0       131072  Contents of all banks (0-7)
+//          0       1       Number of MMUs
+//          1       ?       Contents of all MMUS 0+
 //
 //      EMUL
 //          Offset  Length  Description                 Version exists
-//          0       2       Version                     0
-//          2       2       Number of files opened      0
-//          4       2       Number of labels            1
+//          0       2       Number of files opened      0
+//          2       2       Number of labels            0
 //
 //          Data follows:                                                   Version exists
 //              Null-terminated strings of the filenames of open files.     0
-//              4-byte address, followed by null-terminated label name.     1
+//              4-byte address, followed by null-terminated label name.     0
 //
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -86,6 +83,7 @@
 
 #include <types.h>
 #include <config.h>
+#include <emulator/spectrum.h>
 
 #include <map>
 #include <string>
@@ -115,12 +113,13 @@ class BlockSection
 public:
     BlockSection();
     BlockSection(const BlockSection& block);
-    BlockSection(FourCC fcc);
-    BlockSection(FourCC fcc, const u8* data, u32 size);
+    BlockSection(FourCC fcc, int version);
+    BlockSection(FourCC fcc, int version, const u8* data, u32 size);
 
     vector<u8>& data()                  { return m_data; }
     const vector<u8>& data() const      { return m_data; }
     FourCC getFcc() const               { return m_fcc; }
+    int version() const                 { return m_version; }
 
     // Used for reading
     u8 peek8(int i) const;
@@ -128,6 +127,7 @@ public:
     u32 peek32(int i) const;
     i64 peek64(int i) const;
     string peekString(int i) const;
+    MemAddr peekAddr(int i) const;
     void peekData(int i, vector<u8>& data, i64 size) const;
 
     // Used for writing
@@ -136,14 +136,15 @@ public:
     void poke32(u32 dword);
     void poke64(i64 qword);
     void pokeString(const string& s);
+    void pokeAddr(MemAddr addr);
     void pokeData(const u8* data, i64 size);
     void pokeData(const vector<u8>& data);
-    void checkSize(u32 expectedSize) const;
 
     void write(vector<u8>& data) const;
 
 private:
     FourCC      m_fcc;
+    int         m_version;
     vector<u8>  m_data;
 };
 
@@ -158,17 +159,18 @@ public:
     bool load(string fileName);
     bool save(string fileName);
 
-    // Set expectedSize to 0xffffffff (-1) if you don't care.
-    void addSection(const BlockSection& section, u32 expectedSize);
+    void addSection(const BlockSection& section);
 
     // Queries
     bool hasSection(FourCC fcc);
     u32 sizeSection(FourCC fcc);
-    bool checkSection(FourCC fcc, u32 expectedSize);
+    int versionSection(FourCC fcc);
+    bool checkSection(FourCC fcc, int version);
 
     const BlockSection& operator[] (FourCC fcc) const;
 
     // Static data builders
+    static u16 read16(const vector<u8>& data, int index);
     static u32 read32(const vector<u8>& data, int index);
     static FourCC readFcc(const vector<u8>& data, int index);
     static void write8(vector<u8>& data, u8 x);

@@ -81,7 +81,7 @@ void MemoryMap::resetRange()
 
 void MemoryMap::addRange(MemAddr start, MemAddr end)
 {
-    assert(end.offset > start.offset);
+    assert(end.offset() > start.offset());
     assert(start.bank() <= end.bank());
     assert(m_model != Model::ZX48);
 

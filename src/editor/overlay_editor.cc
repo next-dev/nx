@@ -69,7 +69,7 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
         }
 
         const Assembler::Options& options = getEmulator().getAssembler().getOptions();
-        if (key == K::R && options.m_startAddress != 0)
+        if (key == K::R && options.m_startAddress != MemAddr())
         {
             if (buildSuccess)
             {
@@ -78,7 +78,7 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
 
                 // Run the code
                 // #todo: make it work for 128K
-                getEmulator().getSpeccy().getZ80().PC() = u16(options.m_startAddress);
+                getEmulator().getSpeccy().getZ80().PC() = getSpeccy().convertAddress(options.m_startAddress);
             }
         }
     }

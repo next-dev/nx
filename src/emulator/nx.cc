@@ -1137,15 +1137,24 @@ bool Nx::saveSnaSnapshot(string fileName)
     return NxFile::saveFile(fileName, data);
 }
 
+#define CHECK_AGE(blk, maxVersion) \
+    if (f.hasSection(blk) && f[blk].version() > (maxVersion)) return false;
+
 bool Nx::loadNxSnapshot(string fileName)
 {
     NxFile f;
 
     if (f.load(fileName))
     {
+        CHECK_AGE('MODL', 0);
+        CHECK_AGE('S128', 0);
+        CHECK_AGE('SN48', 0);
+        CHECK_AGE('MRAM', 0);
+        CHECK_AGE('EMUL', 0);
+
         // Find which model we should be in.  No MODL section, then assume 48K
         Model m = Model::ZX48;
-        if (f.checkSection('MODL', 1))
+        if (f.checkSection('MODL', 0))
         {
             const BlockSection& modl = f['MODL'];
             int model = modl.peek8(0);
@@ -1160,7 +1169,7 @@ bool Nx::loadNxSnapshot(string fileName)
         case Model::ZX128:
         case Model::ZXNext:
             // #todo: Deal with NX file format for ZX-Next.
-            if (f.checkSection('S128', 1))
+            if (f.checkSection('S128', 0))
             {
                 const BlockSection& s128 = f['S128'];
                 TState t = 0;
@@ -1173,7 +1182,7 @@ bool Nx::loadNxSnapshot(string fileName)
             // Continue to 48K data
 
         case Model::ZX48:
-            if (f.checkSection('SN48', 36))
+            if (f.checkSection('SN48', 0))
             {
                 const BlockSection& sn48 = f['SN48'];
                 Z80& z80 = m_machine->getZ80();
@@ -1203,25 +1212,23 @@ bool Nx::loadNxSnapshot(string fileName)
                 return false;
             }
 
-            if (m == Model::ZX48 && f.checkSection('RM48', 49152))
+            if (f.checkSection('MRAM', 0))
             {
-                const BlockSection& rm48 = f['RM48'];
-                m_machine->load(0x4000, rm48.data());
-            }
-            else if ((m == Model::ZX128 || m == Model::ZX128 || m == Model::ZXPlus2) &&
-                f.checkSection('R128', 131072))
-            {
-                const BlockSection& r128 = f['R128'];
-                for (int i = 0; i < 8; ++i)
+                const BlockSection& mram = f['MRAM'];
+
+                int numMmus = int(mram.peek8(0));
+                for (int i = 0; i < numMmus; ++i)
                 {
-                    m_machine->setSlot(3, i);
-                    m_machine->load(0xc000, r128.data().data() + (i * KB(16)), KB(16));
+                    vector<u8> data;
+                    mram.peekData(1, data, kBankSize);
+                    m_machine->setMmu(MemGroup::RAM, i, data);
                 }
             }
             else
             {
                 return false;
             }
+
             break;
                 
         default:
@@ -1249,7 +1256,7 @@ bool Nx::loadNxSnapshot(string fileName)
                 dataIndex = 6;
             }
 
-            // Dealing with version 0 data
+            // Reading file names
             for (int i = 0; i < numFiles; ++i)
             {
                 string fn = emul.peekString(dataIndex);
@@ -1268,11 +1275,11 @@ bool Nx::loadNxSnapshot(string fileName)
                 }
             }
 
-            // Dealing with version 1 data
+            // Reading labels
             Labels labels;
             for (int i = 0; i < numLabels; ++i)
             {
-                MemoryMap::Address addr = emul.peek32(dataIndex);
+                MemAddr addr = emul.peekAddr(dataIndex);
                 dataIndex += 4;
                 string label = emul.peekString(dataIndex);
                 dataIndex += int(label.size()) + 1;
@@ -1295,12 +1302,12 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
     Model model = m_machine->getModel();
 
     // Write out the 'MODL' section
-    BlockSection modl('MODL');
+    BlockSection modl('MODL', 0);
     modl.poke8((u8)model);
-    f.addSection(modl, 1);
+    f.addSection(modl);
 
     // Write out the 'SN48' section
-    BlockSection sn48('SN48');
+    BlockSection sn48('SN48', 0);
     sn48.poke16(z80.AF());
     sn48.poke16(z80.BC());
     sn48.poke16(z80.DE());
@@ -1320,59 +1327,48 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
     sn48.poke8(z80.IFF2() ? 1 : 0);
     sn48.poke8(m_machine->getBorderColour());
     sn48.poke32((u32)m_machine->getTState());
-    f.addSection(sn48, 36);
+    f.addSection(sn48);
+
+    // Write out the 'MRAM' sections.
+    BlockSection mram('MRAM', 0);
+    int numMmu = m_machine->getNumBanks();
+    NX_ASSERT(numMmu < 256);
+    mram.poke8(u8(numMmu));
+    for (int i = 0; i < m_machine->getNumBanks(); ++i)
+    {
+        vector<u8> memory = m_machine->getMmu(MemGroup::RAM, i);
+        mram.pokeData(memory);
+    }
+    f.addSection(mram);
 
     // Write out the 'S128' section if 128K
     if (model == Model::ZX128 ||
         model == Model::ZXPlus2)
     {
-        BlockSection s128('S128');
+        BlockSection s128('S128', 0);
 
         // Build the last value in $7ffd
         u8 io = 0;
-        assert(m_machine->getBank(1) == 5);
-        assert(m_machine->getBank(2) == 2);
-        assert(m_machine->getBank(3) >= 0 && m_machine->getBank(3) < 8);
-        io = u8(m_machine->getBank(3));
+        assert(m_machine->getBank(2) == 10);
+        assert(m_machine->getBank(3) == 11);
+        assert(m_machine->getBank(4) == 4);
+        assert(m_machine->getBank(5) == 5);
+        assert(m_machine->getBank(6) >= 0 && m_machine->getBank(7) < 16);
+        io = u8(m_machine->getBank(6)) / 2;
         if (m_machine->isShadowScreen()) io |= 0x08;
         if (m_machine->getBank(0) == 9) io |= 0x10;
         if (m_machine->isPagingDisabled()) io |= 0x20;
 
         s128.poke8(io);
-        f.addSection(s128, 1);
-
-        // Save out the memory
-        BlockSection r128('R128');
-        TState t = 0;
-        int oldSlot3 = m_machine->getBank(3);
-        for (int i = 0; i < 8; ++i)
-        {
-            m_machine->setSlot(3, i);
-            for (u16 byte = 0xc000; byte != 0x0000; ++byte)
-            {
-                r128.poke8(m_machine->peek(byte, t));
-            }
-        }
-        m_machine->setSlot(3, oldSlot3);
-        f.addSection(r128, 131072);
-    }
-    else if (model == Model::ZX48)
-    {
-        BlockSection rm48('RM48');
-        for (u16 a = 0x4000; a != 0x0000; ++a)
-        {
-            rm48.poke8(m_machine->peek(a));
-        }
-        f.addSection(rm48, 49152);
+        f.addSection(s128);
     }
 
     // Write out the 'EMUL' section
     if (saveEmulatorSettings)
     {
-        BlockSection emul('EMUL');
+        BlockSection emul('EMUL', 0);
 
         u16 editorCount = u16(m_editorOverlay.getWindow().getNumEditors());
-        emul.poke16(1);
 
         // Number of editor files
         u16 realCount = editorCount;
@@ -1412,11 +1408,11 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
         // Write out the label information
         for (size_t i = 0; i < labels.size(); ++i)
         {
-            emul.poke32(labels[i].second);
+            emul.pokeAddr(labels[i].second);
             emul.pokeString(labels[i].first);
         }
 
-        f.addSection(emul, 0);
+        f.addSection(emul);
     }
 
     return f.save(fileName);
@@ -1518,7 +1514,8 @@ void Nx::stepOver()
 
         // #todo: use assembler and static analysis to better support where to place the BP (e.g. trailing params).
         pc = nextInstructionAt(pc);
-        m_machine->addTemporaryBreakpoint(pc);
+        MemAddr a = getSpeccy().convertAddress(Z80MemAddr(pc));
+        m_machine->addTemporaryBreakpoint(a);
         m_runMode = RunMode::Normal;
     }
     else
@@ -1535,7 +1532,8 @@ void Nx::stepOut()
         u16 sp = getSpeccy().getZ80().SP();
         TState t = 0;
         u16 address = m_machine->peek16(sp, t);
-        m_machine->addTemporaryBreakpoint(address);
+        MemAddr a = getSpeccy().convertAddress(Z80MemAddr(address));
+        m_machine->addTemporaryBreakpoint(a);
         m_runMode = RunMode::Normal;
     }
 }
