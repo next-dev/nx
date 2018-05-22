@@ -89,10 +89,10 @@ public:
     MemAddr operator- (int offset) const;
     int operator- (MemAddr addr) const;
 
-    MemAddr operator++();
-    MemAddr& operator++(int);
-    MemAddr operator--();
-    MemAddr& operator--(int);
+    MemAddr& operator++();
+    MemAddr operator++(int);
+    MemAddr& operator--();
+    MemAddr operator--(int);
 
 private:
     Bank        m_bank;

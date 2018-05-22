@@ -11,7 +11,13 @@
 #include <random>
 
 //----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
 // Memory addressing
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------------------------------------------------
+// Banks
 //----------------------------------------------------------------------------------------------------------------------
 
 Bank::Bank(MemGroup group, u16 bank)
@@ -35,6 +41,10 @@ Bank& Bank::operator= (const Bank& other)
     return *this;
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+// MemAddr
+//----------------------------------------------------------------------------------------------------------------------
+
 MemAddr::MemAddr(Bank bank, u16 offset)
     : m_bank(bank)
     , m_offset(offset)
@@ -48,6 +58,110 @@ MemAddr::MemAddr(MemGroup group, int realAddress)
 {
 
 }
+
+MemAddr::MemAddr(const MemAddr& memAddr)
+    : m_bank(memAddr.m_bank)
+    , m_offset(memAddr.m_offset)
+{
+
+}
+
+MemAddr& MemAddr::operator= (const MemAddr& memAddr)
+{
+    m_bank = memAddr.bank();
+    m_offset = memAddr.offset();
+    return *this;
+}
+
+bool MemAddr::operator== (const MemAddr& addr) const
+{
+    return m_bank == addr.bank() && m_offset == addr.offset();
+}
+
+bool MemAddr::operator!= (const MemAddr& addr) const
+{
+    return m_bank != addr.bank() || m_offset != addr.offset();
+}
+
+bool MemAddr::operator< (const MemAddr& addr) const
+{
+    return m_bank < addr.bank() || m_offset < addr.offset();
+}
+
+bool MemAddr::operator> (const MemAddr& addr) const
+{
+    return m_bank > addr.bank() || m_offset > addr.offset();
+}
+
+bool MemAddr::operator<= (const MemAddr& addr) const
+{
+    return m_bank < addr.bank() ||
+        (m_bank == addr.bank() && m_offset <= addr.offset());
+}
+
+bool MemAddr::operator>= (const MemAddr& addr) const
+{
+    return m_bank > addr.bank() ||
+        (m_bank == addr.bank() && m_offset >= addr.offset());
+}
+
+MemAddr MemAddr::operator+ (int offset) const
+{
+    int i = index() + offset;
+    return MemAddr(bank().getGroup(), i);
+}
+
+MemAddr MemAddr::operator- (int offset) const
+{
+    int i = index() - offset;
+    return MemAddr(bank().getGroup(), i);
+}
+
+int MemAddr::operator- (MemAddr addr) const
+{
+    NX_ASSERT(bank().getGroup() == addr.bank().getGroup());
+    return index() - addr.index();
+}
+
+MemAddr& MemAddr::operator++()
+{
+    if (++m_offset == kBankSize)
+    {
+        m_bank = Bank(m_bank.getGroup(), m_bank.getIndex() + 1);
+        m_offset = 0;
+    }
+
+    return *this;
+}
+
+MemAddr MemAddr::operator++(int)
+{
+    MemAddr m = *this;
+    operator++();
+    return m;
+}
+
+MemAddr& MemAddr::operator--()
+{
+    if (m_offset-- == 0)
+    {
+        m_bank = Bank(m_bank.getGroup(), m_bank.getIndex() - 1);
+        m_offset = kBankSize - 1;
+    }
+
+    return *this;
+}
+
+MemAddr MemAddr::operator--(int)
+{
+    MemAddr m = *this;
+    operator--();
+    return m;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Z80MemAddr
+//----------------------------------------------------------------------------------------------------------------------
 
 Z80MemAddr::Z80MemAddr(u16 addr)
     : m_address(addr)
