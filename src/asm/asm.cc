@@ -124,6 +124,122 @@ void MemoryMap::upload(Spectrum& speccy)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// ExprValue
+//----------------------------------------------------------------------------------------------------------------------
+
+ExprValue::ExprValue()
+    : m_type(Type::Invalid)
+    , m_value(0)
+{
+
+}
+
+ExprValue::ExprValue(i64 value)
+    : m_type(Type::Integer)
+    , m_value(value)
+{
+
+}
+
+ExprValue::ExprValue(MemAddr addr)
+    : m_type(Type::Address)
+    , m_value(addr)
+{
+
+}
+
+struct AddExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x + y); }
+    ExprValue operator() (MemAddr a, i64 x)         { return ExprValue(a + (int)x); }
+    ExprValue operator() (i64 x, MemAddr a)         { return ExprValue(a + (int)x); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct SubExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x - y); }
+    ExprValue operator() (MemAddr a, i64 x)         { return ExprValue(a - (int)x); }
+    ExprValue operator() (i64 x, MemAddr a)         { return ExprValue(a - (int)x); }
+    ExprValue operator() (MemAddr a, MemAddr b)     { return ExprValue(a - b); }
+};
+
+struct MulExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x * y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct DivExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x / y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct ModExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x & y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct OrExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x | y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct AndExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x & y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct XorExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x ^ y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct ShiftLeftExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x << y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+struct ShiftRightExpr
+{
+    ExprValue operator() (i64 x, i64 y)             { return ExprValue(x >> y); }
+    ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+};
+
+ExprValue ExprValue::operator+ (const ExprValue& other) const       { return visit(AddExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator- (const ExprValue& other) const       { return visit(SubExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator* (const ExprValue& other) const       { return visit(MulExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator/ (const ExprValue& other) const       { return visit(DivExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator% (const ExprValue& other) const       { return visit(ModExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator| (const ExprValue& other) const       { return visit(OrExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator& (const ExprValue& other) const       { return visit(AndExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator^ (const ExprValue& other) const       { return visit(XorExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator<< (const ExprValue& other) const      { return visit(ShiftLeftExpr(), m_value, other.m_value); }
+ExprValue ExprValue::operator>> (const ExprValue& other) const      { return visit(ShiftRightExpr(), m_value, other.m_value); }
+
+//----------------------------------------------------------------------------------------------------------------------
 // Constructor
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -542,7 +658,7 @@ bool Assembler::addValue(i64 symbol, i64 value)
         auto it = m_values.find(symbol);
         if (it == m_values.end())
         {
-            m_values[symbol] = value;
+            m_values[symbol] = ExprValue(value);
             result = true;
         }
     }
@@ -559,7 +675,7 @@ optional<MemAddr> Assembler::lookUpLabel(i64 symbol) const
 optional<ExprValue> Assembler::lookUpValue(i64 symbol) const
 {
     auto it = m_values.find(symbol);
-    return it == m_values.end() ? optional<MemAddr>{} : it->second;
+    return it == m_values.end() ? optional<ExprValue>{} : it->second;
 }
 
 
@@ -1665,7 +1781,7 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
             case T::Unary_Minus:
                 if (stack.back().getType() == ExprValue::Type::Integer)
                 {
-                    stack.back() = -stack.back();
+                    stack.back() = ExprValue(-stack.back());
                 }
                 else
                 {
@@ -1676,7 +1792,7 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
             case T::Tilde:
                 if (stack.back().getType() == ExprValue::Type::Integer)
                 {
-                    stack.back() = ~stack.back();
+                    stack.back() = ExprValue(~stack.back());
                 }
                 else
                 {

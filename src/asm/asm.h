@@ -91,8 +91,8 @@ class ExprValue
 {
 public:
     ExprValue();
-    ExprValue(i64 value);
-    ExprValue(MemAddr value);
+    explicit ExprValue(i64 value);
+    explicit ExprValue(MemAddr value);
 
     ExprValue(const ExprValue& other);
     ExprValue& operator= (const ExprValue& other);
@@ -104,13 +104,14 @@ public:
         Address,
     };
 
-    Type getType() const;
-    operator i64() const;
-    operator MemAddr() const;
+    Type getType() const        { return m_type; }
+    operator i64() const        { return get<i64>(m_value); }
+    operator MemAddr() const    { return get<MemAddr>(m_value); }
 
     //
     // Operations
     //
+
     ExprValue operator+ (const ExprValue& other) const;
     ExprValue operator- (const ExprValue& other) const;
     ExprValue operator* (const ExprValue& other) const;
@@ -283,7 +284,7 @@ private:
         void addBinaryOp(Lex::Element::Type op, const Lex::Element* e);
         void addOpen(const Lex::Element* e);
         void addClose(const Lex::Element* e);
-        void set(i64 result) { m_result = result; }
+        void set(i64 result) { m_result = ExprValue(result); }
 
         bool eval(Assembler& assembler, Lex& lex, MemAddr currentAddress);
 
