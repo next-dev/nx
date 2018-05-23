@@ -104,7 +104,7 @@ OperandType Disassembler::regs8(u8 y) const
         O::H, O::L,
         O::Address_HL, O::A,
     };
-    assert(y >= 0 && y < 8);
+    NX_ASSERT(y >= 0 && y < 8);
     return regs[y];
 }
 
@@ -117,7 +117,7 @@ OperandType Disassembler::regs16_1(u8 p) const
         O::HL,
         O::SP,
     };
-    assert(p >= 0 && p < 4);
+    NX_ASSERT(p >= 0 && p < 4);
     return regs[p];
 }
 
@@ -125,13 +125,13 @@ OperandType Disassembler::regs16_2(u8 p) const
 {
     //static const char* regs[] = { "bc", "de", "hl", "af" };
     static O regs[] = { O::BC, O::DE, O::HL, O::AF };
-    assert(p >= 0 && p < 4);
+    NX_ASSERT(p >= 0 && p < 4);
     return regs[p];
 }
 
 OperandType Disassembler::regs8_ix(u8 y, OperandType ix) const
 {
-    assert(y >= 0 && y < 8);
+    NX_ASSERT(y >= 0 && y < 8);
     switch (y)
     {
     case 0: return O::B; // "b";
@@ -151,7 +151,7 @@ OperandType Disassembler::regs16_1_ix(u8 p, OperandType ix) const
 {
     //static const char* regs[] = { "bc", "de", "??", "sp" };
     static O regs[] = { O::BC, O::DE, O::None, O::SP };
-    assert(p >= 0 && p < 4);
+    NX_ASSERT(p >= 0 && p < 4);
     return p == 2 ? ix : regs[p];
 }
 
@@ -159,7 +159,7 @@ OperandType Disassembler::regs16_2_ix(u8 p, OperandType ix) const
 {
     //static const char* regs[] = { "bc", "de", "??", "af" };
     static O regs[] = { O::BC, O::DE, O::None, O::AF };
-    assert(p >= 0 && p < 4);
+    NX_ASSERT(p >= 0 && p < 4);
     return p == 2 ? ix : regs[p];
 }
 
@@ -167,7 +167,7 @@ OperandType Disassembler::flags(u8 y) const
 {
     //static const char* flags[] = { "nz", "z", "nc", "c", "po", "pe", "p", "m" };
     static O flags[] = { O::NZ, O::Z, O::NC, O::C, O::PO, O::PE, O::P, O::M };
-    assert(y >= 0 && y < 8);
+    NX_ASSERT(y >= 0 && y < 8);
     return flags[y];
 }
 
@@ -175,7 +175,7 @@ T Disassembler::aluOpCode(u8 y) const
 {
     //static const char* aluOpcodes[] = { "add", "adc", "sub", "sbc", "and", "xor", "or", "cp" };
     static T aluOpcodes[] = { T::ADD, T::ADC, T::SUB, T::SBC, T::AND, T::XOR, T::OR, T::CP };
-    assert(y >= 0 && y < 8);
+    NX_ASSERT(y >= 0 && y < 8);
     return aluOpcodes[y];
 }
 
@@ -183,7 +183,7 @@ bool Disassembler::aluOperandPrefix(u8 y) const
 {
     //static const char* prefixes[] = { "a,", "a,", "", "a,", "", "", "", "" };
     static bool prefixes[] = { true, true, false, true, false, false, false, false };
-    assert(y >= 0 && y < 8);
+    NX_ASSERT(y >= 0 && y < 8);
     return prefixes[y];
 }
 
@@ -191,7 +191,7 @@ T Disassembler::rotShift(u8 y) const
 {
     //static const char* opCodes[] = { "rlc", "rrc", "rl", "rr", "sla", "sra", "sl1", "srl" };
     static T opCodes[] = { T::RLC, T::RRC, T::RL, T::RR, T::SLA, T::SRA, T::SL1, T::SRL };
-    assert(y >= 0 && y < 8);
+    NX_ASSERT(y >= 0 && y < 8);
     return opCodes[y];
 }
 
@@ -834,7 +834,7 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         case O::F:	                    return "f";
 
         default:
-            assert(0);
+            NX_ASSERT(0);
             return "???";
         }
     }

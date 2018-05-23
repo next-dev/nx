@@ -117,10 +117,10 @@ namespace {
                     ++c;
 
                     // Unexpected end of string
-                    assert(*c != 0);
+                    NX_ASSERT(*c != 0);
 
                     // Invalid brace contents: must be a positive integer
-                    assert(isDigit(*c));
+                    NX_ASSERT(isDigit(*c));
 
                     number = toDigit(*c++);
                     while (isDigit(*c))
@@ -130,11 +130,11 @@ namespace {
                     }
 
                     // Unexpected end of string
-                    assert(*c != 0);
+                    NX_ASSERT(*c != 0);
                     // Invalid brace contents: must be a positive integer
-                    assert(*c == '}');
+                    NX_ASSERT(*c == '}');
                     // Format value index is out of range
-                    assert(number <= N);
+                    NX_ASSERT(number <= N);
 
                     callback.onMarker(number);
                     ++c;
@@ -150,7 +150,7 @@ namespace {
                 else
                 {
                     // Unescaped right brace
-                    assert(0);
+                    NX_ASSERT(0);
                 }
             }
             else

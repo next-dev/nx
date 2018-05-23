@@ -180,13 +180,13 @@ bool EditorData::isValidPos(DataPos pos) const
 
 EditorData::Pos EditorData::toVirtualPos(DataPos actualPos) const
 {
-    assert(isValidPos(actualPos));
+    NX_ASSERT(isValidPos(actualPos));
     return (int)(actualPos > m_cursor ? m_cursor + (actualPos - m_endBuffer) : actualPos);
 }
 
 EditorData::DataPos EditorData::toDataPos(Pos virtualPos) const
 {
-    assert(isValidPos(virtualPos));
+    NX_ASSERT(isValidPos(virtualPos));
     return (int)(virtualPos > int(m_cursor) ? m_endBuffer + (DataPos((int)virtualPos) - m_cursor) : (int)virtualPos);
 }
 

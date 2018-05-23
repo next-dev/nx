@@ -142,7 +142,7 @@ u32 Spectrum::convertAddress(size_t ramOffset)
         break;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
         return u32(ramOffset);
     }
 }
@@ -327,7 +327,7 @@ void Spectrum::initMemory()
         break;
             
     default:
-        assert(0);
+        NX_ASSERT(0);
         break;
     }
     m_contention.resize(70930);
@@ -389,7 +389,7 @@ void Spectrum::initMemory()
         break;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
     setRomWriteState(false);
 }
@@ -428,15 +428,15 @@ void Spectrum::poke(u16 address, u8 x)
 
 u8 Spectrum::bankPeek(u16 bank, u16 address) const
 {
-    assert(bank < getNumBanks());
-    assert(address < getBankSize());
+    NX_ASSERT(bank < getNumBanks());
+    NX_ASSERT(address < getBankSize());
     return m_ram[bank * getBankSize() + (address % getBankSize())];
 }
 
 void Spectrum::bankPoke(u16 bank, u16 address, u8 byte)
 {
-    assert(bank < getNumBanks());
-    assert(address < getBankSize());
+    NX_ASSERT(bank < getNumBanks());
+    NX_ASSERT(address < getBankSize());
     m_ram[bank * getBankSize() + (address % getBankSize())] = byte;
 }
 
@@ -491,15 +491,15 @@ TState Spectrum::contention(TState tStates)
 
 void Spectrum::bank(int slot, int bank)
 {
-    assert(slot >= 0 && slot < getNumSlots());
-    assert(bank >= 0 && bank < (m_ram.size() / getBankSize()));
+    NX_ASSERT(slot >= 0 && slot < getNumSlots());
+    NX_ASSERT(bank >= 0 && bank < (m_ram.size() / getBankSize()));
 
     m_slots[slot] = bank;
 }
 
 int Spectrum::getBank(int slot) const
 {
-    assert(slot >= 0 && slot < getNumSlots());
+    NX_ASSERT(slot >= 0 && slot < getNumSlots());
     return m_slots[slot];
 }
 
@@ -510,7 +510,7 @@ u16 Spectrum::getNumBanks() const
 
 string& Spectrum::slotName(int slot)
 {
-    assert(slot >= 0 && slot < getNumSlots());
+    NX_ASSERT(slot >= 0 && slot < getNumSlots());
     return m_bankNames[m_slots[slot]];
 }
 
@@ -868,13 +868,13 @@ void Spectrum::updateVideo()
             {
                 if ((pixelData & 0x80) != 0)
                 {
-                    assert(m_videoWrite < (kWindowWidth * kWindowHeight));
+                    NX_ASSERT(m_videoWrite < (kWindowWidth * kWindowHeight));
                     m_image[m_videoWrite++] = c1;
                     lastAttrData = ink;
                 }
                 else
                 {
-                    assert(m_videoWrite < (kWindowWidth * kWindowHeight));
+                    NX_ASSERT(m_videoWrite < (kWindowWidth * kWindowHeight));
                     m_image[m_videoWrite++] = c0;
                     lastAttrData = paper;
                 }
@@ -886,7 +886,7 @@ void Spectrum::updateVideo()
             u32 border = colours[getBorderColour()];
             for (int b = 0; b < 8; ++b)
             {
-                assert(m_videoWrite < (kWindowWidth * kWindowHeight));
+                NX_ASSERT(m_videoWrite < (kWindowWidth * kWindowHeight));
                 m_image[m_videoWrite++] = border;
             }
         }

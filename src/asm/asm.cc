@@ -84,7 +84,7 @@ void MemoryMap::clear(Spectrum& speccy)
         break;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     for (int i = 0; i < (int)m_slots.size(); ++i)
@@ -102,7 +102,7 @@ void MemoryMap::clear(Spectrum& speccy)
 
 void MemoryMap::setPass(int pass)
 {
-    assert(pass > 0);
+    NX_ASSERT(pass > 0);
     m_currentPass = pass;
 }
 
@@ -113,8 +113,8 @@ void MemoryMap::resetRange()
 
 void MemoryMap::addRange(Address start, Address end)
 {
-    assert(end > start);
-    assert(m_model != Model::ZX48);
+    NX_ASSERT(end > start);
+    NX_ASSERT(m_model != Model::ZX48);
 
     m_addresses.reserve(m_addresses.size() + (end - start));
     for (Address i = start; i < end; ++i)
@@ -125,8 +125,8 @@ void MemoryMap::addRange(Address start, Address end)
 
 void MemoryMap::addZ80Range(u16 start, u16 end)
 {
-    assert(start >= 0x4000);
-    assert(end > start);
+    NX_ASSERT(start >= 0x4000);
+    NX_ASSERT(end > start);
     m_addresses.reserve(m_addresses.size() + (end - start));
 
     for (u16 i = start; i < end; ++i)
@@ -134,7 +134,7 @@ void MemoryMap::addZ80Range(u16 start, u16 end)
         u16 slot = i / m_pageSize;
         u16 offset = i % m_pageSize;
 
-        assert(slot >= 0 && slot < m_slots.size());
+        NX_ASSERT(slot >= 0 && slot < m_slots.size());
 
         Address addr = m_slots[slot] * m_pageSize + offset;
 
@@ -1215,7 +1215,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::Element** outE)
 {
     using T = Lex::Element::Type;
-    assert(e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES);
+    NX_ASSERT(e->m_type > T::_KEYWORDS && e->m_type < T::_END_OPCODES);
 
     switch (e->m_type)
     {
@@ -1497,7 +1497,7 @@ Assembler::Expression::Expression()
 
 void Assembler::Expression::addValue(ValueType type, i64 value, const Lex::Element* e)
 {
-    assert(type == ValueType::Integer ||
+    NX_ASSERT(type == ValueType::Integer ||
            type == ValueType::Symbol ||
            type == ValueType::Char ||
            type == ValueType::Dollar);
@@ -1714,14 +1714,14 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemoryMap::Addr
             break;
             
         default:
-            assert(0);
+            NX_ASSERT(0);
             break;
         }
     }
 
 #undef FAIL
 
-    assert(stack.size() == 1);
+    NX_ASSERT(stack.size() == 1);
     m_result = stack[0];
     return true;
 }
@@ -1768,7 +1768,7 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
             const Lex::Element* outE = assembleInstruction2(lex, e);
 #if _DEBUG
             int actualCount = m_address - oldAddress;
-            assert(!outE || !count || (count == actualCount));
+            NX_ASSERT(!outE || !count || (count == actualCount));
 #endif
             if (!outE)
             {
@@ -2059,7 +2059,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         CHECK8_SIGNED();
         indexPrefix = 0xdd;
         srcOp.type = OperandType::Address_HL;
-        assert(!addressIndex);
+        NX_ASSERT(!addressIndex);
         indexOffset = srcOp.expr.r8();
         addressIndex = true;
         break;
@@ -2073,7 +2073,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         CHECK8_SIGNED();
         indexPrefix = 0xfd;
         srcOp.type = OperandType::Address_HL;
-        assert(!addressIndex);
+        NX_ASSERT(!addressIndex);
         indexOffset = srcOp.expr.r8();
         addressIndex = true;
         break;
@@ -2165,7 +2165,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         case OperandType::H:
         case OperandType::L:
         case OperandType::Address_HL:
-            assert(srcOp.type == OperandType::None);
+            NX_ASSERT(srcOp.type == OperandType::None);
             XYZ(2, 0, r(dstOp.type));
             break;
 
@@ -2218,7 +2218,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         case OperandType::H:
         case OperandType::L:
         case OperandType::Address_HL:
-            assert(srcOp.type == OperandType::None);
+            NX_ASSERT(srcOp.type == OperandType::None);
             XYZ(2, alu(opCode), r(dstOp.type));
             break;
 
@@ -2229,7 +2229,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             break;
 
         case OperandType::HL:
-            assert(opCode == T::SBC || opCode == T::ADC);
+            NX_ASSERT(opCode == T::SBC || opCode == T::ADC);
             prefix = 0xed;
             XPQZ(1, rp(srcOp.type), opCode == T::ADC ? 1 : 0, 2);
             break;
@@ -2534,7 +2534,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             case OperandType::Address_HL:
             case OperandType::A:
                 // This is to check for LD (HL),(HL) combination, which doesn't exist.
-                assert(dstOp.type != OperandType::Address_HL || srcOp.type != OperandType::Address_HL);
+                NX_ASSERT(dstOp.type != OperandType::Address_HL || srcOp.type != OperandType::Address_HL);
                 XYZ(1, r(dstOp.type), r(srcOp.type));
                 break;
 
@@ -2615,7 +2615,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             }
             else
             {
-                assert(srcOp.type == OperandType::AddressedExpression);
+                NX_ASSERT(srcOp.type == OperandType::AddressedExpression);
                 CHECK16();
                 XPQZ(1, rp(dstOp.type), 1, 3);
                 SRC_OP16();
@@ -2651,13 +2651,13 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             break;
 
         case OperandType::I:                            // LD I,A
-            assert(srcOp.type == OperandType::A);
+            NX_ASSERT(srcOp.type == OperandType::A);
             prefix = 0xed;
             XYZ(1, 0, 7);
             break;
 
         case OperandType::R:                            // LD R,A
-            assert(srcOp.type == OperandType::A);
+            NX_ASSERT(srcOp.type == OperandType::A);
             prefix = 0xed;
             XYZ(1, 1, 7);
             break;
@@ -2687,13 +2687,13 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         case OperandType::E:
         case OperandType::H:
         case OperandType::L:
-            assert(srcOp.type == OperandType::Address_C);
+            NX_ASSERT(srcOp.type == OperandType::Address_C);
             prefix = 0xed;
             XYZ(1, r(dstOp.type), 0);
             break;
 
         case OperandType::None:
-            assert(srcOp.type == OperandType::Address_C);
+            NX_ASSERT(srcOp.type == OperandType::Address_C);
             prefix = 0xed;
             XYZ(1, 6, 0);
             break;
@@ -2761,12 +2761,12 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             break;
 
         case OperandType::Address_SP:
-            assert(srcOp.type == OperandType::HL);
+            NX_ASSERT(srcOp.type == OperandType::HL);
             XYZ(3, 4, 3);
             break;
 
         case OperandType::DE:
-            assert(srcOp.type == OperandType::HL);
+            NX_ASSERT(srcOp.type == OperandType::HL);
             XYZ(3, 5, 3);
             break;
 
@@ -2894,7 +2894,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
             if (addressIndex)
             {
-                assert(opSize < 2);
+                NX_ASSERT(opSize < 2);
                 emit8(indexOffset);
             }
 
@@ -2903,7 +2903,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             case 0:                 break;
             case 1: emit8(op8);     break;
             case 2: emit16(op16);   break;
-            default: assert(0);
+            default: NX_ASSERT(0);
             }
         }
     }
@@ -2914,9 +2914,9 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         switch (opSize)
         {
         case 0:                                    break;
-        case 1: assert(!prefix);    emit8(op8);    break;
+        case 1: NX_ASSERT(!prefix);    emit8(op8);    break;
         case 2:                     emit16(op16);  break;
-        default: assert(0);
+        default: NX_ASSERT(0);
         }
     }
 
@@ -2949,27 +2949,27 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
         {
         case T::C:
             op.type = OperandType::Address_C;
-            assert(e->m_type == T::CloseParen);
+            NX_ASSERT(e->m_type == T::CloseParen);
             break;
 
         case T::BC:
             op.type = OperandType::Address_BC;
-            assert(e->m_type == T::CloseParen);
+            NX_ASSERT(e->m_type == T::CloseParen);
             break;
 
         case T::DE:
             op.type = OperandType::Address_DE;
-            assert(e->m_type == T::CloseParen);
+            NX_ASSERT(e->m_type == T::CloseParen);
             break;
 
         case T::HL:
             op.type = OperandType::Address_HL;
-            assert(e->m_type == T::CloseParen);
+            NX_ASSERT(e->m_type == T::CloseParen);
             break;
 
         case T::SP:
             op.type = OperandType::Address_SP;
-            assert(e->m_type == T::CloseParen);
+            NX_ASSERT(e->m_type == T::CloseParen);
             break;
 
         case T::IX:
@@ -2984,7 +2984,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                 if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             }
             op.type = OperandType::IX_Expression;
-            assert(e->m_type == T::CloseParen);
+            NX_ASSERT(e->m_type == T::CloseParen);
             break;
 
         case T::IY:
@@ -2999,7 +2999,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                 if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
             }
             op.type = OperandType::IY_Expression;
-            assert(e->m_type == T::CloseParen);
+            NX_ASSERT(e->m_type == T::CloseParen);
             break;
 
         default:
@@ -3008,7 +3008,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                 const Lex::Element* startE = e - 2;
                 op.type = OperandType::AddressedExpression;
                 op.expr = buildExpression(--e);
-                assert(e->m_type == T::CloseParen);
+                NX_ASSERT(e->m_type == T::CloseParen);
                 Lex::Element::Type nextE = (e + 1)->m_type;
                 if (nextE == T::Newline || nextE == T::Comma)
                 {
@@ -3063,7 +3063,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
 
     default:
         // We should never reach here - pass 1 should ensure good syntax.
-        assert(0);
+        NX_ASSERT(0);
     }
 
     return true;
@@ -3100,7 +3100,7 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
 
             default:
                 // Should never reach here!
-                assert(0);
+                NX_ASSERT(0);
             }
             break;
 
@@ -3122,11 +3122,11 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
                 break;
 
             case T::Comma:
-                assert(parenDepth == 0);
+                NX_ASSERT(parenDepth == 0);
                 return expr;
 
             case T::Newline:
-                assert(parenDepth == 0);
+                NX_ASSERT(parenDepth == 0);
                 return expr;
 
             case T::CloseParen:
@@ -3142,7 +3142,7 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
                 break;
 
             default:
-                assert(0);
+                NX_ASSERT(0);
             }
             break;
 
@@ -3159,7 +3159,7 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
                 state = 0;
                 break;
             default:
-                assert(0);
+                NX_ASSERT(0);
             }
         }
 
@@ -3225,7 +3225,7 @@ u8 Assembler::r(OperandType ot) const
     case OperandType::A:            return 7;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
     return 0;
 }
@@ -3242,7 +3242,7 @@ u8 Assembler::rp(OperandType ot) const
     case OperandType::SP:       return 3;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     return 0;
@@ -3258,7 +3258,7 @@ u8 Assembler::rp2(OperandType ot) const
     case OperandType::AF:       return 3;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     return 0;
@@ -3278,7 +3278,7 @@ u8 Assembler::cc(OperandType ot) const
     case OperandType::M:        return 7;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     return 0;
@@ -3299,7 +3299,7 @@ u8 Assembler::rot(Lex::Element::Type opCode) const
     case Lex::Element::Type::SRL:   return 7;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     return 0;
@@ -3319,7 +3319,7 @@ u8 Assembler::alu(Lex::Element::Type opCode) const
     case Lex::Element::Type::CP:    return 7;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     return 0;
@@ -3338,18 +3338,18 @@ void Assembler::emit16(u16 w)
 
 void Assembler::emitXYZ(u8 x, u8 y, u8 z)
 {
-    assert(x < 4);
-    assert(y < 8);
-    assert(z < 8);
+    NX_ASSERT(x < 4);
+    NX_ASSERT(y < 8);
+    NX_ASSERT(z < 8);
     emit8((x << 6) | (y << 3) | z);
 }
 
 void Assembler::emitXPQZ(u8 x, u8 p, u8 q, u8 z)
 {
-    assert(x < 4);
-    assert(p < 4);
-    assert(q < 2);
-    assert(z < 8);
+    NX_ASSERT(x < 4);
+    NX_ASSERT(p < 4);
+    NX_ASSERT(q < 2);
+    NX_ASSERT(z < 8);
     emit8((x << 6) | (p << 4) | (q << 3) | z);
 }
 

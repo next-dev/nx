@@ -113,7 +113,7 @@ void DisassemblyWindow::setView(u16 newTopAddress)
 void DisassemblyWindow::cursorDown()
 {
     int index = findViewAddress(m_address);
-    assert(index != -1);
+    NX_ASSERT(index != -1);
 
     Disassembler d;
     u16 nextAddress = disassemble(d, m_address);

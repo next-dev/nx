@@ -197,36 +197,36 @@ Draw::Draw(std::vector<u8>& pixels, std::vector<u8>& attr)
 
 void Draw::pokePixel(int xCell, int yPixel, u8 bits)
 {
-    assert(xCell < (kUiWidth / 8));
-    assert(yPixel < kUiHeight);
+    NX_ASSERT(xCell < (kUiWidth / 8));
+    NX_ASSERT(yPixel < kUiHeight);
     m_pixels[yPixel * (kUiWidth / 8) + xCell] = bits;
 }
 
 void Draw::andPixel(int xCell, int yPixel, u8 bits)
 {
-    assert(xCell < (kUiWidth / 8));
-    assert(yPixel < kUiHeight);
+    NX_ASSERT(xCell < (kUiWidth / 8));
+    NX_ASSERT(yPixel < kUiHeight);
     m_pixels[yPixel * (kUiWidth / 8) + xCell] &= bits;
 }
 
 void Draw::orPixel(int xCell, int yPixel, u8 bits)
 {
-    assert(xCell < (kUiWidth / 8));
-    assert(yPixel < kUiHeight);
+    NX_ASSERT(xCell < (kUiWidth / 8));
+    NX_ASSERT(yPixel < kUiHeight);
     m_pixels[yPixel * (kUiWidth / 8) + xCell] |= bits;
 }
 
 void Draw::xorPixel(int xCell, int yPixel, u8 bits)
 {
-    assert(xCell < (kUiWidth / 8));
-    assert(yPixel < kUiHeight);
+    NX_ASSERT(xCell < (kUiWidth / 8));
+    NX_ASSERT(yPixel < kUiHeight);
     m_pixels[yPixel * (kUiWidth / 8) + xCell] ^= bits;
 }
 
 void Draw::pokeAttr(int xCell, int yCell, u8 attr)
 {
-    assert(xCell < (kUiWidth / 8));
-    assert(yCell < (kUiHeight / 8));
+    NX_ASSERT(xCell < (kUiWidth / 8));
+    NX_ASSERT(yCell < (kUiHeight / 8));
     m_attrs[yCell * (kUiWidth / 8) + xCell] = attr;
 }
 
@@ -415,7 +415,7 @@ void Draw::window(int xCell, int yCell, int width, int height, const string& tit
     }
 
     int titleMaxLen = width - 7;
-    assert(titleMaxLen > 0);
+    NX_ASSERT(titleMaxLen > 0);
     int titleLen = std::min(titleMaxLen, (int)title.size());
 
     // Render the title

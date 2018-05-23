@@ -85,7 +85,7 @@ bool Path::valid() const
 
 Path Path::operator / (const Path& path)
 {
-    assert(path.isRelative());
+    NX_ASSERT(path.isRelative());
     Path p = *this;
 
     for (const auto& elem : path.elems())
@@ -130,7 +130,7 @@ string Path::osPath() const
 Path Path::parent() const
 {
     Path p = *this;
-    assert(p.m_elems.size() != 0);
+    NX_ASSERT(p.m_elems.size() != 0);
     p.m_elems.erase(p.m_elems.end() - 1);
     return p;
 }
@@ -143,7 +143,7 @@ bool Path::hasExtension() const
 
 string Path::extension() const
 {
-    assert(m_elems.size() > 0);
+    NX_ASSERT(m_elems.size() > 0);
     size_t i = m_elems.back().find('.');
     return m_elems.back().substr(i);
 }

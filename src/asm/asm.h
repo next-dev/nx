@@ -57,7 +57,7 @@ public:
     bool poke16(int address, u16 word);
     void upload(Spectrum& speccy);
     bool isValidAddress(int i) const { return i >= 0 && i < int(m_addresses.size()); }
-    Address getAddress(int i) const { assert(isValidAddress(i)); return m_addresses[i]; }
+    Address getAddress(int i) const { NX_ASSERT(isValidAddress(i)); return m_addresses[i]; }
 
 private:
     class Byte
@@ -158,9 +158,9 @@ private:
     void dumpLex(const Lex& l);
     void dumpSymbolTable();
 
-    const string& currentFileName() const { assert(!m_fileStack.empty()); return m_fileStack.back(); }
-    Lex& currentLex() { assert(!m_fileStack.empty()); return m_sessions[m_fileStack.back()]; }
-    const Lex& currentLex() const { assert(!m_fileStack.empty()); return m_sessions.at(m_fileStack.back()); }
+    const string& currentFileName() const { NX_ASSERT(!m_fileStack.empty()); return m_fileStack.back(); }
+    Lex& currentLex() { NX_ASSERT(!m_fileStack.empty()); return m_sessions[m_fileStack.back()]; }
+    const Lex& currentLex() const { NX_ASSERT(!m_fileStack.empty()); return m_sessions.at(m_fileStack.back()); }
 
     //------------------------------------------------------------------------------------------------------------------
     // Parsing utilities
