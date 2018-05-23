@@ -43,7 +43,7 @@ void ModelWindow::onDraw(Draw& draw)
         "ZX Spectrum Next (dev version)"
     };
 
-    assert(m_models.size() == (int)Model::COUNT);
+    NX_ASSERT(m_models.size() == (int)Model::COUNT);
 
     for (int i = 0; i < (int)Model::COUNT; ++i)
     {
@@ -670,7 +670,7 @@ string Nx::getTitle() const
     case Model::ZXPlus2:    title += "+2]";         break;
     case Model::ZXNext:     title += "Next (dev)]"; break;
     default:
-        assert(0);
+        NX_ASSERT(0);
         title += "]";
     }
 
@@ -1225,7 +1225,7 @@ bool Nx::loadNxSnapshot(string fileName)
             break;
                 
         default:
-            assert(0);
+            NX_ASSERT(0);
         }
 
         if (f.checkSection('EMUL', 0))
@@ -1330,9 +1330,9 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
 
         // Build the last value in $7ffd
         u8 io = 0;
-        assert(m_machine->getBank(1) == 5);
-        assert(m_machine->getBank(2) == 2);
-        assert(m_machine->getBank(3) >= 0 && m_machine->getBank(3) < 8);
+        NX_ASSERT(m_machine->getBank(1) == 5);
+        NX_ASSERT(m_machine->getBank(2) == 2);
+        NX_ASSERT(m_machine->getBank(3) >= 0 && m_machine->getBank(3) < 8);
         io = u8(m_machine->getBank(3));
         if (m_machine->isShadowScreen()) io |= 0x08;
         if (m_machine->getBank(0) == 9) io |= 0x10;
@@ -1500,7 +1500,7 @@ void Nx::togglePause(bool breakpointHit)
 
 void Nx::stepIn()
 {
-    assert(isDebugging());
+    NX_ASSERT(isDebugging());
     if (m_runMode == RunMode::Normal) togglePause(false);
 
     bool breakpointHit;
@@ -1513,7 +1513,7 @@ void Nx::stepOver()
     u16 pc = getSpeccy().getZ80().PC();
     if (isCallInstructionAt(pc))
     {
-        assert(isDebugging());
+        NX_ASSERT(isDebugging());
         if (m_runMode == RunMode::Normal) togglePause(false);
 
         // #todo: use assembler and static analysis to better support where to place the BP (e.g. trailing params).

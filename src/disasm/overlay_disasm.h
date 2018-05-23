@@ -58,8 +58,8 @@ class DisassemblerWindow final : public Window
 public:
     DisassemblerWindow(Nx& nx);
 
-    DisassemblerEditor& getEditor() { assert(!m_editors.empty()); return m_editors[m_editorOrder[0]]; }
-    DisassemblerEditor& getEditor(int i) { assert(i < int(m_editors.size())); return m_editors[m_editorOrder[i]]; }
+    DisassemblerEditor& getEditor() { NX_ASSERT(!m_editors.empty()); return m_editors[m_editorOrder[0]]; }
+    DisassemblerEditor& getEditor(int i) { NX_ASSERT(i < int(m_editors.size())); return m_editors[m_editorOrder[i]]; }
     int getNumEditors() const { return int(m_editors.size()); }
 
     bool saveAll();

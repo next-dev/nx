@@ -158,7 +158,7 @@ Lex::Lex()
     // Build the keyword table
     int numKeywords = sizeof(gKeywords) / sizeof(gKeywords[0]);
     // If this asserts, we can't encode a keyword in 8 bits.
-    assert(numKeywords < 256);
+    NX_ASSERT(numKeywords < 256);
     m_keywords.fill(0);
     for (int i = 1; i < numKeywords; ++i)
     {
@@ -167,7 +167,7 @@ Lex::Lex()
         u64 h = StringTable::hash(gKeywords[i], true);
         int idx = int(h % kKeywordHashSize);
         // If this asserts, there is too many keywords with the same hashed index (maximum 8)
-        assert((m_keywords[idx] & 0xff00000000000000ull) == 0);
+        NX_ASSERT((m_keywords[idx] & 0xff00000000000000ull) == 0);
         m_keywords[idx] <<= 8;
         m_keywords[idx] += u64(i);
     }

@@ -427,7 +427,7 @@ vector<string> Debugger::syntaxCheck(const vector<string>& args, const char* for
             break;
 
         default:
-            assert(0);
+            NX_ASSERT(0);
         }
 
         //

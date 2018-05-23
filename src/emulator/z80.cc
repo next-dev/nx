@@ -545,7 +545,7 @@ u8& Z80::getReg8(u8 y)
     case 5:     return L();
     case 7:     return A();
 
-    default:    assert(0);
+    default:    NX_ASSERT(0);
                 return dummy;
     }
 }
@@ -2047,7 +2047,7 @@ void Z80::execute(u8 opCode, i64& tState)
 
 void Z80::step(i64& tState)
 {
-    assert(tState >= 0);
+    NX_ASSERT(tState >= 0);
     if (IFF1() && /*(*tState < 32)*/ m_interrupt && !m_eiHappened)
     {
         IFF1() = false;

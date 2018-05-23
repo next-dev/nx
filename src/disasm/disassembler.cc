@@ -27,7 +27,7 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
     case Model::ZXNext:
             
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     reset();
@@ -54,13 +54,13 @@ bool DisassemblerDoc::processCommand(CommandType type, int line, i64 param1, str
     switch (type)
     {
     case CommandType::FullComment:
-        assert(line >= 0 && line <= int(m_lines.size()));
+        NX_ASSERT(line >= 0 && line <= int(m_lines.size()));
         m_lines.emplace(m_lines.begin() + line, LineType::FullComment, commandIndex, 0, 0, text);
         break;
 
     case CommandType::LineComment:
-        assert(line >= 0 && line <= int(m_lines.size()));
-        assert(m_lines[line].type == LineType::Instruction);
+        NX_ASSERT(line >= 0 && line <= int(m_lines.size()));
+        NX_ASSERT(m_lines[line].type == LineType::Instruction);
         m_lines[line].text = text;
         break;
 
@@ -68,7 +68,7 @@ bool DisassemblerDoc::processCommand(CommandType type, int line, i64 param1, str
         break;
 
     default:
-        assert(0);
+        NX_ASSERT(0);
     }
 
     return true;
@@ -197,7 +197,7 @@ bool DisassemblerDoc::save(string fileName)
     // MM48 section
     //
     BlockSection mm48('MM48');
-    assert(m_mmap.size() == 65536);
+    NX_ASSERT(m_mmap.size() == 65536);
     mm48.pokeData(m_mmap);
     f.addSection(mm48, 65536);
 

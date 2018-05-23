@@ -189,9 +189,9 @@ private:
     bool isValidPos(Pos pos) const;
     bool isValidPos(DataPos pos) const;
     DataPos getLinePos(int line) const { return m_lines[line]; }
-    void setLinePos(int line, DataPos pos) { assert(isValidPos(pos)); m_lines[line] = pos; }
-    char getChar(DataPos p) const { assert(isValidPos(p));  return m_buffer[(int)p]; }
-    void setChar(DataPos p, char ch) { assert(isValidPos(p));  m_buffer[(int)p] = ch; }
+    void setLinePos(int line, DataPos pos) { NX_ASSERT(isValidPos(pos)); m_lines[line] = pos; }
+    char getChar(DataPos p) const { NX_ASSERT(isValidPos(p));  return m_buffer[(int)p]; }
+    void setChar(DataPos p, char ch) { NX_ASSERT(isValidPos(p));  m_buffer[(int)p] = ch; }
 
 private:
     vector<char>    m_buffer;
@@ -273,8 +273,8 @@ class EditorWindow final : public Window
 public:
     EditorWindow(Nx& nx, string title);
 
-    Editor& getEditor() { assert(!m_editors.empty()); return m_editors[m_editorOrder[0]]; }
-    Editor& getEditor(int i) { assert(i < int(m_editors.size())); return m_editors[m_editorOrder[i]]; }
+    Editor& getEditor() { NX_ASSERT(!m_editors.empty()); return m_editors[m_editorOrder[0]]; }
+    Editor& getEditor(int i) { NX_ASSERT(i < int(m_editors.size())); return m_editors[m_editorOrder[i]]; }
     int getNumEditors() const { return int(m_editors.size()); }
 
     bool saveAll();
