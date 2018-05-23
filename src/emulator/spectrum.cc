@@ -736,6 +736,20 @@ string& Spectrum::slotName(int slot)
     return m_bankNames[m_slots[slot].getIndex()];
 }
 
+vector<u8> Spectrum::getMmu(MemGroup group, int index) const
+{
+    vector<u8> d(kBankSize);
+    const vector<u8>& mem = getMemoryGroup(group);
+    copy(mem.begin() + (index * kBankSize), mem.begin() + ((index + 1) * kBankSize), d.begin());
+    return d;
+}
+
+void Spectrum::setMmu(MemGroup group, int index, const vector<u8>& data)
+{
+    vector<u8>& mem = getMemoryGroup(group);
+    copy(data.begin(), data.end(), mem.begin() + (index * kBankSize));
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // I/O
 //----------------------------------------------------------------------------------------------------------------------

@@ -263,7 +263,7 @@ public:
     bool                isZ80Address        (MemAddr addr) const;
     string              addressName         (MemAddr address);
     u8&                 memRef              (MemAddr addr);
-    vector<u8>          getMmu              (MemGroup group, int index);
+    vector<u8>          getMmu              (MemGroup group, int index) const;
     void                setMmu              (MemGroup group, int index, const vector<u8>& data);
 
     //------------------------------------------------------------------------------------------------------------------
@@ -311,8 +311,9 @@ private:
     //
     // Memory
     //
-    void            initMemory          ();
-    vector<u8>&     getMemoryGroup      (MemGroup group);
+    void                initMemory          ();
+    vector<u8>&         getMemoryGroup      (MemGroup group);
+    const vector<u8>&   getMemoryGroup      (MemGroup group) const;
 
     //
     // Video
