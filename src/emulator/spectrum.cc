@@ -458,6 +458,7 @@ void Spectrum::initMemory()
 {
     setRomWriteState(true);
     m_slots.resize(8);
+    m_bankNames.resize(8);
 
     switch (m_model)
     {
@@ -748,6 +749,26 @@ void Spectrum::setMmu(MemGroup group, int index, const vector<u8>& data)
 {
     vector<u8>& mem = getMemoryGroup(group);
     copy(data.begin(), data.end(), mem.begin() + (index * kBankSize));
+}
+
+vector<u8>& Spectrum::getMemoryGroup(MemGroup group)
+{
+    switch (group)
+    {
+    case MemGroup::RAM: return m_ram;
+    case MemGroup::ROM: return m_rom;
+    default: NX_ASSERT(0); return m_ram;
+    }
+}
+
+const vector<u8>& Spectrum::getMemoryGroup(MemGroup group) const
+{
+    switch (group)
+    {
+    case MemGroup::RAM: return m_ram;
+    case MemGroup::ROM: return m_rom;
+    default: NX_ASSERT(0); return m_ram;
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
