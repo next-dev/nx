@@ -62,6 +62,7 @@ void FourCC::write(vector<u8>& data)
 
 BlockSection::BlockSection()
     : m_fcc()
+    , m_version(0)
     , m_data()
 {
 
@@ -69,6 +70,7 @@ BlockSection::BlockSection()
 
 BlockSection::BlockSection(const BlockSection& block)
     : m_fcc(block.m_fcc)
+    , m_version(block.m_version)
     , m_data(block.m_data)
 {
 

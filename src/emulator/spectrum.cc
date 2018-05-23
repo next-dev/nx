@@ -615,7 +615,7 @@ void Spectrum::poke(Z80MemAddr address, u8 x)
         }
     }
 
-    if (m_romWritable || addr.bank().getGroup() == MemGroup::ROM)
+    if (m_romWritable || addr.bank().getGroup() == MemGroup::RAM)
     {
         memRef(addr) = x;
     }
@@ -717,7 +717,7 @@ void Spectrum::setSlot(int slot, Bank bank)
     default: assert(0);
     }
 
-    m_bankNames[bank.getIndex()] += stringFormat(" {0}", bank.getIndex());
+    m_bankNames[slot] = bn + stringFormat(" {0}", bank.getIndex());
 }
 
 int Spectrum::getBank(int slot) const
@@ -734,7 +734,7 @@ u16 Spectrum::getNumBanks() const
 string& Spectrum::slotName(int slot)
 {
     assert(slot >= 0 && slot < 8);
-    return m_bankNames[m_slots[slot].getIndex()];
+    return m_bankNames[slot];
 }
 
 vector<u8> Spectrum::getMmu(MemGroup group, int index) const

@@ -1241,20 +1241,10 @@ bool Nx::loadNxSnapshot(string fileName)
             int numFiles = 0;
             int numLabels = 0;
 
-            int dataIndex;
+            int dataIndex = 4;
 
-            u16 version = emul.peek16(0);
-
-            if (version >= 0)
-            {
-                numFiles = int(emul.peek16(2));
-                dataIndex = 4;
-            }
-            if (version >= 1)
-            {
-                numLabels = int(emul.peek16(4));
-                dataIndex = 6;
-            }
+            numFiles = int(emul.peek16(0));
+            numLabels = int(emul.peek16(2));
 
             // Reading file names
             for (int i = 0; i < numFiles; ++i)
@@ -1334,7 +1324,7 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
     int numMmu = m_machine->getNumBanks();
     NX_ASSERT(numMmu < 256);
     mram.poke8(u8(numMmu));
-    for (int i = 0; i < m_machine->getNumBanks(); ++i)
+    for (int i = 0; i < numMmu; ++i)
     {
         vector<u8> memory = m_machine->getMmu(MemGroup::RAM, i);
         mram.pokeData(memory);

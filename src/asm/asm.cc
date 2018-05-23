@@ -1746,7 +1746,7 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
     } while(0)
 
     vector<ExprValue> stack;
-    i64 a, b;
+    ExprValue a, b;
 
     for (const auto& v : output)
     {

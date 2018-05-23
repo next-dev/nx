@@ -24,15 +24,19 @@ void CpuStatusWindow::onDraw(Draw &draw)
     draw.printString(m_x + 2, m_y + 1, "PC   AF   BC   DE   HL", false, colour);
     draw.printString(m_x + 2, m_y + 5, "SP   IX   IY   IR   WZ", false, colour);
     draw.printString(m_x + 3, m_y + 8, "T    S Z 5 H 3 V N C", false, colour);
-    draw.printString(m_x + 1, m_y + 11, "IFF1", false, colour);
-    draw.printString(m_x + 1, m_y + 12, "IFF2", false, colour);
-    draw.printString(m_x + 1, m_y + 13, "IM", false, colour);
-    draw.printString(m_x + 1, m_y + 14, "HALT", false, colour);
-    draw.printString(m_x + 1, m_y + 16, "FPS", false, colour);
-    draw.printString(m_x + 12, m_y + 11, "S0: ", false, colour);
-    draw.printString(m_x + 12, m_y + 12, "S1: ", false, colour);
-    draw.printString(m_x + 12, m_y + 13, "S2: ", false, colour);
-    draw.printString(m_x + 12, m_y + 14, "S3: ", false, colour);
+    draw.printString(m_x + 1, m_y + 16, "IFF1", false, colour);
+    draw.printString(m_x + 1, m_y + 17, "IFF2", false, colour);
+    draw.printString(m_x + 1, m_y + 18, "IM", false, colour);
+    draw.printString(m_x + 12, m_y + 16, "HALT", false, colour);
+    draw.printString(m_x + 12, m_y + 17, "FPS", false, colour);
+    draw.printString(m_x + 1, m_y + 11, "S0: ", false, colour);
+    draw.printString(m_x + 1, m_y + 12, "S1: ", false, colour);
+    draw.printString(m_x + 1, m_y + 13, "S2: ", false, colour);
+    draw.printString(m_x + 1, m_y + 14, "S3: ", false, colour);
+    draw.printString(m_x + 12, m_y + 11, "S4: ", false, colour);
+    draw.printString(m_x + 12, m_y + 12, "S5: ", false, colour);
+    draw.printString(m_x + 12, m_y + 13, "S6: ", false, colour);
+    draw.printString(m_x + 12, m_y + 14, "S7: ", false, colour);
 
     draw.printSquashedString(m_x + 27, m_y + 1, "Stack", colour);
     const char hex[] = "0123456789ABCDEF";
@@ -60,15 +64,15 @@ void CpuStatusWindow::onDraw(Draw &draw)
     }
 
     // Print out the interrupt status
-    draw.printString(m_x + 7, m_y + 11, m_z80.IFF1() ? "On" : "Off", false, colour);
-    draw.printString(m_x + 7, m_y + 12, m_z80.IFF2() ? "On" : "Off", false, colour);
-    draw.printString(m_x + 7, m_y + 14, m_z80.isHalted() ? "Yes" : "No", false, colour);
+    draw.printString(m_x + 7, m_y + 16, m_z80.IFF1() ? "On" : "Off", false, colour);
+    draw.printString(m_x + 7, m_y + 17, m_z80.IFF2() ? "On" : "Off", false, colour);
+    draw.printString(m_x + 18, m_y + 16, m_z80.isHalted() ? "Yes" : "No", false, colour);
 
-    draw.printString(m_x + 7, m_y + 13, draw.format("%d", m_z80.IM()), false, colour);
+    draw.printString(m_x + 7, m_y + 18, draw.format("%d", m_z80.IM()), false, colour);
 
     // FPS
     static sf::Clock clock;
-    draw.printString(m_x + 7, m_y + 16, draw.format("%d", (int)(sf::seconds(1) / clock.restart())), false, colour);
+    draw.printString(m_x + 18, m_y + 17, draw.format("%d", (int)(sf::seconds(1) / clock.restart())), false, colour);
 
     // Print out the stack
     for (int i = 1; i < m_height - 1; ++i) draw.printChar(m_x + 26, m_y + i, '\'', colour, gGfxFont);
@@ -85,11 +89,15 @@ void CpuStatusWindow::onDraw(Draw &draw)
     // Print out the banks
     for (int i = 0; i < 4; ++i)
     {
-        draw.printSquashedString(m_x + 16, m_y + 11 + i, m_nx.getSpeccy().slotName(i), colour);
+        draw.printSquashedString(m_x + 5, m_y + 11 + i, m_nx.getSpeccy().slotName(i), colour);
+    }
+    for (int i = 4; i < 8; ++i)
+    {
+        draw.printSquashedString(m_x + 16, m_y + 7 + i, m_nx.getSpeccy().slotName(i), colour);
     }
     if (m_nx.getSpeccy().isShadowScreen())
     {
-        draw.printSquashedString(m_x + 12, m_y + 16, "Screen shadowed", colour);
+        draw.printSquashedString(m_x + 12, m_y + 18, "Screen shadowed", colour);
     }
 }
 
