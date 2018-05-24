@@ -473,7 +473,7 @@ void Spectrum::initMemory()
         setSlot(5, Bank(MemGroup::RAM, 3));
         setSlot(6, Bank(MemGroup::RAM, 4));
         setSlot(7, Bank(MemGroup::RAM, 5));
-        m_videoBank = m_shadowVideoBank = 2;
+        m_videoBank = m_shadowVideoBank = 0;
         break;
 
     case Model::ZX128:
