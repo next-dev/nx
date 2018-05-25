@@ -30,18 +30,36 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
         NX_ASSERT(0);
     }
 
-    reset();
+    reset(speccy);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 // Internal functions
 //----------------------------------------------------------------------------------------------------------------------
 
-void DisassemblerDoc::reset()
+void DisassemblerDoc::reset(const Spectrum& speccy)
 {
     m_lines.clear();
     m_commands.clear();
-    m_lines.emplace_back(LineType::UnknownRange, -1, 0x4000, 0xffff, string{});
+
+    switch (speccy.getModel())
+    {
+    case Model::ZX48:
+        {
+            MemAddr start = speccy.convertAddress(Z80MemAddr(0x4000));
+            MemAddr end = speccy.convertAddress(Z80MemAddr(0xffff));
+            m_lines.emplace_back(LineType::UnknownRange, -1, start, end, string{});
+        }
+        break;
+
+    case Model::ZX128:
+    case Model::ZXPlus2:
+    case Model::ZXNext:
+
+    default:
+        assert(0);
+    }
+
     m_changed = false;
 }
 
@@ -55,7 +73,7 @@ bool DisassemblerDoc::processCommand(CommandType type, int line, i64 param1, str
     {
     case CommandType::FullComment:
         NX_ASSERT(line >= 0 && line <= int(m_lines.size()));
-        m_lines.emplace(m_lines.begin() + line, LineType::FullComment, commandIndex, 0, 0, text);
+        m_lines.emplace(m_lines.begin() + line, LineType::FullComment, commandIndex, MemAddr(), MemAddr(), text);
         break;
 
     case CommandType::LineComment:
@@ -150,14 +168,14 @@ void DisassemblerDoc::deleteLine(int line)
 //              13      ?       Text
 //----------------------------------------------------------------------------------------------------------------------
 
-bool DisassemblerDoc::load(string fileName)
+bool DisassemblerDoc::load(Spectrum& speccy, string fileName)
 {
-    reset();
+    reset(speccy);
 
     NxFile f;
     if (f.load(fileName))
     {
-        if (f.checkSection('MM48', 65536))
+        if (f.checkSection('MM48', 0))
         {
             const BlockSection& mm48 = f['MM48'];
             mm48.peekData(0, m_mmap, 65536);
@@ -196,15 +214,15 @@ bool DisassemblerDoc::save(string fileName)
     //
     // MM48 section
     //
-    BlockSection mm48('MM48');
+    BlockSection mm48('MM48', 0);
     NX_ASSERT(m_mmap.size() == 65536);
     mm48.pokeData(m_mmap);
-    f.addSection(mm48, 65536);
+    f.addSection(mm48);
 
     //
     // DCMD section
     //
-    BlockSection dcmd('DCMD');
+    BlockSection dcmd('DCMD', 0);
     dcmd.poke32(u32(m_commands.size()));
     for (const auto& command : m_commands)
     {
@@ -213,7 +231,7 @@ bool DisassemblerDoc::save(string fileName)
         dcmd.poke64(command.param1);
         dcmd.pokeString(command.text);
     }
-    f.addSection(dcmd, 0);
+    f.addSection(dcmd);
     m_changed = false;
 
     return f.save(fileName);

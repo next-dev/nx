@@ -35,7 +35,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
     u16 a = m_address;
     int findIndex = 0;
     int findWidth = 0;
-    const vector<MemoryMap::Address>& searches = m_nx.getDebugger().getFindAddresses();
+    const vector<MemAddr>& searches = m_nx.getDebugger().getFindAddresses();
     u8 findColour = Draw::attr(Colour::Black, Colour::Green, true);
     
     for (int i = 1; i < m_height - 1; ++i, a += 8)
@@ -54,9 +54,10 @@ void MemoryDumpWindow::onDraw(Draw& draw)
         //
 
         // Adjust to the next address we should look for
+        MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(a));
         while (
             (findIndex < (int)searches.size()) &&
-            (((MemoryMap::Address)a > searches[findIndex])))
+            (ta > searches[findIndex]))
         {
             ++findIndex;
         }
@@ -66,7 +67,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
         for (int b = 0; b < 8; ++b)
         {
             // Check for search element
-            if (findIndex < (int)searches.size() && (a + b) == searches[findIndex])
+            if (findIndex < (int)searches.size() && (ta + b) == searches[findIndex])
             {
                 // Look out for next address;
                 ++findIndex;
@@ -257,11 +258,19 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool 
     }
 }
 
-void MemoryDumpWindow::gotoAddress(MemoryMap::Address addr)
+void MemoryDumpWindow::gotoAddress(MemAddr addr)
 {
-    m_enableGoto = 0;
-    m_editMode = false;
-    m_address = u16(addr) & 0xfff8;
+    if (m_nx.getSpeccy().isZ80Address(addr))
+    {
+        Z80MemAddr a = m_nx.getSpeccy().convertAddress(addr);
+        m_enableGoto = 0;
+        m_editMode = false;
+        m_address = u16(a) & 0xfff8;
+    }
+    else
+    {
+        m_nx.getDebugger().error("Address is not paged in yet.");
+    }
 }
 
 void MemoryDumpWindow::onUnselected()

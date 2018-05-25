@@ -32,6 +32,7 @@ private:
     void ensureVisibleCursor();
 
 private:
+    Spectrum*           m_speccy;
     DisassemblerDoc     m_data;
     int                 m_x;
     int                 m_y;

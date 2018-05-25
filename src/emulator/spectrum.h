@@ -16,6 +16,90 @@
 #include <vector>
 
 //----------------------------------------------------------------------------------------------------------------------
+// MemAddr
+// Represents a bank and offset memory address
+//----------------------------------------------------------------------------------------------------------------------
+
+static const int kBankSize = KB(8);
+static const int kNumBanks = 8;
+
+enum class MemGroup
+{
+    RAM,        // Normal RAM
+    ROM,        // Read only - cannot be written to
+};
+
+class Bank
+{
+public:
+    Bank() : m_group(MemGroup::RAM), m_bank(0) {}
+    Bank(MemGroup group, u16 bank);
+    Bank(const Bank& other);
+    Bank& operator= (const Bank& other);
+
+    MemGroup getGroup() const { return m_group; }
+    u16 getIndex() const { return m_bank; }
+
+    bool operator== (const Bank& bank) const    { return m_group == bank.m_group && m_bank == bank.m_bank; }
+    bool operator!= (const Bank& bank) const    { return m_group != bank.m_group || m_bank != bank.m_bank; }
+    bool operator< (const Bank& bank) const     { assert(m_group == bank.m_group); return m_bank < bank.m_bank; }
+    bool operator> (const Bank& bank) const     { assert(m_group == bank.m_group); return m_bank > bank.m_bank; }
+    bool operator<= (const Bank& bank) const    { assert(m_group == bank.m_group); return m_bank <= bank.m_bank; }
+    bool operator>= (const Bank& bank) const    { assert(m_group == bank.m_group); return m_bank >= bank.m_bank; }
+
+private:
+    MemGroup    m_group;
+    u16         m_bank;
+};
+
+//
+// MemAddr
+//
+// This represents a universal address that can address any piece of memory in the system.  It consists of a bank
+// (which further consists of a memory group and bank index) and an offset.
+//
+
+class Z80MemAddr;
+
+class MemAddr
+{
+public:
+    // Default points to first RAM address.
+    MemAddr() : m_bank(), m_offset(0) {}
+
+    MemAddr(Bank bank, u16 offset);
+    MemAddr(MemGroup group, int realAddress);
+
+    MemAddr(const MemAddr& memAddr);
+    MemAddr& operator= (const MemAddr& memAddr);
+
+    Bank bank() const       { return m_bank; }
+    u16 offset() const      { return m_offset;}
+
+    int index() const { return m_bank.getIndex() * kBankSize + m_offset; }
+
+    bool operator== (const MemAddr& addr) const;
+    bool operator!= (const MemAddr& addr) const;
+    bool operator< (const MemAddr& addr) const;
+    bool operator> (const MemAddr& addr) const;
+    bool operator<= (const MemAddr& addr) const;
+    bool operator>= (const MemAddr& addr) const;
+
+    MemAddr operator+ (int offset) const;
+    MemAddr operator- (int offset) const;
+    int operator- (MemAddr addr) const;
+
+    MemAddr& operator++();
+    MemAddr operator++(int);
+    MemAddr& operator--();
+    MemAddr operator--(int);
+
+private:
+    Bank        m_bank;
+    u16         m_offset;
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Model
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -116,12 +200,12 @@ public:
     // IExternals interface
     //------------------------------------------------------------------------------------------------------------------
 
-    u8              peek                (u16 address) override;
-    u8              peek                (u16 address, TState& t) override;
-    u16             peek16              (u16 address, TState& t) override;
-    void            poke                (u16 address, u8 x, TState& t) override;
-    void            poke16              (u16 address, u16 x, TState& t) override;
-    void            contend             (u16 address, TState delay, int num, TState& t) override;
+    u8              peek                (Z80MemAddr address) override;
+    u8              peek                (Z80MemAddr address, TState& t) override;
+    u16             peek16              (Z80MemAddr address, TState& t) override;
+    void            poke                (Z80MemAddr address, u8 x, TState& t) override;
+    void            poke16              (Z80MemAddr address, u16 x, TState& t) override;
+    void            contend             (Z80MemAddr address, TState delay, int num, TState& t) override;
     u8              in                  (u16 port, TState& t) override;
     void            out                 (u16 port, u8 x, TState& t) override;
 
@@ -158,27 +242,29 @@ public:
     // Memory interface
     //------------------------------------------------------------------------------------------------------------------
 
-    int             getBankSize         () const    { return m_bankSize; }
-    int             getNumSlots         () const    { return (int)m_slots.size(); }
-    int             getRomSize          () const    { return 0x4000; }
-    void            bank                (int slot, int bank);
-    int             getBank             (int slot) const;
-    u16             getNumBanks         () const;
-    string&         slotName            (int slot);
-    bool            isContended         (u16 addr) const;
-    TState          contention          (TState t);
-    void            poke                (u16 address, u8 x);
-    u8              bankPeek            (u16 bank, u16 address) const;
-    void            bankPoke            (u16 bank, u16 address, u8 byte);
-    void            load                (u16 address, const vector<u8>& buffer);
-    void            load                (u16 address, const void* buffer, i64 size);
-    void            setRomWriteState    (bool writable);
-    vector<u32>     findSequence        (vector<u8> seq);
-    vector<u32>     findByte            (u8 byte);
-    vector<u32>     findWord            (u16 word);
-    vector<u32>     findString          (string str);
-    u32             convertAddress      (size_t ramOffset);
-    string          addressName         (u32 address, bool moreInfo);
+    int                 getRomSize          () const    { return 0x4000; }
+    void                setSlot             (int slot, Bank bank);
+    int                 getBank             (int slot) const;
+    u16                 getNumBanks         () const;
+    string&             slotName            (int slot);
+    bool                isContended         (MemAddr addr) const;
+    bool                isContended         (u16 port) const;
+    TState              contention          (TState t);
+    void                poke                (Z80MemAddr address, u8 x);
+    void                load                (Z80MemAddr addr, const vector<u8>& buffer);
+    void                load                (Z80MemAddr addr, const void* buffer, i64 size);
+    void                setRomWriteState    (bool writable);
+    vector<MemAddr>     findSequence        (vector<u8> seq);
+    vector<MemAddr>     findByte            (u8 byte);
+    vector<MemAddr>     findWord            (u16 word);
+    vector<MemAddr>     findString          (string str);
+    MemAddr             convertAddress      (Z80MemAddr addr) const;
+    Z80MemAddr          convertAddress      (MemAddr addr) const;
+    bool                isZ80Address        (MemAddr addr) const;
+    string              addressName         (MemAddr address);
+    u8&                 memRef              (MemAddr addr);
+    vector<u8>          getMmu              (MemGroup group, int index) const;
+    void                setMmu              (MemGroup group, int index, const vector<u8>& data);
 
     //------------------------------------------------------------------------------------------------------------------
     // Video interface
@@ -203,20 +289,20 @@ public:
     // Debugger interface
     //------------------------------------------------------------------------------------------------------------------
 
-    void            toggleBreakpoint        (u16 address);
-    void            addTemporaryBreakpoint  (u16 address);
-    bool            hasUserBreakpointAt     (u16 address) const;
-    vector<u16>     getUserBreakpoints      () const;
+    void            toggleBreakpoint        (MemAddr address);
+    void            addTemporaryBreakpoint  (MemAddr address);
+    bool            hasUserBreakpointAt     (MemAddr address) const;
+    vector<MemAddr> getUserBreakpoints      () const;
     void            clearUserBreakpoints    ();
 
     struct DataBreakpoint
     {
-        u16     address;
+        MemAddr address;
         u16     len;
     };
 
-    void            toggleDataBreakpoint    (u16 address, u16 len);
-    bool            hasDataBreakpoint       (u16 address, u16 len) const;
+    void            toggleDataBreakpoint    (MemAddr address, u16 len);
+    bool            hasDataBreakpoint       (MemAddr address, u16 len) const;
     const vector<DataBreakpoint>&
                     getDataBreakpoints      () const { return m_dataBreakpoints; }
     void            clearDataBreakpoints    () { m_dataBreakpoints.clear(); }
@@ -225,7 +311,9 @@ private:
     //
     // Memory
     //
-    void            initMemory          ();
+    void                initMemory          ();
+    vector<u8>&         getMemoryGroup      (MemGroup group);
+    const vector<u8>&   getMemoryGroup      (MemGroup group) const;
 
     //
     // Video
@@ -260,20 +348,17 @@ private:
     struct Breakpoint
     {
         BreakpointType  type;
-        u16             address;
+        MemAddr         address;
     };
 
-    vector<Breakpoint>::const_iterator      findBreakpoint          (u16 address) const;
-    bool                                    shouldBreak             (u16 address);
+    vector<Breakpoint>::const_iterator      findBreakpoint          (MemAddr address) const;
+    bool                                    shouldBreak             (MemAddr address);
 
-    vector<DataBreakpoint>::const_iterator  findDataBreakpoint  (u16 address, u16 len) const;
+    vector<DataBreakpoint>::const_iterator  findDataBreakpoint      (MemAddr address, u16 len) const;
 
 private:
     // Model
     Model                       m_model;
-    u16                         m_bankSize;
-
-
 
     // Clock state
     TState                      m_tState;
@@ -296,8 +381,9 @@ private:
     Tape*                       m_tape;
 
     // Memory state
-    vector<u8>                  m_slots;
+    vector<Bank>                m_slots;
     vector<string>              m_bankNames;
+    vector<u8>                  m_rom;
     vector<u8>                  m_ram;
     vector<u8>                  m_contention;
     bool                        m_romWritable;

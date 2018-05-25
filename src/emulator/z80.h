@@ -8,20 +8,38 @@
 #include <functional>
 
 //----------------------------------------------------------------------------------------------------------------------
+// Z80MemAddr
+//
+// This is an address that address the 64K that the Z80 can see.  This address needs to be converted via the
+// Spectrum instance to a MemAddr before it can be used (because the Spectrum instance has the slot configuration).
+//----------------------------------------------------------------------------------------------------------------------
+
+class Z80MemAddr
+{
+public:
+    Z80MemAddr(u16 addr);
+
+    operator u16() const { return m_address; }
+
+private:
+    u16     m_address;
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // CPU interface to external systems
 //----------------------------------------------------------------------------------------------------------------------
 
 struct IExternals
 {
     // Memory access
-    virtual u8 peek(u16 address) = 0;
-    virtual u8 peek(u16 address, TState& t) = 0;
-    virtual u16 peek16(u16 address, TState& t) = 0;
-    virtual void poke(u16 address, u8 x, TState& t) = 0;
-    virtual void poke16(u16 address, u16 x, TState& t) = 0;
+    virtual u8 peek(Z80MemAddr address) = 0;
+    virtual u8 peek(Z80MemAddr address, TState& t) = 0;
+    virtual u16 peek16(Z80MemAddr address, TState& t) = 0;
+    virtual void poke(Z80MemAddr address, u8 x, TState& t) = 0;
+    virtual void poke16(Z80MemAddr address, u16 x, TState& t) = 0;
 
     // Contention
-    virtual void contend(u16 address, TState delay, int num, TState& t) = 0;
+    virtual void contend(Z80MemAddr address, TState delay, int num, TState& t) = 0;
 
     // I/O
     virtual u8 in(u16 port, TState& t) = 0;

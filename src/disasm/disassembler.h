@@ -26,7 +26,7 @@ class DisassemblerDoc
 public:
     DisassemblerDoc(Spectrum& speccy);
 
-    bool load(string fileName);
+    bool load(Spectrum& speccy, string fileName);
     bool save(string fileName);
     bool hasChanged() const { return m_changed; }
 
@@ -51,13 +51,13 @@ public:
 
     struct Line
     {
-        LineType                type;
-        int                     commandIndex;   // Index of command that generated this line
-        MemoryMap::Address      startAddress;
-        MemoryMap::Address      endAddress;
-        string                  text;
+        LineType    type;
+        int         commandIndex;   // Index of command that generated this line
+        MemAddr     startAddress;
+        MemAddr     endAddress;
+        string      text;
 
-        Line(LineType type, int commandIndex, MemoryMap::Address start, MemoryMap::Address end, string text)
+        Line(LineType type, int commandIndex, MemAddr start, MemAddr end, string text)
             : type(type)
             , commandIndex(commandIndex)
             , startAddress(start)
@@ -104,7 +104,7 @@ private:
     // Internal API
     //
 
-    void reset();
+    void reset(const Spectrum& speccy);
     void changed() { m_changed = true; }
 
 private:

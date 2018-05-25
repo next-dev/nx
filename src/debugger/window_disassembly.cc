@@ -78,7 +78,7 @@ void DisassemblyWindow::adjustBar()
         // We need to adjust the bar
         m_topAddress = disassemble(d, m_topAddress);
         m_firstLabel = 0;
-        MemoryMap::Address ta = MemoryMap::Address(m_topAddress);
+        MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(m_topAddress));
         while (m_firstLabel < m_labels.size() && m_labels[m_firstLabel].second < ta) ++m_firstLabel;
         if (index == m_viewedAddresses.size())
         {
@@ -106,7 +106,7 @@ void DisassemblyWindow::setView(u16 newTopAddress)
     }
     m_topAddress = newTopAddress;
     m_firstLabel = 0;
-    MemoryMap::Address ta = MemoryMap::Address(m_topAddress);
+    MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(m_topAddress));
     while (m_firstLabel < m_labels.size() && m_labels[m_firstLabel].second < ta) ++m_firstLabel;
 }
 
@@ -178,7 +178,8 @@ void DisassemblyWindow::onDraw(Draw& draw)
         bool printLabel = false;
 
         // Check for a label first
-        if (labelIndex < m_labels.size() && MemoryMap::Address(a) == m_labels[labelIndex].second)
+        MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(a));
+        if ((labelIndex < m_labels.size()) && (ta == m_labels[labelIndex].second))
         {
             printLabel = true;
 
@@ -191,11 +192,12 @@ void DisassemblyWindow::onDraw(Draw& draw)
         else
         // Otherwise, it's an instruction
         {
+            MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(a));
             u8 colour = (a == m_address)
                 ? selectColour
                 : (a == pc)
                     ? pcColour
-                    : m_nx.getSpeccy().hasUserBreakpointAt(a)
+                    : m_nx.getSpeccy().hasUserBreakpointAt(ta)
                         ? breakpointColour
                         : row & 1
                             ? m_bkgColour
@@ -207,7 +209,7 @@ void DisassemblyWindow::onDraw(Draw& draw)
             draw.printString(m_x + 21, m_y + row, d.opCodeString().c_str(), false, colour);
             draw.printString(m_x + 26, m_y + row, d.operandString().c_str(), false, colour);
 
-            if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(a))
+            if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(ta))
             {
                 draw.printChar(m_x + 1, m_y + row, ')', colour, gGfxFont);
             }
@@ -264,7 +266,10 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool
             break;
 
         case K::F9:
-            m_nx.getSpeccy().toggleBreakpoint(m_address);
+            {
+                MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(m_address));
+                m_nx.getSpeccy().toggleBreakpoint(ta);
+            }
             break;
 
         case K::G:
@@ -285,9 +290,12 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool
         {
         case K::F5:
             // Run to
-            m_nx.getSpeccy().addTemporaryBreakpoint(m_address);
-            m_nx.setRunMode(RunMode::Normal);
-            if (m_nx.getRunMode() == RunMode::Stopped) m_nx.togglePause(false);
+            {
+                MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(m_address));
+                m_nx.getSpeccy().addTemporaryBreakpoint(ta);
+                m_nx.setRunMode(RunMode::Normal);
+                if (m_nx.getRunMode() == RunMode::Stopped) m_nx.togglePause(false);
+            }
             break;
 
         default:

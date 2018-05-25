@@ -57,6 +57,8 @@ Debugger::Debugger(Nx& nx)
 {
     m_disassemblyWindow.Select();
 
+    // #todo: Replace the command system with one that understands expressions
+
     //
     // Help command
     //
@@ -88,11 +90,12 @@ Debugger::Debugger(Nx& nx)
 
             if (parsedAddr && parsedLen)
             {
-                getSpeccy().toggleDataBreakpoint(addr, len);
+                MemAddr a = getSpeccy().convertAddress(Z80MemAddr(addr));
+                getSpeccy().toggleDataBreakpoint(a, len);
                 if (len == 1)
                 {
                     errors.emplace_back(
-                        stringFormat(getSpeccy().hasDataBreakpoint(addr, len)
+                        stringFormat(getSpeccy().hasDataBreakpoint(a, len)
                             ? "Data breakpoint set at ${0}."
                             : "Data breakpoint reset at ${0}.",
                             hexWord(addr)));
@@ -100,7 +103,7 @@ Debugger::Debugger(Nx& nx)
                 else
                 {
                     errors.emplace_back(
-                        stringFormat(getSpeccy().hasDataBreakpoint(addr, len)
+                        stringFormat(getSpeccy().hasDataBreakpoint(a, len)
                             ? "Data breakpoint set at ${0}-${1}."
                             : "Data breakpoint reset at ${0}-${1}.",
                             hexWord(addr),
@@ -127,9 +130,10 @@ Debugger::Debugger(Nx& nx)
             u16 addr = 0;
             if (parseWord(args[0], addr))
             {
-                getSpeccy().toggleBreakpoint(addr);
+                MemAddr a = getSpeccy().convertAddress(Z80MemAddr(addr));
+                getSpeccy().toggleBreakpoint(a);
                 errors.emplace_back(
-                    stringFormat(getSpeccy().hasUserBreakpointAt(addr)
+                    stringFormat(getSpeccy().hasUserBreakpointAt(a)
                         ? "Breakpoint set at ${0}."
                         : "Breakpoint reset at ${0}.", hexWord(addr)));
             }
@@ -152,18 +156,18 @@ Debugger::Debugger(Nx& nx)
             errors.emplace_back("Breakpoints:");
             for (const auto& br : getSpeccy().getUserBreakpoints())
             {
-                errors.emplace_back(stringFormat("  ${0}", hexWord(br)));
+                errors.emplace_back(stringFormat("  ${0}", getSpeccy().addressName(br)));
             }
             errors.emplace_back("Data breakpoints:");
             for (const auto& br : getSpeccy().getDataBreakpoints())
             {
                 if (br.len == 1)
                 {
-                    errors.emplace_back(stringFormat("  ${0}", hexWord(br.address)));
+                    errors.emplace_back(stringFormat("  ${0}", getSpeccy().addressName(br.address)));
                 }
                 else
                 {
-                    errors.emplace_back(stringFormat("  ${0}-${1}", hexWord(br.address), hexWord(br.address + br.len - 1)));
+                    errors.emplace_back(stringFormat("  ${0}-${1}", getSpeccy().addressName(br.address), getSpeccy().addressName(br.address + br.len - 1)));
                 }
             }
         }
@@ -245,9 +249,9 @@ Debugger::Debugger(Nx& nx)
                     m_findAddresses = getSpeccy().findSequence(bytes);
                     m_currentAddress = -1;
                     m_findWidth = (int)bytes.size();
-                    for (u32 add : m_findAddresses)
+                    for (MemAddr add : m_findAddresses)
                     {
-                        errors.push_back(getSpeccy().addressName(add, true));
+                        errors.push_back(getSpeccy().addressName(add));
                     }
                     errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
                     errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");
@@ -273,9 +277,9 @@ Debugger::Debugger(Nx& nx)
                 m_findAddresses = getSpeccy().findWord(w);
                 m_currentAddress = -1;
                 m_findWidth = 2;
-                for (u32 add : m_findAddresses)
+                for (MemAddr add : m_findAddresses)
                 {
-                    errors.push_back(getSpeccy().addressName(add, true));
+                    errors.push_back(getSpeccy().addressName(add));
                 }
                 errors.push_back(stringFormat("{0} address(es) found.", m_findAddresses.size()));
                 errors.push_back("Use F3/Shift-F3 to jump to them in the memory or disassembly view.");

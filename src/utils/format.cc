@@ -59,6 +59,13 @@ string hexByte(u8 x)
     return s;
 }
 
+string hexNibble(u8 x)
+{
+    char s[2] = "?";
+    s[0] = "0123456789ABCDEF"[x & 0xf];
+    return string(s);
+}
+
 bool parseNumber(const string& str, int& n)
 {
     int base = str[0] == '$' ? 16 : 10;
