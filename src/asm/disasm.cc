@@ -552,7 +552,7 @@ void Disassembler::disassembleDDFD(u8 b1, u8 b2, u8 b3, u8 b4, OperandType ix)
     return;
 
 invalid:
-    result(T::DB, O::Expression8, ix == O::IX ? byte(0xdd) : byte(0xfd), O::Expression8, byte(b1), 1);
+    result(T::DB, O::Expression8, byte(b1), 1);
 }
 
 void Disassembler::disassembleDDFDCB(u8 b3, u8 b4, OperandType ix)
