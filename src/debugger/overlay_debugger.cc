@@ -216,6 +216,7 @@ Debugger::Debugger(Nx& nx)
             if (args.size() == 0)
             {
                 m_findAddresses.clear();
+                recalcZ80FindAddresses();
                 m_currentAddress = -1;
                 m_findWidth = 0;
             }
@@ -247,6 +248,7 @@ Debugger::Debugger(Nx& nx)
                 if (bytes.size() > 0)
                 {
                     m_findAddresses = getSpeccy().findSequence(bytes);
+                    recalcZ80FindAddresses();
                     m_currentAddress = -1;
                     m_findWidth = (int)bytes.size();
                     for (MemAddr add : m_findAddresses)
@@ -269,12 +271,14 @@ Debugger::Debugger(Nx& nx)
             if (args.size() == 0)
             {
                 m_findAddresses.clear();
+                recalcZ80FindAddresses();
                 m_currentAddress = -1;
                 m_findWidth = 0;
             }
             else if (parseWord(args[0], w))
             {
                 m_findAddresses = getSpeccy().findWord(w);
+                recalcZ80FindAddresses();
                 m_currentAddress = -1;
                 m_findWidth = 2;
                 for (MemAddr add : m_findAddresses)
@@ -292,6 +296,23 @@ Debugger::Debugger(Nx& nx)
 
         return errors;
     });
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Search
+//----------------------------------------------------------------------------------------------------------------------
+
+void Debugger::recalcZ80FindAddresses()
+{
+    m_z80FindAddresses.clear();
+
+    for (const auto& a : m_findAddresses)
+    {
+        if (getSpeccy().isZ80Address(a))
+        {
+            m_z80FindAddresses.emplace_back(getSpeccy().convertAddress(a));
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

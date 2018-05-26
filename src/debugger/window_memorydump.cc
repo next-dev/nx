@@ -35,7 +35,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
     u16 a = m_address;
     int findIndex = 0;
     int findWidth = 0;
-    const vector<MemAddr>& searches = m_nx.getDebugger().getFindAddresses();
+    const vector<Z80MemAddr>& searches = m_nx.getDebugger().getFindAddresses();
     u8 findColour = Draw::attr(Colour::Black, Colour::Green, true);
     
     for (int i = 1; i < m_height - 1; ++i, a += 8)
@@ -54,7 +54,7 @@ void MemoryDumpWindow::onDraw(Draw& draw)
         //
 
         // Adjust to the next address we should look for
-        MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(a));
+        Z80MemAddr ta (a);
         while (
             (findIndex < (int)searches.size()) &&
             (ta > searches[findIndex]))

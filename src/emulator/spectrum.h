@@ -254,7 +254,7 @@ public:
     void                load                (Z80MemAddr addr, const vector<u8>& buffer);
     void                load                (Z80MemAddr addr, const void* buffer, i64 size);
     void                setRomWriteState    (bool writable);
-    vector<MemAddr>     findSequence        (vector<u8> seq);
+    vector<MemAddr>     findSequence        (const vector<u8>& seq);
     vector<MemAddr>     findByte            (u8 byte);
     vector<MemAddr>     findWord            (u16 word);
     vector<MemAddr>     findString          (string str);
@@ -307,6 +307,10 @@ public:
                     getDataBreakpoints      () const { return m_dataBreakpoints; }
     void            clearDataBreakpoints    () { m_dataBreakpoints.clear(); }
 
+    //------------------------------------------------------------------------------------------------------------------
+    // Internal interface
+    //------------------------------------------------------------------------------------------------------------------
+    
 private:
     //
     // Memory
@@ -314,6 +318,8 @@ private:
     void                initMemory          ();
     vector<u8>&         getMemoryGroup      (MemGroup group);
     const vector<u8>&   getMemoryGroup      (MemGroup group) const;
+    void                findSequence        (MemGroup group, const vector<u8>& seq, vector<MemAddr>& outAddresses);
+
 
     //
     // Video

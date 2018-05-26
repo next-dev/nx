@@ -787,10 +787,10 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
             return string("($") + hexWord(u16(param)) + ')';
 
         case O::IX_Expression:
-            return string("(ix") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
+            return string("(ix") + ((i8)(u8)param < 0 ? "" : "+") + intString((int)(i8)(u8)param, 0) + ')';
 
         case O::IY_Expression:
-            return string("(iy") + (param < 0 ? '-' : '+') + intString((int)param, 0) + ')';
+            return string("(iy") + ((i8)(u8)param < 0 ? "" : "+") + intString((int)(i8)(u8)param, 0) + ')';
 
         case O::A:	                    return "a";
         case O::B:	                    return "b";

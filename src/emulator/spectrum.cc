@@ -249,20 +249,27 @@ void Spectrum::setRomWriteState(bool writable)
     m_romWritable = writable;
 }
 
-vector<MemAddr> Spectrum::findSequence(vector<u8> seq)
+void Spectrum::findSequence(MemGroup group, const vector<u8>& seq, vector<MemAddr>& outAddresses)
 {
-    auto it = m_ram.begin();
-    vector<MemAddr> addresses;
-    while (it != m_ram.end())
+    const vector<u8>& groupMem = getMemoryGroup(group);
+    auto it = groupMem.begin();
+    while (it != groupMem.end())
     {
-        it = std::search(it, m_ram.end(), seq.begin(), seq.end());
-        if (it != m_ram.end())
+        it = search(it, groupMem.end(), seq.begin(), seq.end());
+        if (it != groupMem.end())
         {
-            auto ramIndex = std::distance(m_ram.begin(), it);
-            addresses.emplace_back(MemGroup::RAM, int(ramIndex));
-            std::advance(it, seq.size());
+            auto ramIndex = distance(groupMem.begin(), it);
+            outAddresses.emplace_back(group, int(ramIndex));
+            advance(it, seq.size());
         }
     }
+}
+
+vector<MemAddr> Spectrum::findSequence(const vector<u8>& seq)
+{
+    vector<MemAddr> addresses;
+    findSequence(MemGroup::ROM, seq, addresses);
+    findSequence(MemGroup::RAM, seq, addresses);
 
     return addresses;
 }
@@ -292,7 +299,6 @@ MemAddr Spectrum::convertAddress(Z80MemAddr addr) const
 
 Z80MemAddr Spectrum::convertAddress(MemAddr addr) const
 {
-    assert(addr.bank().getGroup() == MemGroup::RAM);
     auto it = find(m_slots.begin(), m_slots.end(), addr.bank());
     assert(it != m_slots.end());
     int slot = int(distance(m_slots.begin(), it));

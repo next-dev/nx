@@ -165,13 +165,16 @@ public:
     CpuStatusWindow&    getCpuStatusWindow() { return m_cpuStatusWindow; }
     CommandWindow&      getCommandWindow() { return m_commandWindow; }
 
-    const vector<MemAddr>&  getFindAddresses() const { return m_findAddresses; }
-    int                     getFindWidth() const { return m_findWidth; }
+    const vector<Z80MemAddr>&   getFindAddresses() const { return m_z80FindAddresses; }
+    int                         getFindWidth() const { return m_findWidth; }
 
 private:
     // Command utilities
     vector<string> syntaxCheck(const vector<string>& args, const char* format, vector<string> desc);
     vector<string> describeCommand(const char* format, vector<string> desc);
+
+    // Search
+    void                recalcZ80FindAddresses();
 
 private:
     MemoryDumpWindow            m_memoryDumpWindow;
@@ -186,6 +189,7 @@ private:
     bool                        m_zoomMode;
 
     vector<MemAddr>             m_findAddresses;
+    vector<Z80MemAddr>          m_z80FindAddresses;
     int                         m_currentAddress;
     int                         m_findWidth;
 };
