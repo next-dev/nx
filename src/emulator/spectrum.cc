@@ -1186,6 +1186,15 @@ vector<Spectrum::DataBreakpoint>::const_iterator Spectrum::findDataBreakpoint(Me
         });
 }
 
+void Spectrum::setBreakpoint(MemAddr address)
+{
+    auto it = findBreakpoint(address);
+    if (it == m_breakpoints.end())
+    {
+        m_breakpoints.emplace_back(Breakpoint{ BreakpointType::User, address });
+    }
+}
+
 void Spectrum::toggleBreakpoint(MemAddr address)
 {
     auto it = findBreakpoint(address);

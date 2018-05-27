@@ -290,6 +290,7 @@ public:
     //------------------------------------------------------------------------------------------------------------------
 
     void            toggleBreakpoint        (MemAddr address);
+    void            setBreakpoint           (MemAddr address);
     void            addTemporaryBreakpoint  (MemAddr address);
     bool            hasUserBreakpointAt     (MemAddr address) const;
     vector<MemAddr> getUserBreakpoints      () const;
