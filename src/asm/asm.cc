@@ -1853,6 +1853,30 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
     return true;
 }
 
+u16 Assembler::Expression::make16(Assembler& assembler, Lex& lex, const Lex::Element& e, const Spectrum& speccy)
+{
+    switch (m_result.getType())
+    {
+    case ExprValue::Type::Integer:
+        return r16();
+
+    case ExprValue::Type::Address:
+        if (speccy.isZ80Address(m_result))
+        {
+            return speccy.convertAddress(m_result);
+        }
+        else
+        {
+            assembler.error(lex, e, "Address expression is not viewable from the current Z80 bank configuration.");
+            return 0;
+        }
+        break;
+    default:
+        assembler.error(lex, e, "Invalid 16-bit expression.");
+        return 0;
+    }
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Pass 2
 //----------------------------------------------------------------------------------------------------------------------
@@ -1967,6 +1991,15 @@ bool Assembler::CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand op, i64
             return false;
         }
     }
+    else if (v.getType() == ExprValue::Type::Address && b == 0xffff)
+    {
+        MemAddr addr(v);
+        if (!m_speccy.isZ80Address(addr))
+        {
+            error(lex, *e, stringFormat("Address is not in current Z80 view, and so cannot be converted to a 16-bit value."));
+            return false;
+        }
+    }
     else
     {
         error(lex, *e, "Invalid expression type.  Expecting an integer expression.");
@@ -2076,7 +2109,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 #define SRC_OP16() do {                                                 \
         opSize = 2;                                                     \
-        op16 = (srcOp.expr.r16());                                      \
+        op16 = srcOp.expr.make16(*this, lex, *e, m_speccy);              \
     } while(0)
 
 #define DST_OP8() do {                                                  \
@@ -2086,7 +2119,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 #define DST_OP16() do {                                                 \
         opSize = 2;                                                     \
-        op16 = (dstOp.expr.r16());                                      \
+        op16 = (dstOp.expr.make16(*this, lex, *e, m_speccy));            \
     } while(0)
 
     //
@@ -3652,11 +3685,18 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
     }
 
     Expression expr = buildExpression(e);
-    // #todo: Handle full addresses
-    optional<MemAddr> addr = getZ80AddressFromExpression(lex, e, expr.result());
-    if (!addr || !expr.eval(*this, lex, m_mmap.getAddress(m_address)))
+    if (!expr.eval(*this, lex, m_mmap.getAddress(m_address)))
     {
         error(lex, *e, "Invalid start address expression.");
+        nextLine(e);
+        return false;
+    }
+
+    // #todo: Handle full addresses
+    optional<MemAddr> addr = getZ80AddressFromExpression(lex, e, expr.result());
+    if (!addr)
+    {
+        error(lex, *e, "START option requires an address parameter.");
         nextLine(e);
         return false;
     }

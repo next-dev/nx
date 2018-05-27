@@ -292,6 +292,9 @@ private:
         u8 r8() const { NX_ASSERT(m_result.getType() == ExprValue::Type::Integer); return m_result.r8(); }
         u16 r16() const { NX_ASSERT(m_result.getType() == ExprValue::Type::Integer); return m_result.r16(); }
 
+        // Converts an address or integer into a 16-bit integer (if within Z80 view)
+        u16 make16(Assembler& assembler, Lex& lex, const Lex::Element& e, const Spectrum& speccy);
+
     private:
         vector<Value>   m_queue;
         ExprValue       m_result;
