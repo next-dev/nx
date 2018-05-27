@@ -1,0 +1,147 @@
+//------------------------------------------------
+//--- 010 Editor v8.0 Binary Template
+//
+//      File: nx.bt
+//   Authors: Matt Davies
+//   Version: 1
+//   Purpose: Store state of Nx Emulator
+//------------------------------------------------
+
+typedef CHAR ID[4];
+
+
+typedef struct
+{
+    ID tag;
+}
+NX_HEADER;
+
+typedef struct
+{
+    ID tag;
+    WORD version;
+    DWORD length;
+}
+NX_BLOCK_HEADER;
+
+typedef struct
+{
+    NX_BLOCK_HEADER hdr;
+    byte data[hdr.length];
+}
+NX_BLOCK;
+
+typedef struct
+{
+    NX_BLOCK_HEADER hdr;
+    byte model;
+}
+NX_MODL;
+
+typedef struct
+{
+    NX_BLOCK_HEADER hdr;
+    WORD AF;
+    WORD BC;
+    WORD DE;
+    WORD HL;
+    WORD AF_ <name="AF'">;
+    WORD BC_ <name="BC'">;
+    WORD DE_ <name="DE'">;
+    WORD HL_ <name="HL'">;
+    WORD IX;
+    WORD IY;
+    WORD SP;
+    WORD PC;
+    WORD IR;
+    WORD WZ;
+    BYTE IM <name="Interrupt Mode">;
+    BYTE IFF1;
+    BYTE IFF2;
+    BYTE Border <name="Border colour">;
+    DWORD TStates;
+}
+NX_SN48;
+
+typedef struct
+{
+    NX_BLOCK_HEADER hdr;
+    BYTE port7ffd;
+}
+NX_S128;
+
+typedef struct
+{
+    BYTE bank[8192];
+}
+NX_BANK;
+
+typedef struct
+{
+    NX_BLOCK_HEADER hdr;
+    BYTE numBanks;
+    NX_BANK banks[numBanks];
+}
+NX_MRAM;
+
+typedef struct
+{
+    DWORD address;
+    string label;
+}
+NX_LABEL;
+
+typedef struct
+{
+    NX_BLOCK_HEADER hdr;
+    WORD numFiles;
+    WORD numLabels;
+    string fileNames [numFiles];
+    NX_LABEL labels[numLabels] <optimize=false>;
+}
+NX_EMUL;
+    
+
+NX_HEADER Header;
+
+if (Header.tag != "NX00")
+{
+    Warning("File is not a valid NX file.");
+    return -1;
+}
+
+local char tag[5];
+local DWORD size;
+
+while (FTell() + 8 <= FileSize() && FTell())
+{
+    // Read the chunk tag
+    ReadBytes(tag, FTell(), 4);
+    tag[4] = 0;
+
+    // Read the chunk size
+    size = ReadUInt(FTell() + 4);
+
+    // See which tag this is:
+    switch(tag)
+    {
+        case "MODL":
+            NX_MODL modl;
+            break;
+        case "SN48":
+            NX_SN48 sn48;
+            break;
+        case "S128":
+            NX_S128 s128;
+            break;
+        case "MRAM":
+            NX_MRAM mram;
+            break;
+        case "EMUL":
+            NX_EMUL emul;
+            break;
+        default:
+            NX_BLOCK block;
+            break;
+    }
+}

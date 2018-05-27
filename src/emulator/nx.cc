@@ -1220,7 +1220,7 @@ bool Nx::loadNxSnapshot(string fileName)
                 for (int i = 0; i < numMmus; ++i)
                 {
                     vector<u8> data;
-                    mram.peekData(1, data, kBankSize);
+                    mram.peekData((i * kBankSize) + 1, data, kBankSize);
                     m_machine->setMmu(MemGroup::RAM, i, data);
                 }
             }
