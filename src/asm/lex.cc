@@ -364,8 +364,6 @@ Lex::Element::Type Lex::next(Assembler& assembler)
     else if ('"' == c || '\'' == c)
     {
         char delim = c;
-        el.m_s0 = m_cursor;
-        pos = m_position;
         c = nextChar(false);
         vector<char> s;
         while (c != delim)
@@ -426,7 +424,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
             }
             c = nextChar(false);
         }
-        el.m_s1 = m_cursor - 1;
+        el.m_s1 = m_cursor;
 
         if ('\'' == c)
         {

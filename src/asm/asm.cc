@@ -3639,6 +3639,8 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
     i64 option = 0;
     vector<const Lex::Element*> args;
 
+    const Lex::Element* optionE = e;
+
     if (e->m_type == T::Symbol)
     {
         option = e->m_symbol;
@@ -3650,7 +3652,7 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
         }
         else if (e->m_type != T::Newline)
         {
-            error(lex, *e, "Invalid option syntax.");
+            error(lex, *e, "Invalid option syntax.  Colon or newline expected.");
             nextLine(e);
             return false;
         }
@@ -3658,14 +3660,14 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
         if (option == startSym)         return doOptStart(lex, e);
         else
         {
-            error(lex, *e, "Unknown option.");
+            error(lex, *optionE, "Unknown option.");
             nextLine(e);
             return false;
         }
     }
     else
     {
-        error(lex, *e, "Invalid option syntax.");
+        error(lex, *e, "Invalid option syntax.  Option symbol expected.");
         nextLine(e);
         return false;
     }
