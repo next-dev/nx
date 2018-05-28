@@ -32,8 +32,8 @@ using namespace std::experimental;
 #define NX_MAJOR_VERSION        0
 #define NX_MINOR_VERSION        0
 #define NX_PATCH_VERSION        7
-#define NX_DEV_MINOR            3
-//#define NX_DEV_PATCH            "C"
+#define NX_DEV_MINOR            2
+#define NX_DEV_PATCH            "C"
 //#define NX_DEV_TESTER           ""
 
 #define NX_STR2(x) #x
