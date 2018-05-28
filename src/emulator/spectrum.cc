@@ -615,7 +615,7 @@ void Spectrum::poke(Z80MemAddr address, u8 x)
     MemAddr addr = convertAddress(address);
     for (const auto& br : m_dataBreakpoints)
     {
-        if ((addr >= br.address) && (addr < (br.address + br.len)))
+        if ((addr.bank().getGroup() == br.address.bank().getGroup()) && (addr >= br.address) && (addr < (br.address + br.len)))
         {
             m_break = true;
         }
