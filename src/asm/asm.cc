@@ -148,6 +148,13 @@ ExprValue::ExprValue(MemAddr addr)
 
 }
 
+ExprValue::ExprValue(string str)
+    : m_type(Type::String)
+    , m_value(str)
+{
+
+}
+
 ExprValue::ExprValue(const ExprValue& other)
     : m_type(other.m_type)
     , m_value(other.m_value)
@@ -168,14 +175,24 @@ struct AddExpr
     ExprValue operator() (MemAddr a, i64 x)         { return ExprValue(a + (int)x); }
     ExprValue operator() (i64 x, MemAddr a)         { return ExprValue(a + (int)x); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct SubExpr
 {
     ExprValue operator() (i64 x, i64 y)             { return ExprValue(x - y); }
     ExprValue operator() (MemAddr a, i64 x)         { return ExprValue(a - (int)x); }
-    ExprValue operator() (i64 x, MemAddr a)         { return ExprValue(a - (int)x); }
-    ExprValue operator() (MemAddr a, MemAddr b)     { return ExprValue(a - b); }
+    ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr a, MemAddr b)     { return ExprValue(i64(a - b)); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct MulExpr
@@ -184,6 +201,11 @@ struct MulExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct DivExpr
@@ -192,6 +214,11 @@ struct DivExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct ModExpr
@@ -200,6 +227,11 @@ struct ModExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct OrExpr
@@ -208,6 +240,11 @@ struct OrExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct AndExpr
@@ -216,6 +253,11 @@ struct AndExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct XorExpr
@@ -224,6 +266,11 @@ struct XorExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct ShiftLeftExpr
@@ -232,6 +279,11 @@ struct ShiftLeftExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 struct ShiftRightExpr
@@ -240,6 +292,11 @@ struct ShiftRightExpr
     ExprValue operator() (MemAddr a, i64 x)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (i64 x, MemAddr a)         { NX_ASSERT(0); return ExprValue(); }
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, i64)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, MemAddr)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (i64, string)              { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (MemAddr, string)          { NX_ASSERT(0); return ExprValue(); }
+    ExprValue operator() (string, string)           { NX_ASSERT(0); return ExprValue(); }
 };
 
 ExprValue ExprValue::operator+ (const ExprValue& other) const       { return visit(AddExpr(), m_value, other.m_value); }
@@ -252,6 +309,35 @@ ExprValue ExprValue::operator& (const ExprValue& other) const       { return vis
 ExprValue ExprValue::operator^ (const ExprValue& other) const       { return visit(XorExpr(), m_value, other.m_value); }
 ExprValue ExprValue::operator<< (const ExprValue& other) const      { return visit(ShiftLeftExpr(), m_value, other.m_value); }
 ExprValue ExprValue::operator>> (const ExprValue& other) const      { return visit(ShiftRightExpr(), m_value, other.m_value); }
+
+string ExprValue::getTypeName() const
+{
+    switch (m_type)
+    {
+    case Type::Invalid:     return "invalid type";
+    case Type::Integer:     return "integer";
+    case Type::Address:     return "address";
+    case Type::String:      return "string";
+    default:
+        NX_ASSERT(0);
+        return "unknown type";
+    }
+}
+
+string ExprValue::getTypeNameWithArticle() const
+{
+    string s = getTypeName();
+    if (s[0] == 'a' || s[0] == 'e' || s[0] == 'i' || s[0] == 'o' || s[0] == 'u')
+    {
+        s = "an " + s;
+    }
+    else
+    {
+        s = "a " + s;
+    }
+
+    return s;
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
@@ -941,6 +1027,7 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
             case T::Symbol:
             case T::Integer:
             case T::Char:
+            case T::String:
                 state = 1;
                 break;
 
@@ -1002,6 +1089,7 @@ bool Assembler::expectExpression(Lex& lex, const Lex::Element* e, const Lex::Ele
             case T::Symbol:
             case T::Integer:
             case T::Char:
+            case T::String:
                 state = 1;
                 break;
 
@@ -1611,9 +1699,10 @@ Assembler::Expression::Expression()
 void Assembler::Expression::addValue(ValueType type, i64 value, const Lex::Element* e)
 {
     NX_ASSERT(type == ValueType::Integer ||
-           type == ValueType::Symbol ||
-           type == ValueType::Char ||
-           type == ValueType::Dollar);
+              type == ValueType::Symbol ||
+              type == ValueType::Char ||
+              type == ValueType::Dollar ||
+              type == ValueType::String);
     m_queue.emplace_back(type, value, e);
 }
 
@@ -1713,6 +1802,7 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
         case ValueType::Symbol:
         case ValueType::Char:
         case ValueType::Dollar:
+        case ValueType::String:
             output.emplace_back(v);
             break;
 
@@ -1757,6 +1847,14 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
             stack.emplace_back(v.value);
             break;
 
+        case ValueType::String:
+            {
+                optional<string> s = assembler.lookUpString(v.value);
+                NX_ASSERT(s, "This string must be found");
+                stack.emplace_back(*s);
+            }
+            break;
+
         case ValueType::Symbol:
             {
                 optional<MemAddr> value = assembler.lookUpLabel(v.value);
@@ -1790,6 +1888,10 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
             {
             case T::Unary_Plus:
                 // Do nothing
+                if (stack.back().getType() != ExprValue::Type::Integer)
+                {
+                    FAIL();
+                }
                 break;
 
             case T::Unary_Minus:
@@ -1823,20 +1925,85 @@ bool Assembler::Expression::eval(Assembler& assembler, Lex& lex, MemAddr current
             if (stack.size() < 2) FAIL();
             b = stack.back();   stack.pop_back();
             a = stack.back();   stack.pop_back();
-            switch ((T)v.value)
+            switch (a.getType())
             {
-            case T::Plus:       stack.emplace_back(a + b);      break;
-            case T::Minus:      stack.emplace_back(a - b);      break;
-            case T::LogicOr:    stack.emplace_back(a | b);      break;
-            case T::LogicAnd:   stack.emplace_back(a & b);      break;
-            case T::LogicXor:   stack.emplace_back(a ^ b);      break;
-            case T::ShiftLeft:  stack.emplace_back(a << b);     break;
-            case T::ShiftRight: stack.emplace_back(a >> b);     break;
-            case T::Multiply:   stack.emplace_back(a * b);      break;
-            case T::Divide:     stack.emplace_back(a / b);      break;
-            case T::Mod:        stack.emplace_back(a % b);      break;
+            case ExprValue::Type::Integer:
+                if (b.getType() == ExprValue::Type::Integer)
+                {
+                    switch ((T)v.value)
+                    {
+                    case T::Plus:       stack.emplace_back(a + b);      break;
+                    case T::Minus:      stack.emplace_back(a - b);      break;
+                    case T::LogicOr:    stack.emplace_back(a | b);      break;
+                    case T::LogicAnd:   stack.emplace_back(a & b);      break;
+                    case T::LogicXor:   stack.emplace_back(a ^ b);      break;
+                    case T::ShiftLeft:  stack.emplace_back(a << b);     break;
+                    case T::ShiftRight: stack.emplace_back(a >> b);     break;
+                    case T::Multiply:   stack.emplace_back(a * b);      break;
+                    case T::Divide:     stack.emplace_back(a / b);      break;
+                    case T::Mod:        stack.emplace_back(a % b);      break;
+                    default:
+                        FAIL();
+                    }
+                }
+                else
+                {
+                    // Allowed expressions:
+                    //
+                    //      int + addr -> addr
+                    //
+                    if (b.getType() == ExprValue::Type::Address)
+                    {
+                        stack.emplace_back(a + b);
+                    }
+                    else
+                    {
+                        assembler.error(lex, *v.elem, stringFormat("May only add an address or integer to an integer.  Found {0}.", b.getTypeNameWithArticle()));
+                        return false;
+                    }
+                }
+                break;
+
+            case ExprValue::Type::Address:
+                // Allowed expressions
+                //
+                //      addr + int -> addr
+                //      addr - int -> addr
+                //      addr - addr -> int
+                //
+                if (b.getType() == ExprValue::Type::Integer)
+                {
+                    switch ((T)v.value)
+                    {
+                    case T::Plus:   stack.emplace_back(a + (int)b);     break;
+                    case T::Minus:  stack.emplace_back(a - (int)b);     break;
+                    default:
+                        assembler.error(lex, *v.elem, "May only add or subtract integers to addresses.");
+                        return false;
+                    }
+                }
+                else if (b.getType() == ExprValue::Type::Address)
+                {
+                    if ((T)v.value == T::Minus)
+                    {
+                        stack.emplace_back(i64(a - b));
+                    }
+                    else
+                    {
+                        assembler.error(lex, *v.elem, "Invalid binary operator for two addresses.  Only subtract allowed.");
+                        return false;
+                    }
+                }
+                break;
+
+            case ExprValue::Type::String:
+                // No allowed expressions yet.
+                assembler.error(lex, *v.elem, "No binary operations involving strings allowed.");
+                return false;
+
             default:
-                FAIL();
+                // We should never get here as all types should be handled above.
+                NX_ASSERT(0);
             }
             break;
             
@@ -3249,6 +3416,7 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
             case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);       state = 1;  break;
             case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);     state = 1;  break;
             case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);        state = 1;  break;
+            case T::String:     expr.addValue(Expression::ValueType::String, e->m_symbol, e);       state = 1;  break;
 
             case T::Plus:       expr.addUnaryOp(Lex::Element::Type::Unary_Plus, e);                 state = 2;  break;
             case T::Minus:      expr.addUnaryOp(Lex::Element::Type::Unary_Minus, e);                state = 2;  break;
@@ -3309,6 +3477,7 @@ Assembler::Expression Assembler::buildExpression(const Lex::Element*& e) const
             case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);    state = 1;  break;
             case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);  state = 1;  break;
             case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);     state = 1;  break;
+            case T::String:     expr.addValue(Expression::ValueType::String, e->m_symbol, e);    state = 1;  break;
             case T::OpenParen:
                 expr.addOpen(e);
                 ++parenDepth;
@@ -3635,6 +3804,7 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
     using T = Lex::Element::Type;
 
     i64 startSym = m_lexSymbols.addString("start", true);
+    i64 dotSym = m_lexSymbols.addString("dot", true);
 
     i64 option = 0;
     vector<const Lex::Element*> args;
@@ -3658,6 +3828,7 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
         }
 
         if (option == startSym)         return doOptStart(lex, e);
+        if (option == dotSym)           return doOptDot(lex, e);
         else
         {
             error(lex, *optionE, "Unknown option.");
@@ -3704,6 +3875,37 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
     }
 
     m_options.m_startAddress = *addr;
+    return true;
+}
+
+bool Assembler::doOptDot(Lex& lex, const Lex::Element*& e)
+{
+    if (!expect(lex, e, "*"))
+    {
+        error(lex, *e, "Syntax error in DOT option.  Should be \"DOT:<filename>\".");
+        nextLine(e);
+        return false;
+    }
+
+    Expression expr = buildExpression(e);
+    if (!expr.eval(*this, lex, m_mmap.getAddress(m_address)))
+    {
+        error(lex, *e, "Invalid dot filename expression.");
+        nextLine(e);
+        return false;
+    }
+
+    if (expr.result().getType() == ExprValue::Type::String)
+    {
+        m_options.m_dotFile = expr.result();
+    }
+    else
+    {
+        error(lex, *e, "DOT option parameter must be a string.");
+        nextLine(e);
+        return false;
+    }
+
     return true;
 }
 

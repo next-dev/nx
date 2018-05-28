@@ -93,6 +93,7 @@ public:
     ExprValue();
     explicit ExprValue(i64 value);
     explicit ExprValue(MemAddr value);
+    explicit ExprValue(string value);
 
     ExprValue(const ExprValue& other);
     ExprValue& operator= (const ExprValue& other);
@@ -102,11 +103,17 @@ public:
         Invalid,
         Integer,
         Address,
+        String,
     };
 
     Type getType() const        { return m_type; }
     operator i64() const        { return get<i64>(m_value); }
     operator MemAddr() const    { return get<MemAddr>(m_value); }
+    operator string() const     { return get<string>(m_value); }
+
+    // Used for forming error messages.
+    string getTypeName() const;
+    string getTypeNameWithArticle() const;
 
     //
     // Operations
@@ -131,7 +138,7 @@ public:
 
 private:
     Type m_type;
-    variant<i64, MemAddr> m_value;
+    variant<i64, MemAddr, string> m_value;
 };
 
 
@@ -161,6 +168,7 @@ public:
 
     optional<MemAddr> lookUpLabel(i64 symbol) const;
     optional<ExprValue> lookUpValue(i64 symbol) const;
+    optional<string> lookUpString(i64 symbol) const { return (const char*)m_lexSymbols.get(symbol); }
 
     Labels getLabels() const;
 
@@ -186,6 +194,7 @@ public:
     struct Options
     {
         MemAddr     m_startAddress;
+        string      m_dotFile;
     };
 
     const Options& getOptions() const { return m_options; }
@@ -268,6 +277,7 @@ private:
             Symbol,
             Char,
             Dollar,
+            String,
         };
 
         struct Value
@@ -328,6 +338,7 @@ private:
     // Options
     //
     bool doOptStart(Lex& lex, const Lex::Element*& e);
+    bool doOptDot(Lex& lex, const Lex::Element*& e);
 
     //
     // Emission utilities
