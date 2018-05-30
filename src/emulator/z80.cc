@@ -66,6 +66,8 @@ Z80::Z80(IExternals& ext)
     , m_interrupt(false)
     , m_nmi(false)
     , m_eiHappened(false)
+    , m_flagsChanged(false)
+    , m_lastFlagsChanged(false)
 {
     restart();
     for (int i = 0; i < 256; ++i)
@@ -103,6 +105,8 @@ void Z80::restart()
     m_iff1 = m_iff2 = true;
     m_im = 0;
     m_interrupt = m_nmi = m_eiHappened = false;
+    m_flagsChanged = false;
+    m_lastFlagsChanged = false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -132,6 +136,7 @@ void Z80::incReg8(u8& reg)
     // N: Reset
     // C: Unaffected
     F() = (F() & F_CARRY) | ((reg == 0x80) ? F_PARITY : 0) | ((reg & 0x0f) ? 0 : F_HALF) | m_SZ53[reg];
+    m_flagsChanged = true;
 }
 
 void Z80::decReg8(u8& reg)
@@ -145,6 +150,7 @@ void Z80::decReg8(u8& reg)
     F() = (F() & F_CARRY) | ((reg & 0x0f) ? 0 : F_HALF) | F_NEG;
     --reg;
     F() |= (reg == 0x7f ? F_PARITY : 0) | m_SZ53[reg];
+    m_flagsChanged = true;
 }
 
 void Z80::addReg16(u16& r1, u16& r2)
@@ -160,6 +166,7 @@ void Z80::addReg16(u16& r1, u16& r2)
     u8 x = (u8)(((r1 & 0x0800) >> 11) | ((r2 & 0x0800) >> 10) | ((add & 0x0800) >> 9));
     F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (add & 0x10000 ? F_CARRY : 0) | ((add >> 8) & (F_3 | F_5)) | kHalfCarryAdd[x];
     r1 = (u16)add;
+    m_flagsChanged = true;
 }
 
 // Result always goes into A.
@@ -175,6 +182,7 @@ void Z80::addReg8(u8& reg)
     u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
     A() = (u8)t;
     F() = ((t & 0x100) ? F_CARRY : 0) | kHalfCarryAdd[x & 0x07] | kOverflowAdd[x >> 4] | m_SZ53[A()];
+    m_flagsChanged = true;
 }
 
 // Result always goes into HL
@@ -192,6 +200,7 @@ void Z80::adcReg16(u16& reg)
     HL() = (u16)t;
     F() = ((t & 0x10000) ? F_CARRY : 0) | kOverflowAdd[x >> 4] | (H() & (F_3 | F_5 | F_SIGN)) | kHalfCarryAdd[x & 0x07] |
         (HL() ? 0 : F_ZERO);
+    m_flagsChanged = true;
 }
 
 // Result always goes into A
@@ -207,6 +216,7 @@ void Z80::adcReg8(u8& reg)
     u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
     A() = (u8)t;
     F() = ((t & 0x100) ? F_CARRY : 0) | kHalfCarryAdd[x & 0x07] | kOverflowAdd[x >> 4] | m_SZ53[A()];
+    m_flagsChanged = true;
 }
 
 void Z80::subReg8(u8& reg)
@@ -221,6 +231,7 @@ void Z80::subReg8(u8& reg)
     u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
     A() = (u8)t;
     F() = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | m_SZ53[A()];
+    m_flagsChanged = true;
 }
 
 void Z80::sbcReg8(u8& reg)
@@ -235,6 +246,7 @@ void Z80::sbcReg8(u8& reg)
     u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
     A() = (u8)t;
     F() = ((t & 0x100) ? F_CARRY : 0) | F_NEG | kHalfCarrySub[x & 0x07] | kOverflowSub[x >> 4] | m_SZ53[A()];
+    m_flagsChanged = true;
 }
 
 void Z80::sbcReg16(u16& reg)
@@ -251,6 +263,7 @@ void Z80::sbcReg16(u16& reg)
     HL() = (u16)t;
     F() = ((t & 0x10000) ? F_CARRY : 0) | F_NEG | kOverflowSub[x >> 4] | (H() & (F_3 | F_5 | F_SIGN))
         | kHalfCarrySub[x & 0x07] | (HL() ? 0 : F_ZERO);
+    m_flagsChanged = true;
 }
 
 void Z80::cpReg8(u8& reg)
@@ -264,6 +277,7 @@ void Z80::cpReg8(u8& reg)
     u8 x = (u8)(((A() & 0x88) >> 3) | ((reg & 0x88) >> 2) | ((t & 0x88) >> 1));
     F() = ((t & 0x100) ? F_CARRY : (t ? 0 : F_ZERO)) | F_NEG | kHalfCarrySub[x & 7] | kOverflowSub[x >> 4] |
         (reg & (F_3 | F_5)) | ((u8)t & F_SIGN);
+    m_flagsChanged = true;
 }
 
 void Z80::andReg8(u8& reg)
@@ -276,6 +290,7 @@ void Z80::andReg8(u8& reg)
     // N: Reset
     // C: Reset
     F() = F_HALF | m_SZ53P[A()];
+    m_flagsChanged = true;
 }
 
 void Z80::orReg8(u8& reg)
@@ -288,6 +303,7 @@ void Z80::orReg8(u8& reg)
     // N: Reset
     // C: Reset
     F() = m_SZ53P[A()];
+    m_flagsChanged = true;
 }
 
 void Z80::xorReg8(u8& reg)
@@ -300,6 +316,7 @@ void Z80::xorReg8(u8& reg)
     // N: Reset
     // C: Reset
     F() = m_SZ53P[A()];
+    m_flagsChanged = true;
 }
 
 //         +-------------------------------------+
@@ -316,6 +333,7 @@ void Z80::rlcReg8(u8& reg)
     // C: bit 7
     reg = ((reg << 1) | (reg >> 7));
     F() = (reg & F_CARRY) | m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 //  +-------------------------------------+
@@ -333,6 +351,7 @@ void Z80::rrcReg8(u8& reg)
     F() = reg & F_CARRY;
     reg = ((reg >> 1) | (reg << 7));
     F() |= m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 //  +-----------------------------------------------+
@@ -350,6 +369,7 @@ void Z80::rlReg8(u8& reg)
     u8 t = reg;
     reg = ((reg << 1) | (F() & F_CARRY));
     F() = (t >> 7) | m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 //  +-----------------------------------------------+
@@ -367,6 +387,7 @@ void Z80::rrReg8(u8& reg)
     u8 t = reg;
     reg = ((reg >> 1) | (F() << 7));
     F() = (t & F_CARRY) | m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
@@ -383,6 +404,7 @@ void Z80::slaReg8(u8& reg)
     F() = reg >> 7;
     reg = (reg << 1);
     F() |= m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 //     +---+---+---+---+---+---+---+---+     +---+
@@ -402,6 +424,7 @@ void Z80::sraReg8(u8& reg)
     F() = reg & F_CARRY;
     reg = ((reg & 0x80) | (reg >> 1));
     F() |= m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 //  +---+     +---+---+---+---+---+---+---+---+
@@ -418,6 +441,7 @@ void Z80::sl1Reg8(u8& reg)
     F() = reg >> 7;
     reg = ((reg << 1) | 0x01);
     F() |= m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 //         +---+---+---+---+---+---+---+---+     +---+
@@ -434,6 +458,7 @@ void Z80::srlReg8(u8& reg)
     F() = reg & F_CARRY;
     reg = (reg >> 1);
     F() |= m_SZ53P[reg];
+    m_flagsChanged = true;
 }
 
 void Z80::bitReg8(u8& reg, int b)
@@ -447,6 +472,7 @@ void Z80::bitReg8(u8& reg, int b)
     F() = (F() & F_CARRY) | F_HALF | (reg & (F_3 | F_5));
     if (!(reg & (1 << b))) F() |= F_PARITY | F_ZERO;
     if ((b == 7) && (reg & 0x80)) F() |= F_SIGN;
+    m_flagsChanged = true;
 }
 
 void Z80::bitReg8MP(u8& reg, int b)
@@ -460,6 +486,7 @@ void Z80::bitReg8MP(u8& reg, int b)
     F() = (F() & F_CARRY) | F_HALF | (m_mp.h & (F_3 | F_5));
     if (!(reg & (1 << b))) F() |= F_PARITY | F_ZERO;
     if ((b == 7) && (reg & 0x80)) F() |= F_SIGN;
+    m_flagsChanged = true;
 }
 
 void Z80::resReg8(u8& reg, int b)
@@ -505,6 +532,7 @@ void Z80::daa()
 
     setFlags(F_CARRY, carry);
     setFlags(F_PARITY, m_parity[result] != 0);
+    m_flagsChanged = true;
 }
 
 int Z80::displacement(u8 x)
@@ -1061,6 +1089,7 @@ void Z80::executeED(i64& tState)
             *r = m_ext.in(BC(), tState);
             NX_LOG_IN(BC(), *r);
             F() = (F() & F_CARRY) | m_SZ53P[*r];
+            m_flagsChanged = true;
             break;
 
         case 1:
@@ -1127,27 +1156,29 @@ void Z80::executeED(i64& tState)
         case 7:
             switch (y)
             {
-            case 0: // LD I,A()
+            case 0: // LD I,A
                 CONTEND(IR(), 1, 1);
                 I() = A();
                 break;
 
-            case 1: // LD R,A()
+            case 1: // LD R,A
                 CONTEND(IR(), 1, 1);
                 R() = A();
                 break;
 
-            case 2: // LD A(),I
+            case 2: // LD A,I
                 CONTEND(IR(), 1, 1);
                 A() = I();
                 F() = (F() & F_CARRY) | m_SZ53[A()] | (IFF2() ? F_PARITY : 0);
                 // #todo: handle IFF2 event
+                m_flagsChanged = true;
                 break;
 
-            case 3: // LD A(),R
+            case 3: // LD A,R
                 CONTEND(IR(), 1, 1);
                 A() = R();
                 F() = (F() & F_CARRY) | m_SZ53[A()] | (IFF2() ? F_PARITY : 0);
+                m_flagsChanged = true;
                 break;
 
             case 4: // RRD
@@ -1157,6 +1188,7 @@ void Z80::executeED(i64& tState)
                 A() = (A() & 0xf0) | (v & 0x0f);
                 F() = (F() & F_CARRY) | m_SZ53P[A()];
                 MP() = HL() + 1;
+                m_flagsChanged = true;
                 break;
 
             case 5: // RLD
@@ -1166,6 +1198,7 @@ void Z80::executeED(i64& tState)
                 A() = (A() & 0xf0) | (v >> 4);
                 F() = (F() & F_CARRY) | m_SZ53P[A()];
                 MP() = HL() + 1;
+                m_flagsChanged = true;
                 break;
 
             case 6:
@@ -1189,6 +1222,7 @@ void Z80::executeED(i64& tState)
             v += A();
             F() = (F() & (F_CARRY | F_ZERO | F_SIGN)) | (BC() ? F_PARITY : 0) |
                 (v & F_3) | ((v & 0x02) ? F_5 : 0);
+            m_flagsChanged = true;
             break;
 
         case 0xa1:  // CPI
@@ -1204,6 +1238,7 @@ void Z80::executeED(i64& tState)
                 if (F() & F_HALF) --t;
                 F() |= (t & F_3) | ((t & 0x02) ? F_5 : 0);
                 ++MP();
+                m_flagsChanged = true;
             }
             break;
 
@@ -1222,6 +1257,7 @@ void Z80::executeED(i64& tState)
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
                     (m_parity[(t2 & 0x07) ^ B()] ? F_PARITY : 0) |
                     m_SZ53[B()];
+                m_flagsChanged = true;
             }
             break;
 
@@ -1239,6 +1275,7 @@ void Z80::executeED(i64& tState)
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
                     (m_parity[(t2 & 0x07) ^ B()] ? F_PARITY : 0) |
                     m_SZ53[B()];
+                m_flagsChanged = true;
             }
             break;
 
@@ -1252,6 +1289,7 @@ void Z80::executeED(i64& tState)
             v += A();
             F() = (F() & (F_CARRY | F_ZERO | F_SIGN)) | (BC() ? F_PARITY : 0) |
                 (v & F_3) | ((v & 0x02) ? F_5 : 0);
+            m_flagsChanged = true;
             break;
 
         case 0xa9:  // CPD
@@ -1267,6 +1305,7 @@ void Z80::executeED(i64& tState)
                 if (F() & F_HALF) --t;
                 F() |= (t & F_3) | ((t & 0x02) ? F_5 : 0);
                 --MP();
+                m_flagsChanged = true;
             }
             break;
 
@@ -1285,6 +1324,7 @@ void Z80::executeED(i64& tState)
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
                     (m_parity[(t2 & 0x07) ^ B()] ? F_PARITY : 0) |
                     m_SZ53[B()];
+                m_flagsChanged = true;
             }
             break;
 
@@ -1303,6 +1343,7 @@ void Z80::executeED(i64& tState)
                     ((t2 < t1) ? F_HALF | F_CARRY : 0) |
                     (m_parity[(t2 & 0x07) ^ B()] ? F_PARITY : 0) |
                     m_SZ53[B()];
+                m_flagsChanged = true;
             }
             break;
 
@@ -1322,6 +1363,7 @@ void Z80::executeED(i64& tState)
             }
             ++DE();
             ++HL();
+            m_flagsChanged = true;
             break;
 
         case 0xb1:  // CPIR
@@ -1346,6 +1388,7 @@ void Z80::executeED(i64& tState)
                     ++MP();
                 }
                 ++HL();
+                m_flagsChanged = true;
             }
             break;
 
@@ -1369,6 +1412,7 @@ void Z80::executeED(i64& tState)
                     PC() -= 2;
                 }
                 ++HL();
+                m_flagsChanged = true;
             }
             break;
 
@@ -1392,6 +1436,7 @@ void Z80::executeED(i64& tState)
                     CONTEND(BC(), 1, 5);
                     PC() -= 2;
                 }
+                m_flagsChanged = true;
             }
             break;
 
@@ -1411,6 +1456,7 @@ void Z80::executeED(i64& tState)
             }
             --DE();
             --HL();
+            m_flagsChanged = true;
             break;
 
         case 0xb9:  // CPDR
@@ -1435,6 +1481,7 @@ void Z80::executeED(i64& tState)
                     --MP();
                 }
                 --HL();
+                m_flagsChanged = true;
             }
             break;
 
@@ -1458,6 +1505,7 @@ void Z80::executeED(i64& tState)
                     PC() -= 2;
                 }
                 --HL();
+                m_flagsChanged = true;
             }
             break;
 
@@ -1481,6 +1529,7 @@ void Z80::executeED(i64& tState)
                     CONTEND(BC(), 1, 5);
                     PC() -= 2;
                 }
+                m_flagsChanged = true;
             }
             break;
 
@@ -1709,24 +1758,28 @@ void Z80::execute(u8 opCode, i64& tState)
             case 0:     // 07 - RLCA
                 A() = ((A() << 1) | (A() >> 7));
                 F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (A() & (F_CARRY | F_3 | F_5));
+                m_flagsChanged = true;
                 break;
 
             case 1:     // 0F - RRCA
                 F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (A() & F_CARRY);
                 A() = ((A() >> 1) | (A() << 7));
                 F() |= (A() & (F_3 | F_5));
+                m_flagsChanged = true;
                 break;
 
             case 2:     // 17 - RLA
-                d = A();
+                r8 = A();
                 A() = (A() << 1) | (F() & F_CARRY);
-                F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (A() & (F_3 | F_5)) | (d >> 7);
+                F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (A() & (F_3 | F_5)) | (r8 >> 7);
+                m_flagsChanged = true;
                 break;
 
             case 3:     // 1F - RRA
                 d = A();
                 A() = (A() >> 1) | (F() << 7);
                 F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (A() & (F_3 | F_5)) | (d & F_CARRY);
+                m_flagsChanged = true;
                 break;
 
             case 4:     // 27 - DAA
@@ -1736,14 +1789,21 @@ void Z80::execute(u8 opCode, i64& tState)
             case 5:     // 2F - CPL
                 A() = A() ^ 0xff;
                 F() = (F() & (F_CARRY | F_PARITY | F_ZERO | F_SIGN)) | (A() & (F_3 | F_5)) | F_NEG | F_HALF;
+                m_flagsChanged = true;
                 break;
 
             case 6:     // 37 - SCF
-                F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (A() & (F_3 | F_5)) | F_CARRY;
+                {
+                    u8 s = m_lastFlagsChanged ? F() : 0;
+                    F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (((s ^ F()) | A()) & (F_3 | F_5)) | F_CARRY;
+                    m_flagsChanged = true;
+                }
                 break;
 
             case 7:     // 3F - CCF
-                F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (A() & (F_3 | F_5)) | ((F() & F_CARRY) ? F_HALF : F_CARRY);
+                u8 s = m_lastFlagsChanged ? F() : 0;
+                F() = (F() & (F_PARITY | F_ZERO | F_SIGN)) | (((s ^ F()) | A()) & (F_3 | F_5)) | ((F() & F_CARRY) ? F_HALF : F_CARRY);
+                m_flagsChanged = true;
                 break;
             }
             break;
@@ -1928,7 +1988,7 @@ void Z80::execute(u8 opCode, i64& tState)
                 }
                 break;
 
-            case 2:     // D3 - OUT (n),A()       A() -> $AAnn
+            case 2:     // D3 - OUT (n),A       A -> $AAnn
                 r8 = PEEK(PC());
                 NX_LOG_OUT((u16)r8 | ((u16)A() << 8), A());
                 m_ext.out((u16)r8 | ((u16)A() << 8), A(), tState);
@@ -1937,7 +1997,7 @@ void Z80::execute(u8 opCode, i64& tState)
                 ++PC();
                 break;
 
-            case 3:     // DB - IN A(),(n)        A() <- $AAnn
+            case 3:     // DB - IN A,(n)        A <- $AAnn
                 r8 = PEEK(PC());
                 tt = ((u16)A() << 8) | r8;
                 m_mp.h = A();
@@ -1947,7 +2007,7 @@ void Z80::execute(u8 opCode, i64& tState)
                 ++PC();
                 break;
 
-            case 4:     // E3 - EX (SP()),HL()
+            case 4:     // E3 - EX (SP),HL
                 tt = PEEK16(SP());
                 CONTEND(SP() + 1, 1, 1);
                 POKE(SP() + 1, H());
@@ -1957,7 +2017,7 @@ void Z80::execute(u8 opCode, i64& tState)
                 MP() = HL();
                 break;
 
-            case 5:     // EB - EX DE(),HL()
+            case 5:     // EB - EX DE,HL
                 tt = DE();
                 DE() = HL();
                 HL() = tt;
@@ -2047,9 +2107,11 @@ void Z80::execute(u8 opCode, i64& tState)
 
 void Z80::step(i64& tState)
 {
+    m_flagsChanged = false;
     NX_ASSERT(tState >= 0);
     if (IFF1() && /*(*tState < 32)*/ m_interrupt && !m_eiHappened)
     {
+        m_lastFlagsChanged = false;
         IFF1() = false;
         IFF2() = false;
 
@@ -2083,6 +2145,7 @@ void Z80::step(i64& tState)
 
         u8 opCode = fetchInstruction(tState);
         execute(opCode, tState);
+        m_lastFlagsChanged = m_flagsChanged;
     }
 }
 

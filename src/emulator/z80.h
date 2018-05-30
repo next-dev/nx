@@ -194,6 +194,9 @@ private:
     u8          m_SZ53[256];
     u8          m_SZ53P[256];
 
+    bool        m_flagsChanged;
+    bool        m_lastFlagsChanged;
+
     static const u8 kIoIncParityTable[16];
     static const u8 kIoDecParityTable[16];
     static const u8 kHalfCarryAdd[8];
