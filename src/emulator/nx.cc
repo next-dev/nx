@@ -468,10 +468,7 @@ void Emulator::openFile()
 
     if (fileName)
     {
-        if (!getEmulator().openFile(fileName))
-        {
-            tinyfd_messageBox("ERROR", "Unable to load!", "ok", "error", 0);
-        }
+        getEmulator().openFile(fileName);
     }
 
     getSpeccy().getAudio().mute(mute);
@@ -906,8 +903,17 @@ bool Nx::loadSnaSnapshot(string fileName)
     u8* data = buffer.data();
     i64 size = (i64)buffer.size();
     Z80& z80 = m_machine->getZ80();
-    
-    if (size != 49179) return false;
+
+    if (getSpeccy().getModel() != Model::ZX48)
+    {
+        Overlay::currentOverlay()->error("Must be in 48K mode to load .sna files.");
+        return false;
+    }
+    if (size != 49179)
+    {
+        Overlay::currentOverlay()->error("Only 48K .sna files supported currently.");
+        return false;
+    }
     
     z80.I() = BYTE_OF(data, 0);
     z80.HL_() = WORD_OF(data, 1);
@@ -943,7 +949,11 @@ bool Nx::loadZ80Snapshot(string fileName)
     Z80& z80 = m_machine->getZ80();
 
     // Only support version 1.0 Z80 files now
-    if (buffer.size() < 30) return false;
+    if (buffer.size() < 30)
+    {
+        Overlay::currentOverlay()->error("Invalid .z80 file");
+        return false;
+    }
     int version = 1;
     if (WORD_OF(data, 6) == 0)
     {
@@ -955,8 +965,12 @@ bool Nx::loadZ80Snapshot(string fileName)
     {
         // Check to see if we're only 48K
         u8 hardware = BYTE_OF(data, 34);
-        if (version == 2 && (hardware != 0 && hardware == 1)) return false;
-        if (version == 3 && (hardware != 0 || hardware == 1 || hardware == 3)) return false;
+        if ((version == 2 && (hardware != 0 && hardware != 1)) ||
+            (version == 3 && (hardware != 0 && hardware != 1 && hardware == 3)))
+        {
+            Overlay::currentOverlay()->error("Only 48K .z80 files supported.");
+            return false;
+        }
     }
 
     z80.A() = BYTE_OF(data, 0);
@@ -984,7 +998,10 @@ bool Nx::loadZ80Snapshot(string fileName)
     z80.IFF2() = BYTE_OF(data, 28) ? 1 : 0;
     z80.IM() = int(BYTE_OF(data, 29) & 0x03);
 
-#define CHECK_BUFFER() do { if (size_t(mem - data) >= buffer.size()) { NX_BREAK(); return false; } } while(0)
+#define CHECK_BUFFER() do { if (size_t(mem - data) >= buffer.size()) {      \
+    NX_BREAK();                                                             \
+    Overlay::currentOverlay()->error("Invalid .z80 file");                   \
+    return false; } } while(0)
 
     if (version == 1)
     {
@@ -1003,6 +1020,7 @@ bool Nx::loadZ80Snapshot(string fileName)
                     if (size_t(mem + 3 - data) > buffer.size())
                     {
                         NX_BREAK();
+                        Overlay::currentOverlay()->error("Invalid .z80 file");
                         return false;
                     }
 
@@ -1045,7 +1063,11 @@ bool Nx::loadZ80Snapshot(string fileName)
         }
         else
         {
-            if (buffer.size() != (0xc000 + 30)) return false;
+            if (buffer.size() != (0xc000 + 30))
+            {
+                Overlay::currentOverlay()->error("Invalid .z80 file");
+                return false;
+            }
 
             m_machine->load(0x4000, data + 30, 0xc000);
         }
@@ -1064,39 +1086,52 @@ bool Nx::loadZ80Snapshot(string fileName)
         for (int i = 0; i < 3; ++i)
         {
             u16 a = pages[BYTE_OF(mem,2)];
+            if (a == 0x0000)
+            {
+                Overlay::currentOverlay()->error("Invalid 48K .z80 file");
+                return false;
+            }
             u16 len = WORD_OF(mem, 0);
             mem += 3;
             bool compressed = (len != 0xffff);
             if (!compressed) len = 0x4000;
 
-            int idx = 0;
-            while (idx < len)
+            if (compressed)
             {
-                u8 b = mem[idx++];
-                if (b == 0xed)
+                int idx = 0;
+                while (idx < len)
                 {
-                    b = mem[idx++];
+                    u8 b = mem[idx++];
                     if (b == 0xed)
                     {
-                        u8 count = mem[idx++];
                         b = mem[idx++];
-                        for (int ii = 0; ii < count; ++ii)
+                        if (b == 0xed)
                         {
+                            u8 count = mem[idx++];
+                            b = mem[idx++];
+                            for (int ii = 0; ii < count; ++ii)
+                            {
+                                m_machine->poke(a++, b);
+                            }
+                        }
+                        else
+                        {
+                            m_machine->poke(a++, 0xed);
                             m_machine->poke(a++, b);
                         }
                     }
                     else
                     {
-                        m_machine->poke(a++, 0xed);
                         m_machine->poke(a++, b);
                     }
                 }
-                else
-                {
-                    m_machine->poke(a++, b);
-                }
+                mem += len;
             }
-            mem += len;
+            else
+            {
+                // Load uncompressed data
+                m_machine->load(0x4000, mem, 0x4000);
+            }
         }
     }
 
@@ -1158,7 +1193,11 @@ bool Nx::loadNxSnapshot(string fileName)
         {
             const BlockSection& modl = f['MODL'];
             int model = modl.peek8(0);
-            if (model < 0 || model >= (int)Model::COUNT) return false;
+            if (model < 0 || model >= (int)Model::COUNT)
+            {
+                Overlay::currentOverlay()->error("Invalid machine model in .nx file.  Corruption or old version of emulator?");
+                return false;
+            }
             m = (Model)model;
         }
         switchModel(m);
@@ -1177,6 +1216,7 @@ bool Nx::loadNxSnapshot(string fileName)
             }
             else
             {
+                Overlay::currentOverlay()->error("Missing section in .nx file.  Cannot load.");
                 return false;
             }
             // Continue to 48K data
@@ -1209,6 +1249,7 @@ bool Nx::loadNxSnapshot(string fileName)
             }
             else
             {
+                Overlay::currentOverlay()->error("Missing section in .nx file.  Cannot load.");
                 return false;
             }
 
@@ -1226,6 +1267,7 @@ bool Nx::loadNxSnapshot(string fileName)
             }
             else
             {
+                Overlay::currentOverlay()->error("Missing section in .nx file.  Cannot load.");
                 return false;
             }
 
@@ -1282,6 +1324,7 @@ bool Nx::loadNxSnapshot(string fileName)
         return true;
     } // if (f.load(...
 
+    Overlay::currentOverlay()->error("Unable to open .nx file");
     return false;
 }
 
@@ -1423,6 +1466,7 @@ bool Nx::loadTape(string fileName)
     }
     else
     {
+        Overlay::currentOverlay()->error("Unable to load the tape file.");
         return false;
     }
 }
