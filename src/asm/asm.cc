@@ -3347,7 +3347,7 @@ optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, E
     return {};
 }
 
-optional<i64> Assembler::calculateExpression(const vector<u8>& exprData)
+optional<ExprValue> Assembler::calculateExpression(const vector<u8>& exprData)
 {
     //
     // Lexical analysis on the expression

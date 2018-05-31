@@ -85,12 +85,12 @@ bool MemAddr::operator!= (const MemAddr& addr) const
 
 bool MemAddr::operator< (const MemAddr& addr) const
 {
-    return m_bank < addr.bank() || m_offset < addr.offset();
+    return m_bank < addr.bank() || (m_bank == addr.bank() && m_offset < addr.offset());
 }
 
 bool MemAddr::operator> (const MemAddr& addr) const
 {
-    return m_bank > addr.bank() || m_offset > addr.offset();
+    return m_bank > addr.bank() || (m_bank == addr.bank() && m_offset > addr.offset());
 }
 
 bool MemAddr::operator<= (const MemAddr& addr) const

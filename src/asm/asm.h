@@ -157,7 +157,7 @@ public:
     void error(const Lex& l, const Lex::Element& el, const string& message);
     void addErrorInfo(const string& fileName, const string& message, int line, int col);
     i64 getSymbol(const u8* start, const u8* end, bool ignoreCase) { return m_lexSymbols.addRange((const char*)start, (const char *)end, ignoreCase); }
-    optional<i64> calculateExpression(const vector<u8>& exprData);
+    optional<ExprValue> calculateExpression(const vector<u8>& exprData);
 
     optional<MemAddr> lookUpLabel(i64 symbol) const;
     optional<ExprValue> lookUpValue(i64 symbol) const;

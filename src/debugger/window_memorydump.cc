@@ -305,10 +305,30 @@ void MemoryDumpWindow::onText(char ch)
                     m_editAddress = m_address = m_nx.getSpeccy().getZ80().PC();
                     m_editNibble = 0;
                 }
-                else if (optional<i64> result = m_nx.getAssembler().calculateExpression(exprData); result)
+                else if (optional<ExprValue> result = m_nx.getAssembler().calculateExpression(exprData); result)
                 {
-                    m_editAddress = m_address = u16(*result);
-                    m_editNibble = 0;
+                    switch (result->getType())
+                    {
+                    case ExprValue::Type::Integer:
+                        m_editAddress = m_address = u16(*result);
+                        m_editNibble = 0;
+                        break;
+
+                    case ExprValue::Type::Address:
+                        if (m_nx.getSpeccy().isZ80Address(*result))
+                        {
+                            m_editAddress = m_address = m_nx.getSpeccy().convertAddress(*result);
+                            m_editNibble = 0;
+                        }
+                        else
+                        {
+                            m_nx.getDebugger().error("Address not visible by the Z80.  Memory must be paged in.");
+                        }
+                        break;
+
+                    default:
+                        m_nx.getDebugger().error("Invalid address expression entered.");
+                    }
                 }
                 else
                 {

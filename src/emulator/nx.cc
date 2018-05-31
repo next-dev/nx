@@ -708,6 +708,11 @@ void Nx::setScale(int scale)
 
 void Nx::run()
 {
+    MemAddr m1 = MemAddr(Bank(MemGroup::RAM, 4), 7457);
+    MemAddr m2 = MemAddr(Bank(MemGroup::RAM, 2), 7885);
+    bool c1 = m1 < m2;
+    bool c2 = m2 < m1;
+
     while (m_window.isOpen())
     {
         sf::Event event;

@@ -334,9 +334,28 @@ void DisassemblyWindow::onText(char ch)
                 {
                     setCursor(m_nx.getSpeccy().getZ80().PC());
                 }
-                else if (optional<i64> result = m_nx.getAssembler().calculateExpression(exprData); result)
+                else if (optional<ExprValue> result = m_nx.getAssembler().calculateExpression(exprData); result)
                 {
-                    setCursor(u16(*result));
+                    switch (result->getType())
+                    {
+                    case ExprValue::Type::Integer:
+                        setCursor(u16(*result));
+                        break;
+
+                    case ExprValue::Type::Address:
+                        if (m_nx.getSpeccy().isZ80Address(*result))
+                        {
+                            setCursor(m_nx.getSpeccy().convertAddress(*result));
+                        }
+                        else
+                        {
+                            m_nx.getDebugger().error("Address not visible by the Z80.  Memory must be paged in.");
+                        }
+                        break;
+
+                    default:
+                        m_nx.getDebugger().error("Invalid address expression entered.");
+                    }
                 }
                 else
                 {
