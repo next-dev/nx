@@ -118,17 +118,37 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
 
             case K::SemiColon:
-                if (m_data.getLine(m_currentLine).type != DisassemblerDoc::LineType::Instruction)
+                if (getData().getLine(m_currentLine).type != DisassemblerDoc::LineType::Instruction)
                 {
-                    m_data.processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
-                    m_blockFirstChar = true;
-                    m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
-                        Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
-                        [this](Editor& ed)
-                        {
-                            getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
-                            ++m_currentLine;
-                        });
+                    if (getData().getLine(m_currentLine).type == DisassemblerDoc::LineType::FullComment)
+                    {
+                        // Edit full line comment
+                        m_blockFirstChar = true;
+                        int index = getData().getLine(m_currentLine).commandIndex;
+                        m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
+                            Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
+                            [this](Editor& ed)
+                            {
+                                // Reset the command text
+                                getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
+
+                                // Reset the line text
+                                getData().getLine(m_currentLine).text = m_editor->getData().getString();
+                            });
+                        m_editor->getData().insert(getData().getLine(m_currentLine).text);
+                    }
+                    else
+                    {
+                        getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
+                        m_blockFirstChar = true;
+                        m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
+                            Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
+                            [this](Editor& ed)
+                            {
+                                getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
+                                ++m_currentLine;
+                            });
+                        }
                 }
                 break;
 
