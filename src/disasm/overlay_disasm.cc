@@ -125,6 +125,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                         // Edit full line comment
                         m_blockFirstChar = true;
                         int index = getData().getLine(m_currentLine).commandIndex;
+                        m_editorPrefix.clear();
                         m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
                             Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
                             [this](Editor& ed)
@@ -141,6 +142,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     {
                         getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
                         m_blockFirstChar = true;
+                        m_editorPrefix.clear();
                         m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
                             Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
                             [this](Editor& ed)
@@ -150,6 +152,17 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                             });
                         }
                 }
+                break;
+
+            case K::C:
+                m_blockFirstChar = true;
+                m_editorPrefix = "Code: ";
+                m_editor = new Editor(m_x + 7, m_y, m_width - 8, 1,
+                    Draw::attr(Colour::White, Colour::Magenta, false), false, m_width - 8, 0,
+                    [this](Editor& ed)
+                    {
+
+                    });
                 break;
 
             default:
@@ -193,6 +206,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             case K::SemiColon:
                 getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
                 m_blockFirstChar = true;
+                m_editorPrefix.clear();
                 m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
                     Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
                     [this](Editor& ed)
@@ -284,7 +298,15 @@ void DisassemblerEditor::render(Draw& draw)
         }
     }
 
-    if (m_editor) m_editor->renderAll(draw);
+    if (m_editor)
+    {
+        if (!m_editorPrefix.empty())
+        {
+            draw.printString(m_editor->getX() - (int)m_editorPrefix.size(), m_editor->getY(), m_editorPrefix, false,
+                m_editor->getBkgColour());
+        }
+        m_editor->renderAll(draw);
+    }
 }
 
 void DisassemblerEditor::saveFile()
@@ -609,6 +631,7 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         ";|Add/Edit comment",
         "Ctrl-;|Add/Edit line comment",
         "Shift-;|Insert comment",
+        "C|Add code entry point",
         })
 {
 }

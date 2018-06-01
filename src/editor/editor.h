@@ -243,6 +243,9 @@ public:
 
     void setPosition(int xCell, int yCell, int width, int height);
     int getLineNumberGap(Draw& draw) const;
+    int getX() const { return m_x; }
+    int getY() const { return m_y; }
+    u8 getBkgColour() const { return m_bkgColour; }
 
 private:
     EditorData          m_data;

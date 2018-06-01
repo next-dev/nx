@@ -44,6 +44,7 @@ private:
     string              m_fileName;
     Editor*             m_editor;
     bool                m_blockFirstChar;   // Stop the character that initiates the editor to be consumed by it
+    string              m_editorPrefix;
     int                 m_currentLine;
 };
 
