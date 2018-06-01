@@ -181,6 +181,31 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
             }
         }
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Shift-keys
+        //--------------------------------------------------------------------------------------------------------------
+
+        else if (shift && !ctrl && !alt)
+        {
+            switch (key)
+            {
+            case K::SemiColon:
+                getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
+                m_blockFirstChar = true;
+                m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
+                    Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
+                    [this](Editor& ed)
+                {
+                    getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
+                    ++m_currentLine;
+                });
+                break;
+
+            default:
+                break;
+            }
+        }
     }
     else
     {
@@ -583,6 +608,7 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         "Ctrl-B|Build",
         ";|Add/Edit comment",
         "Ctrl-;|Add/Edit line comment",
+        "Shift-;|Insert comment",
         })
 {
 }
