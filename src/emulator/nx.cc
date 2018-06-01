@@ -1323,6 +1323,8 @@ bool Nx::loadNxSnapshot(string fileName)
                 labels.emplace_back(make_pair(label, addr));
             }
             m_debugger.getDisassemblyWindow().setLabels(labels);
+            m_assembler.setLabels(labels);
+            
 
         }
 

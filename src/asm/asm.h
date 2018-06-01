@@ -163,6 +163,7 @@ public:
     optional<ExprValue> lookUpValue(i64 symbol) const;
 
     Labels getLabels() const;
+    void setLabels(const Labels& labels);
 
     struct ErrorInfo
     {

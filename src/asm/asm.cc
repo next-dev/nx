@@ -3724,5 +3724,15 @@ Labels Assembler::getLabels() const
     return labels;
 }
 
+void Assembler::setLabels(const Labels& labels)
+{
+    m_symbolTable.clear();
+    for (const auto& l : labels)
+    {
+        i64 symbol = getSymbol((const u8 *)l.first.data(), (const u8 *)l.first.data() + l.first.size(), true);
+        addSymbol(symbol, l.second);
+    }
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
