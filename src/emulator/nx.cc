@@ -636,11 +636,11 @@ Nx::Nx(int argc, char** argv)
     }
     
     updateSettings();
+    m_emulator.select();
     if (!loadedFiles)
     {
         loadNxSnapshot((m_tempPath / "cache.nx").osPath());
     }
-    m_emulator.select();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
