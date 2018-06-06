@@ -662,7 +662,7 @@ bool Assembler::addSymbol(i64 symbol, MemAddr address)
     }
 }
 
-bool Assembler::addValue(i64 symbol, i64 value)
+bool Assembler::addValue(i64 symbol, ExprValue value)
 {
     auto symIt = m_symbolTable.find(symbol);
     bool result = false;
@@ -671,7 +671,7 @@ bool Assembler::addValue(i64 symbol, i64 value)
         auto it = m_values.find(symbol);
         if (it == m_values.end())
         {
-            m_values[symbol] = ExprValue(value);
+            m_values[symbol] = value;
             result = true;
         }
     }
@@ -1141,10 +1141,9 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                     const Lex::Element* endE;
                     if (expect(lex, ++e, "*", &endE))
                     {
-                        Expression expr = buildExpression(e);
-                        if (expr.eval(*this, lex, m_mmap.getAddress(m_address)))
+                        if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
                         {
-                            optional<MemAddr> a = getZ80AddressFromExpression(lex, e, expr.result());
+                            optional<MemAddr> a = getZ80AddressFromExpression(lex, e, *result);
 
                             if (a)
                             {
@@ -1702,7 +1701,7 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
 
 bool Assembler::CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand op, i64 a, i64 b)
 {
-    ExprValue v = op.expr.result();
+    ExprValue v = op.expr;
 
     if (v.getType() == ExprValue::Type::Integer)
     {
@@ -1830,7 +1829,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 #define SRC_OP16() do {                                                 \
         opSize = 2;                                                     \
-        op16 = srcOp.expr.make16(*this, lex, *e, m_speccy);              \
+        op16 = make16(lex, *e, m_speccy, srcOp.expr);                   \
     } while(0)
 
 #define DST_OP8() do {                                                  \
@@ -1840,7 +1839,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
 #define DST_OP16() do {                                                 \
         opSize = 2;                                                     \
-        op16 = (dstOp.expr.make16(*this, lex, *e, m_speccy));            \
+        op16 = make16(lex, *e, m_speccy, dstOp.expr);                   \
     } while(0)
 
     //
@@ -2120,7 +2119,8 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case T::RES:
     case T::SET:
         {
-            if (dstOp.expr.result() < 0 || dstOp.expr.result() > 7)
+            if (dstOp.expr.getType() != ExprValue::Type::Integer ||
+                ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 7))
             {
                 error(lex, *dstE, "Invalid bit index.  Must be 0-7.");
                 return nullptr;
@@ -2271,14 +2271,14 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         break;
 
     case T::RST:
-        if (dstOp.expr.result() < 0 ||
-            dstOp.expr.result() > 0x56 ||
-            ((i64)dstOp.expr.result() % 8) != 0)
+        if (dstOp.expr.getType() != ExprValue::Type::Integer ||
+            ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 0x56) ||
+            ((i64)dstOp.expr % 8) != 0)
         {
             error(lex, *dstE, "Invalid value for RST opcode.");
             return nullptr;
         }
-        XYZ(3, u8((i64)dstOp.expr.result() / 8), 7);
+        XYZ(3, u8((i64)dstOp.expr / 8), 7);
         break;
 
         //--------------------------------------------------------------------------------------------------------------
@@ -2608,7 +2608,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 break;
 
             case OperandType::Expression:
-                if (srcOp.expr.result() != 0)
+                if (srcOp.expr.getType() != ExprValue::Type::Integer || (i64)srcOp.expr != 0)
                 {
                     error(lex, *srcE, "Invalid expression for OUT instruction.  Must be 0 or 8-bit register.");
                     return nullptr;
@@ -2650,13 +2650,14 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         break;
 
     case T::IM:
-        if (dstOp.expr.result() < 0 || dstOp.expr.result() > 2)
+        if (dstOp.expr.getType() != ExprValue::Type::Integer ||
+            ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 2))
         {
             error(lex, *dstE, "Invalid value of IM instruction.  Must be 0-2.");
             return nullptr;
         }
         prefix = 0xed;
-        switch (dstOp.expr.result())
+        switch ((i64)dstOp.expr)
         {
         case 0: XYZ(1, 0, 6);   break;
         case 1: XYZ(1, 2, 6);   break;
@@ -2814,9 +2815,15 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     case T::Minus:
     case T::Tilde:
         // Start of an expression.
-        op.expr = buildExpression(e);
-        if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
-        op.type = OperandType::Expression;
+        if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); !result)
+        {
+            op.expr = *result;
+            op.type = OperandType::Expression;
+        }
+        else
+        {
+            return 0;
+        }
         break;
 
     case T::OpenParen:
@@ -2853,12 +2860,18 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
             if (e->m_type == T::CloseParen)
             {
                 // This is just (IX), no expression
-                op.expr.set(0);
+                op.expr = ExprValue(i64(0));
             }
             else
             {
-                op.expr = buildExpression(e);
-                if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+                if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
+                {
+                    op.expr = *result;
+                }
+                else
+                {
+                    return 0;
+                }
             }
             op.type = OperandType::IX_Expression;
             NX_ASSERT(e->m_type == T::CloseParen);
@@ -2868,12 +2881,18 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
             if (e->m_type == T::CloseParen)
             {
                 // This is just (IY), no expression
-                op.expr.set(0);
+                op.expr = ExprValue(i64(0));
             }
             else
             {
-                op.expr = buildExpression(e);
-                if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+                if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
+                {
+                    op.expr = *result;
+                }
+                else
+                {
+                    return 0;
+                }
             }
             op.type = OperandType::IY_Expression;
             NX_ASSERT(e->m_type == T::CloseParen);
@@ -2884,12 +2903,20 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
             {
                 const Lex::Element* startE = e - 2;
                 op.type = OperandType::AddressedExpression;
-                op.expr = buildExpression(--e);
+                const Lex::Element* oldE = --e;
+                ExpressionEvaluator::skipExpression(e);
                 NX_ASSERT(e->m_type == T::CloseParen);
                 Lex::Element::Type nextE = (e + 1)->m_type;
                 if (nextE == T::Newline || nextE == T::Comma)
                 {
-                    if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+                    if (auto result = m_eval.parseExpression(lex, oldE, m_mmap.getAddress(m_address)); result)
+                    {
+                        op.expr = *result;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
                 }
                 else
                 {
@@ -2898,8 +2925,14 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                     // Rebuild the expression, this time including the initial parentheses.
                     op.type = OperandType::Expression;
                     e = startE;
-                    op.expr = buildExpression(e);
-                    if (!op.expr.eval(*this, lex, m_mmap.getAddress(m_address))) return 0;
+                    if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
+                    {
+                        op.expr = *result;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
                     --e;
                 }
             }
@@ -2946,109 +2979,11 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     return true;
 }
 
-Expression Assembler::buildExpression(const Lex::Element*& e) const
-{
-    using T = Lex::Element::Type;
-
-    int parenDepth = 0;
-    int state = 0;
-    Expression expr;
-
-    for (;;)
-    {
-        switch (state)
-        {
-        case 0:
-            switch (e->m_type)
-            {
-            case T::OpenParen:
-                expr.addOpen(e);
-                ++parenDepth;
-                break;
-
-            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0, e);                 state = 1;  break;
-            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);       state = 1;  break;
-            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);     state = 1;  break;
-            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);        state = 1;  break;
-
-            case T::Plus:       expr.addUnaryOp(Lex::Element::Type::Unary_Plus, e);                 state = 2;  break;
-            case T::Minus:      expr.addUnaryOp(Lex::Element::Type::Unary_Minus, e);                state = 2;  break;
-            case T::Tilde:      expr.addUnaryOp(Lex::Element::Type::Tilde, e);                      state = 2;  break;
-
-            default:
-                // Should never reach here!
-                NX_ASSERT(0);
-            }
-            break;
-
-        case 1:
-            switch (e->m_type)
-            {
-            case T::Plus:
-            case T::Minus:
-            case T::LogicOr:
-            case T::LogicAnd:
-            case T::LogicXor:
-            case T::ShiftLeft:
-            case T::ShiftRight:
-            case T::Multiply:
-            case T::Divide:
-            case T::Mod:
-                expr.addBinaryOp(e->m_type, e);
-                state = 0;
-                break;
-
-            case T::Comma:
-                NX_ASSERT(parenDepth == 0);
-                return expr;
-
-            case T::Newline:
-                NX_ASSERT(parenDepth == 0);
-                return expr;
-
-            case T::CloseParen:
-                if (parenDepth > 0)
-                {
-                    --parenDepth;
-                    expr.addClose(e);
-                }
-                else
-                {
-                    return expr;
-                }
-                break;
-
-            default:
-                NX_ASSERT(0);
-            }
-            break;
-
-        case 2:
-            switch (e->m_type)
-            {
-            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0, e);              state = 1;  break;
-            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);    state = 1;  break;
-            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);  state = 1;  break;
-            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);     state = 1;  break;
-            case T::OpenParen:
-                expr.addOpen(e);
-                ++parenDepth;
-                state = 0;
-                break;
-            default:
-                NX_ASSERT(0);
-            }
-        }
-
-        ++e;
-    }
-}
-
-optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr)
+optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, ExprValue& expr)
 {
     // #todo: Handle pages
     MemAddr a0 = m_mmap.getAddress(m_address) + 2;                                  // Current address
-    optional<MemAddr> a1 = getZ80AddressFromExpression(lex, e, expr.result());      // Address we want to go to
+    optional<MemAddr> a1 = getZ80AddressFromExpression(lex, e, expr);      // Address we want to go to
     if (a1)
     {
         int d = *a1 - a0;
@@ -3087,10 +3022,14 @@ optional<ExprValue> Assembler::calculateExpression(const vector<u8>& exprData)
     //
     // Calculate
     //
-    Expression expr = buildExpression(start);
-    if (!expr.eval(*this, lex, MemAddr())) return {};
-
-    return expr.result();
+    if (auto result = m_eval.parseExpression(lex, start, MemAddr()); result)
+    {
+        return *result;
+    }
+    else
+    {
+        return {};
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -3239,6 +3178,30 @@ void Assembler::emitXPQZ(u8 x, u8 p, u8 q, u8 z)
     emit8((x << 6) | (p << 4) | (q << 3) | z);
 }
 
+u16 Assembler::make16(Lex& lex, const Lex::Element& e, const Spectrum& speccy, ExprValue result)
+{
+    switch (result.getType())
+    {
+    case ExprValue::Type::Integer:
+        return result.r16();
+
+    case ExprValue::Type::Address:
+        if (speccy.isZ80Address(result))
+        {
+            return speccy.convertAddress(result);
+        }
+        else
+        {
+            error(lex, e, "Address expression is not viewable from the current Z80 bank configuration.");
+            return 0;
+        }
+        break;
+    default:
+        error(lex, e, "Invalid 16-bit expression.");
+        return 0;
+    }
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Directives
 //----------------------------------------------------------------------------------------------------------------------
@@ -3246,40 +3209,72 @@ void Assembler::emitXPQZ(u8 x, u8 p, u8 q, u8 z)
 bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
 {
     using T = Lex::Element::Type;
+    MemAddr a;
+    const Lex::Element* start = e;
 
-    Expression addr = buildExpression(e);
-    if (!addr.eval(*this, lex, m_mmap.getAddress(m_address))) return false;
-    if (addr.result() < 0 || addr.result() > 0xffff)
+    if (auto exp = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); exp)
     {
-        error(lex, *e, "Address out of range.");
-        while (e->m_type != T::Newline) ++e;
-        ++e;
+        switch (exp->getType())
+        {
+        case ExprValue::Type::Integer:
+            if ((i64)*exp < 0 || (i64)*exp > 0xffff)
+            {
+                error(lex, *start, "Z80 address out of range.");
+                nextLine(e);
+                return false;
+            }
+            a = m_speccy.convertAddress(Z80MemAddr((u16)(i64)*exp));
+            break;
+            
+        case ExprValue::Type::Address:
+            a = *exp;
+            if (!m_speccy.isZ80Address(a))
+            {
+                error(lex, *start, "Only Z80 visible addresses allowed at the moment.");
+                return false;
+            }
+            break;
+
+        default:
+            error(lex, *start, "Expression does not produce a valid address.");
+            nextLine(e);
+            return false;
+        }
+
+        m_mmap.resetRange();
+        m_mmap.addRange(a, m_speccy.convertAddress(Z80MemAddr(0xffff)));
+        m_address = 0;
+        return true;
+    }
+    else
+    {
+        error(lex, *start, "Invalid expression.");
+        nextLine(e);
         return false;
     }
-    
-    u16 p = u16(addr.result());
-    m_mmap.resetRange();
-    m_mmap.addZ80Range(m_speccy, p, 0xffff);
-    m_address = 0;
-    return true;
 }
 
 bool Assembler::doEqu(Lex& lex, i64 symbol, const Lex::Element*& e)
 {
     using T = Lex::Element::Type;
+    const Lex::Element* start = e;
 
-    Expression expr = buildExpression(e);
-    if (!expr.eval(*this, lex, m_mmap.getAddress(m_address))) return false;
-
-    if (!addValue(symbol, expr.result()))
+    if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
     {
-        error(lex, *e, "Variable name already used.");
-        while (e->m_type != T::Newline) ++e;
-        ++e;
+        if (!addValue(symbol, *expr))
+        {
+            error(lex, *start, "Variable name already used.");
+            nextLine(e);
+            return false;
+        }
+        return true;
+    }
+    else
+    {
+        error(lex, *start, "Invalid expression.");
+        nextLine(e);
         return false;
     }
-
-    return true;
 }
 
 bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
@@ -3293,17 +3288,22 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
         {
             // Expression found
             const Lex::Element* startE = e;
-            Expression expr = buildExpression(e);
-            if (!expr.eval(*this, lex, m_mmap.getAddress(m_address))) return false;
-            if (expr.result() < -128 || expr.result() > 255)
+            if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
             {
-                error(lex, *startE, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
-                while (e->m_type != T::Newline) ++e;
-                ++e;
+                if (expr->getType() != ExprValue::Type::Integer ||
+                    ((i64)*expr < -128 || (i64)*expr > 255))
+                {
+                    error(lex, *startE, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
+                    nextLine(e);
+                    return false;
+                }
+
+                emit8(expr->r8());
+            }
+            else
+            {
                 return false;
             }
-
-            emit8(expr.r8());
         }
         else if (e->m_type == T::String)
         {
@@ -3333,16 +3333,27 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
         {
             // Expression found
             const Lex::Element* startE = e;
-            Expression expr = buildExpression(e);
-            if (!expr.eval(*this, lex, m_mmap.getAddress(m_address))) return false;
-            if (expr.result() < -32768 || expr.result() > 65535)
+            if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
             {
-                error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
-                nextLine(e);
+                if (expr->getType() != ExprValue::Type::Integer)
+                {
+                    error(lex, *startE, "Integer expression required.");
+                    nextLine(e);
+                    return false;
+                }
+                else if ((i64)*expr < -32768 || (i64)*expr > 65535)
+                {
+                    error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
+                    nextLine(e);
+                    return false;
+                }
+
+                emit16(expr->r16());
+            }
+            else
+            {
                 return false;
             }
-
-            emit16(expr.r16());
         }
 
         if (e->m_type == T::Comma) ++e;
@@ -3405,25 +3416,27 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
         return false;
     }
 
-    Expression expr = buildExpression(e);
-    if (!expr.eval(*this, lex, m_mmap.getAddress(m_address)))
+    const Lex::Element* start = e;
+    if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
     {
-        error(lex, *e, "Invalid start address expression.");
+        // #todo: Handle full addresses
+        optional<MemAddr> addr = getZ80AddressFromExpression(lex, e, *expr);
+        if (!addr)
+        {
+            error(lex, *start, "START option requires an address parameter.");
+            nextLine(e);
+            return false;
+        }
+
+        m_options.m_startAddress = *addr;
+        return true;
+    }
+    else
+    {
+        error(lex, *start, "Invalid start address expression.");
         nextLine(e);
         return false;
     }
-
-    // #todo: Handle full addresses
-    optional<MemAddr> addr = getZ80AddressFromExpression(lex, e, expr.result());
-    if (!addr)
-    {
-        error(lex, *e, "START option requires an address parameter.");
-        nextLine(e);
-        return false;
-    }
-
-    m_options.m_startAddress = *addr;
-    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

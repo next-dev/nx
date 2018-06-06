@@ -144,7 +144,7 @@ private:
     bool assembleFile2(Path fileName);
 
     bool addSymbol(i64 symbol, MemAddr address);
-    bool addValue(i64 symbol, i64 value);
+    bool addValue(i64 symbol, ExprValue value);
 
     void dumpLex(const Lex& l);
     void dumpSymbolTable();
@@ -199,14 +199,14 @@ private:
     struct Operand
     {
         OperandType     type;       // Type of operand
-        Expression      expr;       // Expression (if necessary)
+        ExprValue       expr;       // Expression (if necessary)
     };
 
     bool pass2(Lex& lex, const vector<Lex::Element>& elems);
     const Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
-    Expression buildExpression(const Lex::Element*& e) const;
+    //Expression buildExpression(const Lex::Element*& e) const;
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
-    optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, Expression& expr);
+    optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, ExprValue& expr);
     Path findFile(Path givenPath);
     optional<MemAddr> getZ80AddressFromExpression(Lex& lex, const Lex::Element* e, ExprValue expr);
     bool CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand operand, i64 a, i64 b);
@@ -240,10 +240,14 @@ private:
     void emitXYZ(u8 x, u8 y, u8 z);
     void emitXPQZ(u8 x, u8 p, u8 q, u8 z);
 
+    u16 make16(Lex& lex, const Lex::Element& e, const Spectrum& speccy, ExprValue result);
+
 private:
     //------------------------------------------------------------------------------------------------------------------
     // Member variables
     //------------------------------------------------------------------------------------------------------------------
+
+    ExpressionEvaluator         m_eval;
 
     struct SymbolInfo
     {

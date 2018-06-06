@@ -42,7 +42,225 @@ void Expression::addClose(const Lex::Element* e)
     m_queue.emplace_back(ValueType::CloseParen, 0, e);
 }
 
-bool Expression::eval(Assembler& assembler, Lex& lex, MemAddr currentAddress)
+//----------------------------------------------------------------------------------------------------------------------
+// ExpressionEvaluator
+//----------------------------------------------------------------------------------------------------------------------
+
+ExpressionEvaluator::ExpressionEvaluator()
+{
+
+}
+
+optional<ExprValue> ExpressionEvaluator::parseExpression(const vector<u8>& text)
+{
+    return {};
+}
+
+optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, vector<string>& messages, const Lex::Element*& e, MemAddr currentAddress)
+{
+    Expression expr = constructExpression(e);
+    return eval(lex, messages, currentAddress, expr) ? expr.result() : optional<ExprValue>{};
+}
+
+Expression ExpressionEvaluator::constructExpression(const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    int parenDepth = 0;
+    int state = 0;
+    Expression expr;
+
+    for (;;)
+    {
+        switch (state)
+        {
+        case 0:
+            switch (e->m_type)
+            {
+            case T::OpenParen:
+                expr.addOpen(e);
+                ++parenDepth;
+                break;
+
+            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0, e);                 state = 1;  break;
+            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);       state = 1;  break;
+            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);     state = 1;  break;
+            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);        state = 1;  break;
+
+            case T::Plus:       expr.addUnaryOp(Lex::Element::Type::Unary_Plus, e);                 state = 2;  break;
+            case T::Minus:      expr.addUnaryOp(Lex::Element::Type::Unary_Minus, e);                state = 2;  break;
+            case T::Tilde:      expr.addUnaryOp(Lex::Element::Type::Tilde, e);                      state = 2;  break;
+
+            default:
+                // Should never reach here!
+                NX_ASSERT(0);
+            }
+            break;
+
+        case 1:
+            switch (e->m_type)
+            {
+            case T::Plus:
+            case T::Minus:
+            case T::LogicOr:
+            case T::LogicAnd:
+            case T::LogicXor:
+            case T::ShiftLeft:
+            case T::ShiftRight:
+            case T::Multiply:
+            case T::Divide:
+            case T::Mod:
+                expr.addBinaryOp(e->m_type, e);
+                state = 0;
+                break;
+
+            case T::Comma:
+                NX_ASSERT(parenDepth == 0);
+                return expr;
+
+            case T::Newline:
+                NX_ASSERT(parenDepth == 0);
+                return expr;
+
+            case T::CloseParen:
+                if (parenDepth > 0)
+                {
+                    --parenDepth;
+                    expr.addClose(e);
+                }
+                else
+                {
+                    return expr;
+                }
+                break;
+
+            default:
+                NX_ASSERT(0);
+            }
+            break;
+
+        case 2:
+            switch (e->m_type)
+            {
+            case T::Dollar:     expr.addValue(Expression::ValueType::Dollar, 0, e);              state = 1;  break;
+            case T::Symbol:     expr.addValue(Expression::ValueType::Symbol, e->m_symbol, e);    state = 1;  break;
+            case T::Integer:    expr.addValue(Expression::ValueType::Integer, e->m_integer, e);  state = 1;  break;
+            case T::Char:       expr.addValue(Expression::ValueType::Char, e->m_integer, e);     state = 1;  break;
+            case T::OpenParen:
+                expr.addOpen(e);
+                ++parenDepth;
+                state = 0;
+                break;
+            default:
+                NX_ASSERT(0);
+            }
+        }
+
+        ++e;
+    }
+}
+
+void ExpressionEvaluator::skipExpression(const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    int parenDepth = 0;
+    int state = 0;
+
+    for (;;)
+    {
+        switch (state)
+        {
+        case 0:
+            switch (e->m_type)
+            {
+            case T::OpenParen:
+                ++parenDepth;
+                break;
+
+            case T::Dollar:
+            case T::Symbol:
+            case T::Integer:
+            case T::Char:
+                state = 1;
+                break;
+
+            case T::Plus:
+            case T::Minus:
+            case T::Tilde:
+                state = 2;
+                break;
+
+            default:
+                // Should never reach here!
+                NX_ASSERT(0);
+            }
+            break;
+
+        case 1:
+            switch (e->m_type)
+            {
+            case T::Plus:
+            case T::Minus:
+            case T::LogicOr:
+            case T::LogicAnd:
+            case T::LogicXor:
+            case T::ShiftLeft:
+            case T::ShiftRight:
+            case T::Multiply:
+            case T::Divide:
+            case T::Mod:
+                state = 0;
+                break;
+
+            case T::Comma:
+                NX_ASSERT(parenDepth == 0);
+                return;
+
+            case T::Newline:
+                NX_ASSERT(parenDepth == 0);
+                return;
+
+            case T::CloseParen:
+                if (parenDepth > 0)
+                {
+                    --parenDepth;
+                }
+                else
+                {
+                    return;
+                }
+                break;
+
+            default:
+                NX_ASSERT(0);
+            }
+            break;
+
+        case 2:
+            switch (e->m_type)
+            {
+            case T::Dollar:
+            case T::Symbol:
+            case T::Integer:
+            case T::Char:
+                state = 1;
+                break;
+
+            case T::OpenParen:
+                ++parenDepth;
+                state = 0;
+                break;
+            default:
+                NX_ASSERT(0);
+            }
+        }
+
+        ++e;
+    }
+}
+
+bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr currentAddress, Expression& expr)
 {
     // #todo: introduce types (value, address, page, offset etc) into expressions.
 
@@ -146,7 +364,7 @@ bool Expression::eval(Assembler& assembler, Lex& lex, MemAddr currentAddress)
 
 #define FAIL()                                                          \
     do {                                                                \
-        assembler.error(lex, *v.elem, "Syntax error in expression.");   \
+        error(lex, *v.elem, "Syntax error in expression.");             \
         return false;                                                   \
     } while(0)
 
@@ -164,21 +382,21 @@ bool Expression::eval(Assembler& assembler, Lex& lex, MemAddr currentAddress)
 
         case ValueType::Symbol:
         {
-            optional<MemAddr> value = assembler.lookUpLabel(v.value);
+            optional<MemAddr> value = lookUpLabel(v.value);
             if (value)
             {
                 stack.emplace_back(*value);
             }
             else
             {
-                optional<ExprValue> value = assembler.lookUpValue(v.value);
+                optional<ExprValue> value = lookUpValue(v.value);
                 if (value)
                 {
                     stack.emplace_back(*value);
                 }
                 else
                 {
-                    assembler.error(lex, *v.elem, "Unknown symbol.");
+                    error(lex, *v.elem, "Unknown symbol.");
                     return false;
                 }
             }
@@ -256,29 +474,5 @@ bool Expression::eval(Assembler& assembler, Lex& lex, MemAddr currentAddress)
     NX_ASSERT(stack.size() == 1);
     m_result = stack[0];
     return true;
-}
-
-u16 Expression::make16(Assembler& assembler, Lex& lex, const Lex::Element& e, const Spectrum& speccy)
-{
-    switch (m_result.getType())
-    {
-    case ExprValue::Type::Integer:
-        return r16();
-
-    case ExprValue::Type::Address:
-        if (speccy.isZ80Address(m_result))
-        {
-            return speccy.convertAddress(m_result);
-        }
-        else
-        {
-            assembler.error(lex, e, "Address expression is not viewable from the current Z80 bank configuration.");
-            return 0;
-        }
-        break;
-    default:
-        assembler.error(lex, e, "Invalid 16-bit expression.");
-        return 0;
-    }
 }
 
