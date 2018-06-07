@@ -324,7 +324,7 @@ void Assembler::dumpLex(const Lex& l)
             switch (el.m_type)
             {
             case T::Symbol:
-                line += stringFormat(": {0}", m_lexSymbols.get(el.m_symbol));
+                line += stringFormat(": {0}", m_eval.getSymbols().get(el.m_symbol));
                 break;
 
             case T::Integer:
@@ -397,7 +397,7 @@ void Assembler::dumpSymbolTable()
     // Construct the output data
     for (const auto& symPair : m_symbolTable)
     {
-        string symbol = (const char *)m_lexSymbols.get(symPair.first);
+        string symbol = (const char *)m_eval.getSymbols().get(symPair.first);
         string addressString = m_speccy.addressName(symPair.second.m_addr);
         symbols.emplace_back(symbol.substr(0, min(symbol.size(), size_t(16))), addressString);
     }
@@ -436,10 +436,9 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     m_fileStack.clear();
     m_symbolTable.clear();
     m_values.clear();
-    m_lexSymbols.clear();
+    m_eval.clear();
     m_mmap.clear(m_speccy);
     m_address = 0;
-    m_errors.clear();
 
     //
     // Set up the assembler
@@ -467,11 +466,13 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
 
 bool Assembler::assemble(const vector<u8>& data, string sourceName)
 {
+    m_errors.reset();
+
     //
     // Lexical Analysis
     //
     m_sessions[sourceName] = Lex();
-    currentLex().parse(*this, std::move(data), sourceName);
+    currentLex().parse(m_errors, m_eval.getSymbols(), std::move(data), sourceName);
 
 #if NX_DEBUG_LOG_LEX
     dumpLex(m_sessions.back());
@@ -553,7 +554,7 @@ bool Assembler::assembleFile1(Path fileName)
             //
             m_fileStack.emplace_back(fn);
             m_sessions[fn] = Lex();
-            currentLex().parse(*this, std::move(data), fn);
+            currentLex().parse(m_errors, m_eval.getSymbols(), std::move(data), fn);
 
 #if NX_DEBUG_LOG_LEX
             dumpLex(m_sessions.back());
@@ -602,45 +603,13 @@ bool Assembler::assembleFile2(Path fileName)
 
 void Assembler::output(const std::string& msg)
 {
-    m_assemblerWindow.output(msg);
-}
-
-void Assembler::addErrorInfo(const string& fileName, const string& message, int line, int col)
-{
-    m_errors.emplace_back(fileName, message, line, col);
-}
-
-void Assembler::error(const Lex& l, const Lex::Element& el, const string& message)
-{
-    Lex::Element::Pos start = el.m_position;
-    int length = int(el.m_s1 - el.m_s0);
-
-    addErrorInfo(l.getFileName(), message, start.m_line, start.m_col);
-
-    // Output the error
-    string err = stringFormat("!{0}({1}): {2}", l.getFileName(), start.m_line, message);
-    output(err);
-
-    // Output the markers
-    string line;
-    int x = start.m_col - 1;
-
-    // Print line that token resides in
-    const vector<u8>& file = l.getFile();
-    for (const i8* p = (const i8 *)(file.data() + start.m_lineOffset);
-        (p < (const i8 *)(file.data() + file.size()) && (*p != '\r') && (*p != '\n'));
-        ++p)
+    // Flush the errors we've had so far
+    for (const auto& line : m_errors.getOutput())
     {
-        line += *p;
+        m_assemblerWindow.output(line);
     }
-    output(line);
-    line = "!";
-
-    // Print the marker
-    for (int j = 0; j < x; ++j) line += ' ';
-    line += '^';
-    for (int j = 0; j < length - 1; ++j) line += '~';
-    output(line);
+    m_errors.clearOutput();
+    m_assemblerWindow.output(msg);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -910,7 +879,7 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
 
 int Assembler::invalidInstruction(Lex& lex, const Lex::Element* e, const Lex::Element** outE)
 {
-    error(lex, *e, "Invalid instruction.");
+    m_errors.error(lex, *e, "Invalid instruction.");
     if (outE)
     {
         *outE = 0;
@@ -1039,7 +1008,7 @@ void Assembler::nextLine(const Lex::Element*& e)
 
 #define FAIL(msg)                               \
     do {                                        \
-    error(lex, *e, (msg));                      \
+    m_errors.error(lex, *e, (msg));             \
     nextLine(e);                                \
     buildResult = false;                        \
     } while (0)
@@ -1197,8 +1166,8 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                     else if (e->m_type == T::String)
                     {
                         // String found
-                        string str = (const char *)m_lexSymbols.get(e->m_symbol);
-                        int strLen = int(m_lexSymbols.length(e->m_symbol));
+                        string str = (const char *)m_eval.getSymbols().get(e->m_symbol);
+                        int strLen = int(m_eval.getSymbols().length(e->m_symbol));
                         m_address += strLen;
                         ++e;
                     }
@@ -1266,7 +1235,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 ++e;
                 if (e->m_type == T::String)
                 {
-                    string fileName = (const char *)m_lexSymbols.get(e->m_symbol);
+                    string fileName = (const char *)m_eval.getSymbols().get(e->m_symbol);
                     if (!assembleFile1(fileName))
                     {
                         FAIL(stringFormat("Failed to assemble '{0}'.", fileName));
@@ -1304,13 +1273,13 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 if (!addSymbol(symbol, m_mmap.getAddress(symAddress)))
                 {
                     // #todo: Output the original line where it is defined.
-                    error(lex, *e, "Symbol already defined.");
+                    m_errors.error(lex, *e, "Symbol already defined.");
                     buildResult = false;
                 }
             }
             else
             {
-                error(lex, *e, "Address space overrun.  There is not enough space to assemble in this area section.");
+                m_errors.error(lex, *e, "Address space overrun.  There is not enough space to assemble in this area section.");
             }
         }
     }
@@ -1551,7 +1520,7 @@ int Assembler::assembleInstruction1(Lex& lex, const Lex::Element* e, const Lex::
         break;
 
     default:
-        error(lex, *e, "Unimplemented instruction.");
+        m_errors.error(lex, *e, "Unimplemented instruction.");
         *outE = 0;
         return 0;
     }
@@ -1603,7 +1572,7 @@ int Assembler::assembleLoad1(Lex& lex, const Lex::Element* e, const Lex::Element
 
 #define FAIL(msg)                                   \
     do {                                            \
-        error(lex, *e, (msg));                      \
+        m_errors.error(lex, *e, (msg));                      \
         while (e->m_type != T::Newline) ++e;        \
         ++e;                                        \
         buildResult = false;                        \
@@ -1707,7 +1676,7 @@ bool Assembler::CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand op, i64
     {
         if (v < a || v > b)
         {
-            error(lex, *e, stringFormat("Integer expression out of range.  Must be be between {0} and {1}.", a, b));
+            m_errors.error(lex, *e, stringFormat("Integer expression out of range.  Must be be between {0} and {1}.", a, b));
             return false;
         }
     }
@@ -1716,13 +1685,13 @@ bool Assembler::CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand op, i64
         MemAddr addr(v);
         if (!m_speccy.isZ80Address(addr))
         {
-            error(lex, *e, stringFormat("Address is not in current Z80 view, and so cannot be converted to a 16-bit value."));
+            m_errors.error(lex, *e, stringFormat("Address is not in current Z80 view, and so cannot be converted to a 16-bit value."));
             return false;
         }
     }
     else
     {
-        error(lex, *e, "Invalid expression type.  Expecting an integer expression.");
+        m_errors.error(lex, *e, "Invalid expression type.  Expecting an integer expression.");
         return false;
     }
 
@@ -1782,7 +1751,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     //
 
 #define UNDEFINED()                             \
-    error(lex, *s, "Unimplemented opcode.");    \
+    m_errors.error(lex, *s, "Unimplemented opcode.");    \
     return nullptr;
 
 #define CHECK8()                do { if (!CheckIntOpRange(lex, srcE, srcOp, 0, 255)) return nullptr; } while(0)
@@ -1907,7 +1876,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case OperandType::IXL:
         if (indexPrefix == 0xfd)
         {
-            error(lex, *srcE, "Cannot have both IX and IY registers in same instruction.");
+            m_errors.error(lex, *srcE, "Cannot have both IX and IY registers in same instruction.");
             return 0;
         }
         break;
@@ -1918,7 +1887,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case OperandType::IYL:
         if (indexPrefix == 0xdd)
         {
-            error(lex, *srcE, "Cannot have both IX and IY registers in same instruction.");
+            m_errors.error(lex, *srcE, "Cannot have both IX and IY registers in same instruction.");
             return 0;
         }
         break;
@@ -2122,7 +2091,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             if (dstOp.expr.getType() != ExprValue::Type::Integer ||
                 ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 7))
             {
-                error(lex, *dstE, "Invalid bit index.  Must be 0-7.");
+                m_errors.error(lex, *dstE, "Invalid bit index.  Must be 0-7.");
                 return nullptr;
             }
             prefix = 0xcb;
@@ -2196,7 +2165,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 // but JP (IX+n) is not.
                 if (indexOffset != 0)
                 {
-                    error(lex, *dstE, "Index offsets are not allowed in JP instructions.  Remove the offset.");
+                    m_errors.error(lex, *dstE, "Index offsets are not allowed in JP instructions.  Remove the offset.");
                     return nullptr;
                 }
 
@@ -2275,7 +2244,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 0x56) ||
             ((i64)dstOp.expr % 8) != 0)
         {
-            error(lex, *dstE, "Invalid value for RST opcode.");
+            m_errors.error(lex, *dstE, "Invalid value for RST opcode.");
             return nullptr;
         }
         XYZ(3, u8((i64)dstOp.expr / 8), 7);
@@ -2610,7 +2579,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             case OperandType::Expression:
                 if (srcOp.expr.getType() != ExprValue::Type::Integer || (i64)srcOp.expr != 0)
                 {
-                    error(lex, *srcE, "Invalid expression for OUT instruction.  Must be 0 or 8-bit register.");
+                    m_errors.error(lex, *srcE, "Invalid expression for OUT instruction.  Must be 0 or 8-bit register.");
                     return nullptr;
                 }
                 prefix = 0xed;
@@ -2653,7 +2622,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
         if (dstOp.expr.getType() != ExprValue::Type::Integer ||
             ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 2))
         {
-            error(lex, *dstE, "Invalid value of IM instruction.  Must be 0-2.");
+            m_errors.error(lex, *dstE, "Invalid value of IM instruction.  Must be 0-2.");
             return nullptr;
         }
         prefix = 0xed;
@@ -2989,7 +2958,7 @@ optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, E
         int d = *a1 - a0;
         if (d < -128 || d > 127)
         {
-            error(lex, *e, stringFormat("Relative jump of {0} is too far.  Distance must be between -128 and +127.", d));
+            m_errors.error(lex, *e, stringFormat("Relative jump of {0} is too far.  Distance must be between -128 and +127.", d));
             return {};
         }
 
@@ -2997,7 +2966,7 @@ optional<u8> Assembler::calculateDisplacement(Lex& lex, const Lex::Element* e, E
     }
     else
     {
-        error(lex, *e, "Invalid expression for displacement value.");
+        m_errors.error(lex, *e, "Invalid expression for displacement value.");
     }
 
     return {};
@@ -3009,7 +2978,7 @@ optional<ExprValue> Assembler::calculateExpression(const vector<u8>& exprData)
     // Lexical analysis on the expression
     //
     Lex lex;
-    if (!lex.parse(*this, exprData, "<input>")) return {};
+    if (!lex.parse(m_errors, m_eval.getSymbols(), exprData, "<input>")) return {};
 
     //
     // Check the syntax
@@ -3192,12 +3161,12 @@ u16 Assembler::make16(Lex& lex, const Lex::Element& e, const Spectrum& speccy, E
         }
         else
         {
-            error(lex, e, "Address expression is not viewable from the current Z80 bank configuration.");
+            m_errors.error(lex, e, "Address expression is not viewable from the current Z80 bank configuration.");
             return 0;
         }
         break;
     default:
-        error(lex, e, "Invalid 16-bit expression.");
+        m_errors.error(lex, e, "Invalid 16-bit expression.");
         return 0;
     }
 }
@@ -3219,7 +3188,7 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
         case ExprValue::Type::Integer:
             if ((i64)*exp < 0 || (i64)*exp > 0xffff)
             {
-                error(lex, *start, "Z80 address out of range.");
+                m_errors.error(lex, *start, "Z80 address out of range.");
                 nextLine(e);
                 return false;
             }
@@ -3230,13 +3199,13 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
             a = *exp;
             if (!m_speccy.isZ80Address(a))
             {
-                error(lex, *start, "Only Z80 visible addresses allowed at the moment.");
+                m_errors.error(lex, *start, "Only Z80 visible addresses allowed at the moment.");
                 return false;
             }
             break;
 
         default:
-            error(lex, *start, "Expression does not produce a valid address.");
+            m_errors.error(lex, *start, "Expression does not produce a valid address.");
             nextLine(e);
             return false;
         }
@@ -3248,7 +3217,7 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
     }
     else
     {
-        error(lex, *start, "Invalid expression.");
+        m_errors.error(lex, *start, "Invalid expression.");
         nextLine(e);
         return false;
     }
@@ -3263,7 +3232,7 @@ bool Assembler::doEqu(Lex& lex, i64 symbol, const Lex::Element*& e)
     {
         if (!addValue(symbol, *expr))
         {
-            error(lex, *start, "Variable name already used.");
+            m_errors.error(lex, *start, "Variable name already used.");
             nextLine(e);
             return false;
         }
@@ -3271,7 +3240,7 @@ bool Assembler::doEqu(Lex& lex, i64 symbol, const Lex::Element*& e)
     }
     else
     {
-        error(lex, *start, "Invalid expression.");
+        m_errors.error(lex, *start, "Invalid expression.");
         nextLine(e);
         return false;
     }
@@ -3293,7 +3262,7 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
                 if (expr->getType() != ExprValue::Type::Integer ||
                     ((i64)*expr < -128 || (i64)*expr > 255))
                 {
-                    error(lex, *startE, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
+                    m_errors.error(lex, *startE, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
                     nextLine(e);
                     return false;
                 }
@@ -3307,8 +3276,8 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
         }
         else if (e->m_type == T::String)
         {
-            const char* str = (const char *)m_lexSymbols.get(e->m_symbol);
-            const char* end = str + m_lexSymbols.length(e->m_symbol);
+            const char* str = (const char *)m_eval.getSymbols().get(e->m_symbol);
+            const char* end = str + m_eval.getSymbols().length(e->m_symbol);
             for (; str != end; ++str)
             {
                 emit8(*str);
@@ -3337,13 +3306,13 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
             {
                 if (expr->getType() != ExprValue::Type::Integer)
                 {
-                    error(lex, *startE, "Integer expression required.");
+                    m_errors.error(lex, *startE, "Integer expression required.");
                     nextLine(e);
                     return false;
                 }
                 else if ((i64)*expr < -32768 || (i64)*expr > 65535)
                 {
-                    error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
+                    m_errors.error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
                     nextLine(e);
                     return false;
                 }
@@ -3366,7 +3335,7 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
 {
     using T = Lex::Element::Type;
 
-    i64 startSym = m_lexSymbols.addString("start", true);
+    i64 startSym = m_eval.getSymbols().addString("start", true);
 
     i64 option = 0;
     vector<const Lex::Element*> args;
@@ -3382,7 +3351,7 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
         }
         else if (e->m_type != T::Newline)
         {
-            error(lex, *e, "Invalid option syntax.");
+            m_errors.error(lex, *e, "Invalid option syntax.");
             nextLine(e);
             return false;
         }
@@ -3393,14 +3362,14 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
         }
         else
         {
-            error(lex, *e, "Unknown option.");
+            m_errors.error(lex, *e, "Unknown option.");
             nextLine(e);
             return false;
         }
     }
     else
     {
-        error(lex, *e, "Invalid option syntax.");
+        m_errors.error(lex, *e, "Invalid option syntax.");
         nextLine(e);
         return false;
     }
@@ -3414,7 +3383,7 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
 {
     if (!expect(lex, e, "*"))
     {
-        error(lex, *e, "Syntax error in START option.  Should be \"START:<address>\".");
+        m_errors.error(lex, *e, "Syntax error in START option.  Should be \"START:<address>\".");
         nextLine(e);
         return false;
     }
@@ -3426,7 +3395,7 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
         optional<MemAddr> addr = getZ80AddressFromExpression(lex, e, *expr);
         if (!addr)
         {
-            error(lex, *start, "START option requires an address parameter.");
+            m_errors.error(lex, *start, "START option requires an address parameter.");
             nextLine(e);
             return false;
         }
@@ -3436,7 +3405,7 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
     }
     else
     {
-        error(lex, *start, "Invalid start address expression.");
+        m_errors.error(lex, *start, "Invalid start address expression.");
         nextLine(e);
         return false;
     }
@@ -3451,7 +3420,7 @@ Labels Assembler::getLabels() const
     Labels labels;
     for (const auto& si : m_symbolTable)
     {
-        labels.emplace_back(make_pair((const char *)m_lexSymbols.get(si.first), si.second.m_addr));
+        labels.emplace_back(make_pair((const char *)m_eval.getSymbols().get(si.first), si.second.m_addr));
     }
 
     sort(labels.begin(), labels.end(), [](const auto& p1, const auto& p2) -> bool {

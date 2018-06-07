@@ -3,6 +3,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 #include <asm/asm.h>
+#include <utils/format.h>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Expression
@@ -56,10 +57,10 @@ optional<ExprValue> ExpressionEvaluator::parseExpression(const vector<u8>& text)
     return {};
 }
 
-optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, vector<ErrorInfo>& messages, const Lex::Element*& e, MemAddr currentAddress)
+optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, ErrorManager& errs, const Lex::Element*& e, MemAddr currentAddress)
 {
     Expression expr = constructExpression(e);
-    return eval(lex, messages, currentAddress, expr) ? expr.result() : optional<ExprValue>{};
+    return eval(lex, errs, currentAddress, expr) ? expr.result() : optional<ExprValue>{};
 }
 
 Expression ExpressionEvaluator::constructExpression(const Lex::Element*& e)
@@ -260,7 +261,7 @@ void ExpressionEvaluator::skipExpression(const Lex::Element*& e)
     }
 }
 
-optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, vector<ErrorInfo>& messages, MemAddr currentAddress, Expression& expr)
+optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, MemAddr currentAddress, Expression& expr)
 {
     // #todo: introduce types (value, address, page, offset etc) into expressions.
 
@@ -364,7 +365,7 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, vector<ErrorInfo>& messa
 
 #define FAIL()                                                          \
     do {                                                                \
-        error(lex, *v.elem, "Syntax error in expression.");             \
+        errs.error(lex, *v.elem, "Syntax error in expression.");             \
         return {};                                                      \
     } while(0)
 
@@ -396,7 +397,7 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, vector<ErrorInfo>& messa
                 }
                 else
                 {
-                    error(lex, *v.elem, "Unknown symbol.");
+                    errs.error(lex, *v.elem, "Unknown symbol.");
                     return {};
                 }
             }
@@ -475,3 +476,9 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, vector<ErrorInfo>& messa
     return stack[0];
 }
 
+void ExpressionEvaluator::clear()
+{
+    m_symbols.clear();
+    m_values.clear();
+    m_labels.clear();
+}

@@ -11,7 +11,7 @@
 #include <map>
 #include <vector>
 
-class Assembler;
+class ErrorManager;
 
 const int kKeywordHashSize = 32;
 
@@ -20,7 +20,7 @@ class Lex
 public:
     Lex();
 
-    bool parse(Assembler& assembler, const vector<u8>& data, string sourceName);
+    bool parse(ErrorManager& output, StringTable& symbols, const vector<u8>& data, string sourceName);
 
 public:
     // Lexical analysis data structures
@@ -211,8 +211,8 @@ public:
 private:
     char nextChar(bool toUpper = true);
     void ungetChar();
-    Element::Type next(Assembler& assembler);
-    Element::Type error(Assembler& assembler, const std::string& msg);
+    Element::Type next(ErrorManager& errs, StringTable& symbols);
+    Element::Type error(ErrorManager& errs, const std::string& msg);
     Element::Type buildElemInt(Element& el, Element::Type type, Element::Pos pos, i64 integer);
     Element::Type buildElemSymbol(Element& el, Element::Type type, Element::Pos pos, i64 symbol);
 

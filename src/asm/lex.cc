@@ -2,7 +2,7 @@
 // Lexical analyser
 //----------------------------------------------------------------------------------------------------------------------
 
-#include <asm/asm.h>
+#include <asm/errors.h>
 #include <asm/lex.h>
 #include <utils/format.h>
 
@@ -173,7 +173,7 @@ Lex::Lex()
     }
 }
 
-bool Lex::parse(Assembler& assembler, const vector<u8>& data, string sourceName)
+bool Lex::parse(ErrorManager& output, StringTable& symbols, const vector<u8>& data, string sourceName)
 {
     m_file = data;
     m_fileName = sourceName;
@@ -188,7 +188,7 @@ bool Lex::parse(Assembler& assembler, const vector<u8>& data, string sourceName)
     Element::Type t = Element::Type::Unknown;
     while (t != Element::Type::EndOfFile)
     {
-        t = next(assembler);
+        t = next(output, symbols);
         if (t == Element::Type::Error) result = false;
     };
 
@@ -237,10 +237,10 @@ void Lex::ungetChar()
     m_cursor = m_lastCursor;
 }
 
-Lex::Element::Type Lex::error(Assembler& assembler, const std::string& msg)
+Lex::Element::Type Lex::error(ErrorManager& errs, const std::string& msg)
 {
-    assembler.output(stringFormat("!{0}({1}): Lexical Error: {2}", m_fileName, m_lastPosition.m_line, msg));
-    assembler.addErrorInfo(m_fileName, msg, m_lastPosition.m_line, m_lastPosition.m_col);
+    errs.output(stringFormat("!{0}({1}): Lexical Error: {2}", m_fileName, m_lastPosition.m_line, msg));
+    errs.error(m_fileName, msg, m_lastPosition.m_line, m_lastPosition.m_col);
 
     i32 x = m_lastPosition.m_col - 1;
     const u8* lineStart = m_file.data() + m_lastPosition.m_lineOffset;
@@ -250,18 +250,18 @@ Lex::Element::Type Lex::error(Assembler& assembler, const std::string& msg)
     const u8* p = lineStart;
     while ((p < fileEnd) && (*p != '\r') && (*p != '\n')) ++p;
     string line(lineStart, p);
-    assembler.output(line);
+    errs.output(line);
 
     // Print the cursor point where the error is
     line.clear();
     for (int j = 0; j < x; ++j) line += ' ';
     line += '^';
-    assembler.output(line);
+    errs.output(line);
 
     return Element::Type::Error;
 }
 
-Lex::Element::Type Lex::next(Assembler& assembler)
+Lex::Element::Type Lex::next(ErrorManager& errs, StringTable& symbols)
 {
     char c = nextChar();
 
@@ -354,7 +354,8 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         }
 
         // It's a symbol
-        return buildElemSymbol(el, Element::Type::Symbol, pos, assembler.getSymbol(el.m_s0, el.m_s1, true));
+        return buildElemSymbol(el, Element::Type::Symbol, pos,
+            symbols.addRange((const char *)el.m_s0, (const char *)el.m_s1, true));
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -372,7 +373,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         {
             if (0 == c || '\n' == c)
             {
-                return error(assembler, "Unterminated string.");
+                return error(errs, "Unterminated string.");
             }
 
             if (c == '\\')
@@ -395,7 +396,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
                         if (!(c >= '0' && c <= '9') && !(c >= 'A' && c <= 'F') && !(c >= 'a' && c <= 'f'))
                         {
                             ungetChar();
-                            return error(assembler, "Invalid hexadecimal character in string.");
+                            return error(errs, "Invalid hexadecimal character in string.");
                         }
                         t = c - '0';
                         if (c >= 'a' && c <= 'f') t -= 32;
@@ -432,14 +433,14 @@ Lex::Element::Type Lex::next(Assembler& assembler)
         {
             if (s.size() != 1)
             {
-                return error(assembler, "Invalid character literal.");
+                return error(errs, "Invalid character literal.");
             }
             return buildElemInt(el, Element::Type::Char, pos, int(s[0]));
         }
         else
         {
             return buildElemSymbol(el, Element::Type::String, pos,
-                assembler.getSymbol((const u8 *)s.data(), (const u8 *)s.data() + s.size(), false));
+                symbols.addRange(s.data(), s.data() + s.size(), false));
         }
     }
 
@@ -483,7 +484,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
             if (c >= 'A' && c <= 'F') d -= 7;
             if (d >= base)
             {
-                return error(assembler, "Invalid number literal.");
+                return error(errs, "Invalid number literal.");
             }
             t += d;
 
@@ -519,7 +520,7 @@ Lex::Element::Type Lex::next(Assembler& assembler)
 
     else {
         buildElemInt(el, Element::Type::Unknown, pos, 0);
-        return error(assembler, "Unknown token");
+        return error(errs, "Unknown token");
     }
 }
 
