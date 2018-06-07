@@ -1141,7 +1141,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                     const Lex::Element* endE;
                     if (expect(lex, ++e, "*", &endE))
                     {
-                        if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
+                        if (auto result = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); result)
                         {
                             optional<MemAddr> a = getZ80AddressFromExpression(lex, e, *result);
 
@@ -2815,7 +2815,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     case T::Minus:
     case T::Tilde:
         // Start of an expression.
-        if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); !result)
+        if (auto result = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); !result)
         {
             op.expr = *result;
             op.type = OperandType::Expression;
@@ -2864,7 +2864,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
             }
             else
             {
-                if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
+                if (auto result = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); result)
                 {
                     op.expr = *result;
                 }
@@ -2885,7 +2885,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
             }
             else
             {
-                if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
+                if (auto result = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); result)
                 {
                     op.expr = *result;
                 }
@@ -2909,7 +2909,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                 Lex::Element::Type nextE = (e + 1)->m_type;
                 if (nextE == T::Newline || nextE == T::Comma)
                 {
-                    if (auto result = m_eval.parseExpression(lex, oldE, m_mmap.getAddress(m_address)); result)
+                    if (auto result = m_eval.parseExpression(lex, m_errors, oldE, m_mmap.getAddress(m_address)); result)
                     {
                         op.expr = *result;
                     }
@@ -2925,7 +2925,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
                     // Rebuild the expression, this time including the initial parentheses.
                     op.type = OperandType::Expression;
                     e = startE;
-                    if (auto result = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); result)
+                    if (auto result = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); result)
                     {
                         op.expr = *result;
                     }
@@ -3022,7 +3022,7 @@ optional<ExprValue> Assembler::calculateExpression(const vector<u8>& exprData)
     //
     // Calculate
     //
-    if (auto result = m_eval.parseExpression(lex, start, MemAddr()); result)
+    if (auto result = m_eval.parseExpression(lex, m_errors, start, MemAddr()); result)
     {
         return *result;
     }
@@ -3212,7 +3212,7 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
     MemAddr a;
     const Lex::Element* start = e;
 
-    if (auto exp = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); exp)
+    if (auto exp = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); exp)
     {
         switch (exp->getType())
         {
@@ -3259,7 +3259,7 @@ bool Assembler::doEqu(Lex& lex, i64 symbol, const Lex::Element*& e)
     using T = Lex::Element::Type;
     const Lex::Element* start = e;
 
-    if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
+    if (auto expr = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); expr)
     {
         if (!addValue(symbol, *expr))
         {
@@ -3288,7 +3288,7 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
         {
             // Expression found
             const Lex::Element* startE = e;
-            if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
+            if (auto expr = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); expr)
             {
                 if (expr->getType() != ExprValue::Type::Integer ||
                     ((i64)*expr < -128 || (i64)*expr > 255))
@@ -3333,7 +3333,7 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
         {
             // Expression found
             const Lex::Element* startE = e;
-            if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
+            if (auto expr = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); expr)
             {
                 if (expr->getType() != ExprValue::Type::Integer)
                 {
@@ -3387,7 +3387,10 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
             return false;
         }
 
-        if (option == startSym)         return doOptStart(lex, e);
+        if (option == startSym)
+        {
+            return doOptStart(lex, e);
+        }
         else
         {
             error(lex, *e, "Unknown option.");
@@ -3417,7 +3420,7 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
     }
 
     const Lex::Element* start = e;
-    if (auto expr = m_eval.parseExpression(lex, e, m_mmap.getAddress(m_address)); expr)
+    if (auto expr = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); expr)
     {
         // #todo: Handle full addresses
         optional<MemAddr> addr = getZ80AddressFromExpression(lex, e, *expr);

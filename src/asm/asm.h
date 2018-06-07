@@ -107,23 +107,6 @@ public:
     Labels getLabels() const;
     void setLabels(const Labels& labels);
 
-    struct ErrorInfo
-    {
-        string      m_fileName;
-        string      m_error;
-        int         m_line;
-        int         m_column;
-
-        ErrorInfo(string fileName, string error, int line, int column)
-            : m_fileName(fileName)
-            , m_error(error)
-            , m_line(line)
-            , m_column(column)
-        {}
-
-        ErrorInfo() {}
-    };
-
     vector<ErrorInfo> getErrorInfos() const { return m_errors; }
 
     struct Options

@@ -56,7 +56,7 @@ optional<ExprValue> ExpressionEvaluator::parseExpression(const vector<u8>& text)
     return {};
 }
 
-optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, vector<string>& messages, const Lex::Element*& e, MemAddr currentAddress)
+optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, vector<ErrorInfo>& messages, const Lex::Element*& e, MemAddr currentAddress)
 {
     Expression expr = constructExpression(e);
     return eval(lex, messages, currentAddress, expr) ? expr.result() : optional<ExprValue>{};
@@ -260,7 +260,7 @@ void ExpressionEvaluator::skipExpression(const Lex::Element*& e)
     }
 }
 
-bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr currentAddress, Expression& expr)
+optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, vector<ErrorInfo>& messages, MemAddr currentAddress, Expression& expr)
 {
     // #todo: introduce types (value, address, page, offset etc) into expressions.
 
@@ -269,8 +269,8 @@ bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr curre
     //
     // Step 1 - convert to reverse polish notation using the Shunting Yard algorithm
     //
-    vector<Value>   output;
-    vector<Value>   opStack;
+    vector<Expression::Value>   output;
+    vector<Expression::Value>   opStack;
 
     enum class Assoc
     {
@@ -309,38 +309,38 @@ bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr curre
         { 0, Assoc::Right },        // Unary minus
     };
 
-    for (const auto& v : m_queue)
+    for (const auto& v : expr.getQueue())
     {
         switch (v.type)
         {
-        case ValueType::UnaryOp:
-        case ValueType::BinaryOp:
+        case Expression::ValueType::UnaryOp:
+        case Expression::ValueType::BinaryOp:
             // Operator
             while (
                 !opStack.empty() &&
                 (((opInfo[(int)v.elem->m_type - (int)T::Plus].assoc == Assoc::Left) &&
                 (opInfo[(int)v.elem->m_type - (int)T::Plus].level == opInfo[(int)opStack.back().elem->m_type - (int)T::Plus].level)) ||
                     ((opInfo[(int)v.elem->m_type - (int)T::Plus].level > opInfo[(int)opStack.back().elem->m_type - (int)T::Plus].level))) &&
-                opStack.back().type != ValueType::OpenParen)
+                opStack.back().type != Expression::ValueType::OpenParen)
             {
                 output.emplace_back(opStack.back());
                 opStack.pop_back();
             }
             // continue...
 
-        case ValueType::OpenParen:
+        case Expression::ValueType::OpenParen:
             opStack.emplace_back(v);
             break;
 
-        case ValueType::Integer:
-        case ValueType::Symbol:
-        case ValueType::Char:
-        case ValueType::Dollar:
+        case Expression::ValueType::Integer:
+        case Expression::ValueType::Symbol:
+        case Expression::ValueType::Char:
+        case Expression::ValueType::Dollar:
             output.emplace_back(v);
             break;
 
-        case ValueType::CloseParen:
-            while (opStack.back().type != ValueType::OpenParen)
+        case Expression::ValueType::CloseParen:
+            while (opStack.back().type != Expression::ValueType::OpenParen)
             {
                 output.emplace_back(opStack.back());
                 opStack.pop_back();
@@ -365,7 +365,7 @@ bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr curre
 #define FAIL()                                                          \
     do {                                                                \
         error(lex, *v.elem, "Syntax error in expression.");             \
-        return false;                                                   \
+        return {};                                                      \
     } while(0)
 
     vector<ExprValue> stack;
@@ -375,12 +375,12 @@ bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr curre
     {
         switch (v.type)
         {
-        case ValueType::Integer:
-        case ValueType::Char:
+        case Expression::ValueType::Integer:
+        case Expression::ValueType::Char:
             stack.emplace_back(v.value);
             break;
 
-        case ValueType::Symbol:
+        case Expression::ValueType::Symbol:
         {
             optional<MemAddr> value = lookUpLabel(v.value);
             if (value)
@@ -397,17 +397,17 @@ bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr curre
                 else
                 {
                     error(lex, *v.elem, "Unknown symbol.");
-                    return false;
+                    return {};
                 }
             }
         }
         break;
 
-        case ValueType::Dollar:
+        case Expression::ValueType::Dollar:
             stack.emplace_back(currentAddress);
             break;
 
-        case ValueType::UnaryOp:
+        case Expression::ValueType::UnaryOp:
             if (stack.size() < 1) FAIL();
             switch ((T)v.value)
             {
@@ -442,7 +442,7 @@ bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr curre
             }
             break;
 
-        case ValueType::BinaryOp:
+        case Expression::ValueType::BinaryOp:
             if (stack.size() < 2) FAIL();
             b = stack.back();   stack.pop_back();
             a = stack.back();   stack.pop_back();
@@ -472,7 +472,6 @@ bool ExpressionEvaluator::eval(Lex& lex, vector<string>& messages, MemAddr curre
 #undef FAIL
 
     NX_ASSERT(stack.size() == 1);
-    m_result = stack[0];
-    return true;
+    return stack[0];
 }
 

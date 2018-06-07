@@ -286,7 +286,7 @@ public:
 
     void openFile(const string& fileName = string());
 
-    void setErrorInfos(vector<Assembler::ErrorInfo> errors);
+    void setErrorInfos(vector<ErrorInfo> errors);
     void goToError(int n);
 
 private:
@@ -304,7 +304,7 @@ protected:
 private:
     vector<Editor>                  m_editors;
     vector<int>                     m_editorOrder;
-    vector<Assembler::ErrorInfo>    m_errors;
+    vector<ErrorInfo>               m_errors;
     int                             m_currentError;
 
     int                             m_selectedTab;      // Current tab index during selection window

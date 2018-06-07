@@ -1526,7 +1526,7 @@ bool EditorWindow::needToSave() const
 // Error cycling
 //----------------------------------------------------------------------------------------------------------------------
 
-void EditorWindow::setErrorInfos(vector<Assembler::ErrorInfo> errors)
+void EditorWindow::setErrorInfos(vector<ErrorInfo> errors)
 {
     m_errors = errors;
     m_currentError = -1;
@@ -1535,7 +1535,7 @@ void EditorWindow::setErrorInfos(vector<Assembler::ErrorInfo> errors)
 void EditorWindow::goToError(int n)
 {
     if (n < 0 || n >= m_errors.size()) return;
-    const Assembler::ErrorInfo& err = m_errors[n];
+    const ErrorInfo& err = m_errors[n];
 
     openFile(err.m_fileName);
     EditorData& data = getEditor().getData();
