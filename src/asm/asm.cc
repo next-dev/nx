@@ -395,12 +395,10 @@ void Assembler::dumpSymbolTable()
     vector<Symbols> symbols;
 
     // Construct the output data
-    for (const auto& symPair : m_symbolTable)
-    {
-        string symbol = (const char *)m_eval.getSymbols().get(symPair.first);
-        string addressString = m_speccy.addressName(symPair.second.m_addr);
-        symbols.emplace_back(symbol.substr(0, min(symbol.size(), size_t(16))), addressString);
-    }
+    m_eval.enumerateLabels([this, &symbols](string name, MemAddr addr) {
+        string addressString = m_speccy.addressName(addr);
+        symbols.emplace_back(name.substr(0, min(name.size(), size_t(16))), addressString);
+    });
 
     // Sort the data in ASCII order for symbols.
     sort(symbols.begin(), symbols.end(), [](const Symbols& s1, const Symbols& s2) { return s1.m_symbol < s2.m_symbol;  });
@@ -434,8 +432,6 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     m_assemblerWindow.clear();
     m_sessions.clear();
     m_fileStack.clear();
-    m_symbolTable.clear();
-    m_values.clear();
     m_eval.clear();
     m_mmap.clear(m_speccy);
     m_address = 0;
@@ -616,48 +612,24 @@ void Assembler::output(const std::string& msg)
 // Symbol table
 //----------------------------------------------------------------------------------------------------------------------
 
-bool Assembler::addSymbol(i64 symbol, MemAddr address)
+bool Assembler::addLabel(i64 symbol, MemAddr address)
 {
-    auto it = m_symbolTable.find(symbol);
-    if (it == m_symbolTable.end())
-    {
-        // We're good.  This is a new symbol
-        m_symbolTable[symbol] = { address };
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return m_eval.addLabel(symbol, address);
 }
 
 bool Assembler::addValue(i64 symbol, ExprValue value)
 {
-    auto symIt = m_symbolTable.find(symbol);
-    bool result = false;
-    if (symIt == m_symbolTable.end())
-    {
-        auto it = m_values.find(symbol);
-        if (it == m_values.end())
-        {
-            m_values[symbol] = value;
-            result = true;
-        }
-    }
-
-    return result;
+    return m_eval.addValue(symbol, value);
 }
 
 optional<MemAddr> Assembler::lookUpLabel(i64 symbol) const
 {
-    auto it = m_symbolTable.find(symbol);
-    return it == m_symbolTable.end() ? optional<MemAddr>{} : it->second.m_addr;
+    return m_eval.getLabel(symbol);
 }
 
 optional<ExprValue> Assembler::lookUpValue(i64 symbol) const
 {
-    auto it = m_values.find(symbol);
-    return it == m_values.end() ? optional<ExprValue>{} : it->second;
+    return m_eval.getValue(symbol);
 }
 
 
@@ -1270,7 +1242,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         {
             if (m_mmap.isValidAddress(symAddress))
             {
-                if (!addSymbol(symbol, m_mmap.getAddress(symAddress)))
+                if (!addLabel(symbol, m_mmap.getAddress(symAddress)))
                 {
                     // #todo: Output the original line where it is defined.
                     m_errors.error(lex, *e, "Symbol already defined.");
@@ -3418,10 +3390,9 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
 Labels Assembler::getLabels() const
 {
     Labels labels;
-    for (const auto& si : m_symbolTable)
-    {
-        labels.emplace_back(make_pair((const char *)m_eval.getSymbols().get(si.first), si.second.m_addr));
-    }
+    m_eval.enumerateLabels([this, &labels](string name, MemAddr addr) {
+        labels.emplace_back(make_pair(name, addr));
+    });
 
     sort(labels.begin(), labels.end(), [](const auto& p1, const auto& p2) -> bool {
         return p1.second < p2.second;
@@ -3432,11 +3403,11 @@ Labels Assembler::getLabels() const
 
 void Assembler::setLabels(const Labels& labels)
 {
-    m_symbolTable.clear();
+    m_eval.clear();
     for (const auto& l : labels)
     {
         i64 symbol = getSymbol((const u8 *)l.first.data(), (const u8 *)l.first.data() + l.first.size(), true);
-        addSymbol(symbol, l.second);
+        addLabel(symbol, l.second);
     }
 }
 

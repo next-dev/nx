@@ -383,14 +383,14 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, MemA
 
         case Expression::ValueType::Symbol:
         {
-            optional<MemAddr> value = lookUpLabel(v.value);
+            optional<MemAddr> value = getLabel(v.value);
             if (value)
             {
                 stack.emplace_back(*value);
             }
             else
             {
-                optional<ExprValue> value = lookUpValue(v.value);
+                optional<ExprValue> value = getValue(v.value);
                 if (value)
                 {
                     stack.emplace_back(*value);
@@ -481,4 +481,62 @@ void ExpressionEvaluator::clear()
     m_symbols.clear();
     m_values.clear();
     m_labels.clear();
+}
+
+optional<MemAddr> ExpressionEvaluator::getLabel(i64 symbol) const
+{
+    auto it = m_labels.find(symbol);
+    return it == m_labels.end() ? optional<MemAddr>() : it->second;
+}
+
+optional<ExprValue> ExpressionEvaluator::getValue(i64 symbol) const
+{
+    auto it = m_values.find(symbol);
+    return it == m_values.end() ? optional<ExprValue>() : it->second;
+}
+
+bool ExpressionEvaluator::addLabel(i64 symbol, MemAddr addr)
+{
+    auto it = m_labels.find(symbol);
+    if (it == m_labels.end())
+    {
+        m_labels[symbol] = addr;
+        return true;
+    }
+
+    return false;
+}
+
+bool ExpressionEvaluator::addValue(i64 symbol, ExprValue value)
+{
+    auto it = m_values.find(symbol);
+    if (it == m_values.end())
+    {
+        m_values[symbol] = value;
+        return true;
+    }
+
+    return false;
+}
+
+void ExpressionEvaluator::enumerateLabels(function<void(string name, MemAddr addr)> fn) const
+{
+    for (const auto& labelPair : m_labels)
+    {
+        fn(getSymbol(labelPair.first), labelPair.second);
+    }
+}
+
+void ExpressionEvaluator::enumerateValues(function<void(string name, ExprValue value)> fn) const
+{
+    for (const auto& valuePair : m_values)
+    {
+        fn(getSymbol(valuePair.first), valuePair.second);
+    }
+}
+
+string ExpressionEvaluator::getSymbol(i64 symbol) const
+{
+    const char* str = (const char *)m_symbols.get(symbol);
+    return str ? str : "";
 }
