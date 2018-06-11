@@ -2756,7 +2756,7 @@ bool Assembler::buildOperand(Lex& lex, const Lex::Element*& e, Operand& op)
     case T::Minus:
     case T::Tilde:
         // Start of an expression.
-        if (auto result = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); !result)
+        if (auto result = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); result)
         {
             op.expr = *result;
             op.type = OperandType::Expression;

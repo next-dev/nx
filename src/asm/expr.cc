@@ -60,7 +60,7 @@ optional<ExprValue> ExpressionEvaluator::parseExpression(const vector<u8>& text)
 optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, ErrorManager& errs, const Lex::Element*& e, MemAddr currentAddress)
 {
     Expression expr = constructExpression(e);
-    return eval(lex, errs, currentAddress, expr) ? expr.result() : optional<ExprValue>{};
+    return eval(lex, errs, currentAddress, expr);
 }
 
 Expression ExpressionEvaluator::constructExpression(const Lex::Element*& e)

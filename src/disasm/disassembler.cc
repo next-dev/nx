@@ -25,6 +25,7 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
     case Model::ZX128:
     case Model::ZXPlus2:
     case Model::ZXNext:
+        break;
             
     default:
         NX_ASSERT(0);
@@ -55,6 +56,7 @@ void DisassemblerDoc::reset(const Spectrum& speccy)
     case Model::ZX128:
     case Model::ZXPlus2:
     case Model::ZXNext:
+        break;
 
     default:
         assert(0);
