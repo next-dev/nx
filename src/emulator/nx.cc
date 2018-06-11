@@ -1396,7 +1396,7 @@ bool Nx::saveNxSnapshot(string fileName, bool saveEmulatorSettings)
         NX_ASSERT(m_machine->getBank(6) >= 0 && m_machine->getBank(7) < 16);
         io = u8(m_machine->getBank(6)) / 2;
         if (m_machine->isShadowScreen()) io |= 0x08;
-        if (m_machine->getBank(0) == 9) io |= 0x10;
+        if (m_machine->getBank(0) == 2) io |= 0x10;
         if (m_machine->isPagingDisabled()) io |= 0x20;
 
         s128.poke8(io);
