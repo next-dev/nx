@@ -104,18 +104,12 @@ public:
     void addBinaryOp(Lex::Element::Type op, const Lex::Element* e);
     void addOpen(const Lex::Element* e);
     void addClose(const Lex::Element* e);
-    void set(i64 result) { m_result = ExprValue(result); }
 
-
-    ExprValue result() const { return m_result; }
-    u8 r8() const { NX_ASSERT(m_result.getType() == ExprValue::Type::Integer); return m_result.r8(); }
-    u16 r16() const { NX_ASSERT(m_result.getType() == ExprValue::Type::Integer); return m_result.r16(); }
 
     const vector<Value>& getQueue() const { return m_queue; }
 
 private:
     vector<Value>   m_queue;
-    ExprValue       m_result;
 };
 
 
