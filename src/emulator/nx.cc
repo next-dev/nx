@@ -1668,6 +1668,68 @@ bool Nx::assemble(const vector<u8>& data, string sourceName)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Utilities
+// These utilities require information from the Speccy, Assembler and other places
+//----------------------------------------------------------------------------------------------------------------------
+
+optional<MemAddr> Nx::textToAddress(string text)
+{
+    vector<u8> exprData;
+    copy(text.begin(), text.end(), back_inserter(exprData));
+    u16 address = 0;
+
+    if (text.size() == 0)
+    {
+        address = getSpeccy().getZ80().PC();
+    }
+    else if (optional<ExprValue> result = getAssembler().calculateExpression(exprData); result)
+    {
+        switch (result->getType())
+        {
+        case ExprValue::Type::Integer:
+            address = u16(*result);
+            break;
+
+        case ExprValue::Type::Address:
+            if (getSpeccy().isZ80Address(*result))
+            {
+                address = getSpeccy().convertAddress(*result);
+            }
+            else
+            {
+                Overlay::currentOverlay()->error("Address not visible by the Z80.  Memory must be paged in.");
+                return {};
+            }
+            break;
+
+        default:
+            Overlay::currentOverlay()->error("Invalid address expression entered.");
+            return {};
+        }
+    }
+    else
+    {
+        Overlay::currentOverlay()->error("Invalid expression entered.");
+        return {};
+    }
+
+    return getSpeccy().convertAddress(Z80MemAddr(address));
+}
+
+optional<int> Nx::diffZ80Address(MemAddr a1, MemAddr a2)
+{
+    if (!getSpeccy().isZ80Address(a1) ||
+        !getSpeccy().isZ80Address(a2))
+    {
+        return {};
+    }
+    Z80MemAddr z1 = getSpeccy().convertAddress(a1);
+    Z80MemAddr z2 = getSpeccy().convertAddress(a2);
+    return int((u16)z1 - (u16)z2);
+}
+
+
+//----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 
 

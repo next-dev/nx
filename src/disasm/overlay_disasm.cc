@@ -154,17 +154,6 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 }
                 break;
 
-            case K::C:
-                m_blockFirstChar = true;
-                m_editorPrefix = "Code: ";
-                m_editor = new Editor(m_x + 7, m_y, m_width - 8, 1,
-                    Draw::attr(Colour::White, Colour::Magenta, false), false, m_width - 8, 0,
-                    [this](Editor& ed)
-                    {
-
-                    });
-                break;
-
             default:
                 break;
             }
@@ -491,10 +480,34 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
     using K = sf::Keyboard::Key;
 
     //
+    // Normal
+    //
+    if (down && !shift && !ctrl && !alt)
+    {
+        switch (key)
+        {
+        case K::C:      // Code entry point
+            prompt("Code entry", [this](string text) {
+                if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
+                {
+                    if (m_nx.getSpeccy().isZ80Address(*addr))
+                    {
+                        getEditor().getData().processCommand(DisassemblerDoc::CommandType::CodeEntry, 0, (i64)addr->index());
+                    }
+                }
+            });
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    //
     // Ctrl
     //
 
-    if (down && ctrl && !shift && !alt)
+    else if (down && ctrl && !shift && !alt)
     {
         switch (key)
         {

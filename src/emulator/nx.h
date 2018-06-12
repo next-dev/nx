@@ -156,6 +156,12 @@ public:
     // Zoom
     void toggleZoom();
     bool getZoom() const { return m_zoom; }
+
+    // Utilties
+    optional<MemAddr> textToAddress(string text);
+
+    // If both a1 and a2 are in the Z80 address space, will return the diff (a1 - a2)
+    optional<int> diffZ80Address(MemAddr a1, MemAddr a2);
     
 private:
     // Window

@@ -105,7 +105,15 @@ void DisassemblyWindow::setView(u16 newTopAddress)
     m_topAddress = newTopAddress;
     m_firstLabel = 0;
     MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(m_topAddress));
-    while (m_firstLabel < m_labels.size() && m_labels[m_firstLabel].second < ta) ++m_firstLabel;
+
+    // Find the first label
+    while (m_firstLabel < m_labels.size())
+    {
+        optional<int> d = m_nx.diffZ80Address(m_labels[m_firstLabel].second, ta);
+        if (d && (*d >= 0)) break;
+        ++m_firstLabel;
+    }
+    //while (m_firstLabel < m_labels.size() && m_labels[m_firstLabel].second < ta) ++m_firstLabel;
 }
 
 void DisassemblyWindow::cursorDown()
@@ -265,39 +273,10 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool
         case K::G:
             prompt("Goto", [this](string text)
             {
-                vector<u8> exprData;
-                copy(text.begin(), text.end(), back_inserter(exprData));
-
-                if (text.size() == 0)
+                if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
                 {
-                    setCursor(m_nx.getSpeccy().getZ80().PC());
-                }
-                else if (optional<ExprValue> result = m_nx.getAssembler().calculateExpression(exprData); result)
-                {
-                    switch (result->getType())
-                    {
-                    case ExprValue::Type::Integer:
-                        setCursor(u16(*result));
-                        break;
-
-                    case ExprValue::Type::Address:
-                        if (m_nx.getSpeccy().isZ80Address(*result))
-                        {
-                            setCursor(m_nx.getSpeccy().convertAddress(*result));
-                        }
-                        else
-                        {
-                            m_nx.getDebugger().error("Address not visible by the Z80.  Memory must be paged in.");
-                        }
-                        break;
-
-                    default:
-                        m_nx.getDebugger().error("Invalid address expression entered.");
-                    }
-                }
-                else
-                {
-                    m_nx.getDebugger().error("Invalid expression entered.");
+                    Z80MemAddr z80Addr = m_nx.getSpeccy().convertAddress(*addr);
+                    setCursor(z80Addr);
                 }
             });
             break;
