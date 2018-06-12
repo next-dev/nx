@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <SFML/Graphics.hpp>
+#include <editor/editor.h>
 
 class Spectrum;
 
@@ -64,8 +65,9 @@ public:
     int printChar(int xPixel, int yCell, char c, const u8* font = gFont);        // X is in pixels, returns width of character
     int printString(int xCell, int yCell, const string& str, bool supportHighlight, u8 attr, const u8* font = gFont);
     int printSquashedString(int xCell, int yCell, const string& str, u8 attr, const u8* font = gFont);
-    int squashedStringWidth(const string& str, const u8* font = gFont);
+    static int squashedStringWidth(const string& str, const u8* font = gFont);
     void attrRect(int xCell, int yCell, int width, int height, u8 colour);
+    void clearRect(int xCell, int yCell, int width, int height, u8 colour);
 
     //
     // Level 2 - advanced objects
@@ -73,7 +75,7 @@ public:
     void window(int xCell, int yCell, int width, int height, const string& title, bool bright, u8 backgroundAttr = 0x78);
 
 private:
-    void charInfo(const u8* font, char c, u8& outMask, int& lShift, int& width);
+    static void charInfo(const u8* font, char c, u8& outMask, int& lShift, int& width);
 
 private:
     vector<u8>&     m_pixels;
@@ -175,6 +177,14 @@ public:
     void setTitle(string title)     { m_title = title; }
     void setPosition(int x, int y, int width, int height);
 
+    //
+    // Prompts
+    //
+    using PromptHandler = function<void(string)>;
+    void prompt(string promptString, PromptHandler handler);
+    void killPrompt();
+    bool isPrompting() const;
+
 protected:
     //
     // Hooks
@@ -186,6 +196,9 @@ protected:
     //
     // Helper functions
     //
+    void drawPrompt(Draw& draw);
+    void doEditorKeys(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
+    void doEditorText(char ch);
 
 protected:
     Nx&             m_nx;
@@ -193,8 +206,13 @@ protected:
     int             m_y;
     int             m_width;
     int             m_height;
-    std::string     m_title;
+    string          m_title;
     u8              m_bkgColour;
+
+    Editor          m_editor;           // Editor to manager input
+    string          m_prompt;           // Prefix text on prompt
+    PromptHandler   m_handler;          // Function called when enter pressed
+    bool            m_ignoreFirstChar;  // Set to true to ignore the first character typed
 };
 
 //----------------------------------------------------------------------------------------------------------------------

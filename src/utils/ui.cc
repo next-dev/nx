@@ -399,6 +399,17 @@ void Draw::attrRect(int xCell, int yCell, int width, int height, u8 colour)
     }
 }
 
+void Draw::clearRect(int xCell, int yCell, int width, int height, u8 colour)
+{
+    for (int r = yCell; r < yCell + height; ++r)
+    {
+        for (int c = xCell; c < xCell + width; ++c)
+        {
+            printChar(c, r, ' ', colour);
+        }
+    }
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // Level 2 drawing
 //----------------------------------------------------------------------------------------------------------------------
@@ -590,6 +601,11 @@ Window::Window(Nx& nx, int x, int y, int width, int height, std::string title, C
     , m_height(height)
     , m_title(title)
     , m_bkgColour((int)ink + (8 * (int)paper) + (bright ? 0x40 : 0x00))
+    , m_editor(x + 1, y + 1, width - 2, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, width - 3, 0,
+        [this](Editor& ed) {
+            killPrompt();
+            m_handler(ed.getData().getString());
+        })
 {
 
 }
@@ -606,16 +622,93 @@ void Window::draw(Draw& draw)
 {
     draw.window(m_x, m_y, m_width, m_height, m_title.c_str(), (m_bkgColour & 0x40) != 0, m_bkgColour);
     onDraw(draw);
+    drawPrompt(draw);
 }
 
 void Window::keyPress(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
-    onKey(key, down, shift, ctrl, alt);
+    if (isPrompting())
+    {
+        doEditorKeys(key, down, shift, ctrl, alt);
+    }
+    else
+    {
+        onKey(key, down, shift, ctrl, alt);
+    }
 }
 
 void Window::text(char ch)
 {
-    onText(ch);
+    if (isPrompting())
+    {
+        doEditorText(ch);
+    }
+    else
+    {
+        onText(ch);
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Window prompts
+//----------------------------------------------------------------------------------------------------------------------
+
+void Window::prompt(string promptString, function<void(string)> handler)
+{
+    if (isPrompting()) return;
+
+    m_prompt = promptString + ": ";
+    int promptSize = Draw::squashedStringWidth(m_prompt);
+    m_editor.setPosition(m_x + 2 + promptSize, m_y + 1, m_width - 3 - promptSize, 1);
+    m_editor.clear();
+    m_handler = handler;
+    m_ignoreFirstChar = true;
+}
+
+void Window::killPrompt()
+{
+    m_prompt.clear();
+}
+
+bool Window::isPrompting() const
+{
+    return !m_prompt.empty();
+}
+
+void Window::drawPrompt(Draw& draw)
+{
+    if (isPrompting())
+    {
+        // Draw the editor
+        draw.pokeAttr(m_x, m_y + 1, Draw::attr(Colour::Black, Colour::Magenta, false));
+        draw.pokeAttr(m_x + m_width - 1, m_y + 1, Draw::attr(Colour::Black, Colour::Magenta, false));
+        draw.clearRect(m_x + 1, m_y + 1, m_width - 2, 1, Draw::attr(Colour::White, Colour::Magenta, false));
+        draw.printSquashedString(m_x + 2, m_y + 1, m_prompt, Draw::attr(Colour::White, Colour::Magenta, false));
+        m_editor.renderAll(draw);
+    }
+}
+
+void Window::doEditorKeys(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
+{
+    m_editor.key(key, down, shift, ctrl, alt);
+}
+
+void Window::doEditorText(char ch)
+{
+    if (m_ignoreFirstChar)
+    {
+        m_ignoreFirstChar = false;
+        return;
+    }
+
+    if (ch == 27)
+    {
+        killPrompt();
+    }
+    else
+    {
+        m_editor.text(ch);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -643,13 +736,21 @@ void SelectableWindow::draw(Draw& draw)
     }
     draw.window(m_x, m_y, m_width, m_height, m_title.c_str(), (bkg & 0x40) != 0, bkg);
     onDraw(draw);
+    drawPrompt(draw);
 }
 
 void SelectableWindow::keyPress(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     if (ms_currentWindow == this)
     {
-        onKey(key, down, shift, ctrl, alt);
+        if (isPrompting())
+        {
+            doEditorKeys(key, down, shift, ctrl, alt);
+        }
+        else
+        {
+            onKey(key, down, shift, ctrl, alt);
+        }
     }
 }
 

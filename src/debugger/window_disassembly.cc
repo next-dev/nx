@@ -19,8 +19,6 @@ DisassemblyWindow::DisassemblyWindow(Nx& nx)
     , m_topAddress(0x8000)
     , m_address(0x8000)
     , m_firstLabel(0)
-    , m_gotoEditor(6, 23, 37, 1, Draw::attr(Colour::White, Colour::Magenta, false), false, 40, 0)
-    , m_enableGoto(0)
 {
     adjustBar();
 }
@@ -221,14 +219,6 @@ void DisassemblyWindow::onDraw(Draw& draw)
             a = next;
         }
     }
-
-    if (m_enableGoto)
-    {
-        draw.attrRect(m_x, m_y + 1, m_width, 1, draw.attr(Colour::Black, Colour::Magenta, true));
-        draw.printString(m_x + 1, m_y + 1, "    ", false, draw.attr(Colour::White, Colour::Magenta, true));
-        draw.printSquashedString(m_x + 1, m_y + 1, "Goto:", draw.attr(Colour::Yellow, Colour::Magenta, true));
-        m_gotoEditor.render(draw, 0);
-    }
 }
 
 void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
@@ -273,64 +263,12 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool
             break;
 
         case K::G:
-            if (m_enableGoto == 0)
+            prompt("Goto", [this](string text)
             {
-                m_gotoEditor.clear();
-                m_enableGoto = 1;
-            }
-            break;
+                vector<u8> exprData;
+                copy(text.begin(), text.end(), back_inserter(exprData));
 
-        default:
-            break;
-        }
-    }
-    else if (down && !shift && ctrl && !alt)
-    {
-        switch (key)
-        {
-        case K::F5:
-            // Run to
-            {
-                MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(m_address));
-                m_nx.getSpeccy().addTemporaryBreakpoint(ta);
-                m_nx.setRunMode(RunMode::Normal);
-                if (m_nx.getRunMode() == RunMode::Stopped) m_nx.togglePause(false);
-            }
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    if (m_enableGoto)
-    {
-        m_gotoEditor.key(key, down, shift, ctrl, alt);
-    }
-}
-
-void DisassemblyWindow::onText(char ch)
-{
-    if (m_enableGoto == 0) return;
-    if (m_enableGoto == 1)
-    {
-        // We swallow the first event, because it will be the key that enabled the goto.
-        m_gotoEditor.clear();
-        m_enableGoto = 2;
-        return;
-    }
-    
-    if (m_enableGoto)
-    {
-        switch(ch)
-        {
-            case 10:
-            case 13:
-            {
-                m_enableGoto = 0;
-
-                vector<u8> exprData = m_gotoEditor.getData().getData();
-                if (exprData.size() == 0)
+                if (text.size() == 0)
                 {
                     setCursor(m_nx.getSpeccy().getZ80().PC());
                 }
@@ -361,17 +299,35 @@ void DisassemblyWindow::onText(char ch)
                 {
                     m_nx.getDebugger().error("Invalid expression entered.");
                 }
+            });
+            break;
+
+        default:
+            break;
+        }
+    }
+    else if (down && !shift && ctrl && !alt)
+    {
+        switch (key)
+        {
+        case K::F5:
+            // Run to
+            {
+                MemAddr ta = m_nx.getSpeccy().convertAddress(Z80MemAddr(m_address));
+                m_nx.getSpeccy().addTemporaryBreakpoint(ta);
+                m_nx.setRunMode(RunMode::Normal);
+                if (m_nx.getRunMode() == RunMode::Stopped) m_nx.togglePause(false);
             }
             break;
 
-            case 27:
-                m_enableGoto = 0;
-                break;
-                
-            default:
-                m_gotoEditor.text(ch);
+        default:
+            break;
         }
     }
+}
+
+void DisassemblyWindow::onText(char ch)
+{
 }
 
 u16 DisassemblyWindow::backInstruction(u16 address)
@@ -413,6 +369,6 @@ u16 DisassemblyWindow::disassemble(u16 address)
 
 void DisassemblyWindow::onUnselected()
 {
-    m_enableGoto = 0;
+    killPrompt();
 }
 

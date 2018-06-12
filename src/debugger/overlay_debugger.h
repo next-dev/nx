@@ -6,6 +6,7 @@
 
 #include <asm/asm.h>
 #include <editor/editor.h>
+#include <editor/window_editor.h>
 #include <emulator/spectrum.h>
 
 #include <string>
@@ -66,7 +67,7 @@ public:
     void setLabels(const Labels& labels) { m_labels = labels; }
     const Labels& getLabels() const { return m_labels; }
 
-    bool allowExit() const { return m_enableGoto == 0; }
+    bool allowExit() const { return !isPrompting(); }
 
 private:
     void onDraw(Draw& draw) override;
@@ -89,9 +90,6 @@ private:
     vector<u16> m_viewedAddresses;
     Labels m_labels;
     int m_firstLabel;
-    
-    Editor  m_gotoEditor;
-    int     m_enableGoto;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

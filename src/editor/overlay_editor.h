@@ -5,6 +5,7 @@
 #pragma once
 
 #include <editor/editor.h>
+#include <editor/window_editor.h>
 #include <utils/ui.h>
 
 #include <string>
