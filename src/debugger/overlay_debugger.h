@@ -23,7 +23,7 @@ public:
 
     void zoomMode(bool flag);
     void gotoAddress(MemAddr addr);
-    bool allowExit() const { return m_enableGoto == 0 && !m_editMode; }
+    bool allowExit() const { return !isPrompting() && !m_editMode; }
 
 protected:
     void onDraw(Draw& draw) override;
@@ -35,9 +35,10 @@ protected:
     void poke(u8 value);
 
 private:
+    void jumpToAddress(string text);
+
+private:
     u16     m_address;
-    Editor  m_gotoEditor;
-    int     m_enableGoto;
     bool    m_showChecksums;
 
     // Edit mode
