@@ -112,7 +112,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
 
             case K::Delete:
-                getData().deleteLine(m_currentLine);
+                m_currentLine = getData().deleteLine(m_currentLine);
                 m_currentLine = min(m_currentLine, getData().getNumLines() - 1);
                 ensureVisibleCursor();
                 break;
@@ -140,7 +140,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     }
                     else
                     {
-                        getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
+                        getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, {}, "");
                         m_blockFirstChar = true;
                         m_editorPrefix.clear();
                         m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
@@ -193,7 +193,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             switch (key)
             {
             case K::SemiColon:
-                getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, 0, "");
+                getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, {}, "");
                 m_blockFirstChar = true;
                 m_editorPrefix.clear();
                 m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
@@ -492,7 +492,7 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 {
                     if (m_nx.getSpeccy().isZ80Address(*addr))
                     {
-                        getEditor().getData().processCommand(DisassemblerDoc::CommandType::CodeEntry, 0, (i64)addr->index());
+                        getEditor().getData().processCommand(DisassemblerDoc::CommandType::CodeEntry, -1, *addr);
                     }
                 }
             });

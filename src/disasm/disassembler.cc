@@ -5,6 +5,7 @@
 #include <disasm/disassembler.h>
 #include <emulator/nxfile.h>
 #include <utils/tinyfiledialogs.h>
+#include <utils/ui.h>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
@@ -65,11 +66,9 @@ void DisassemblerDoc::reset(const Spectrum& speccy)
     m_changed = false;
 }
 
-bool DisassemblerDoc::processCommand(CommandType type, int line, i64 param1, string text)
+bool DisassemblerDoc::processCommand(CommandType type, int line, MemAddr addr, string text)
 {
     int commandIndex = (int)m_commands.size();
-    m_commands.emplace_back(type, line, param1, text);
-    changed();
 
     switch (type)
     {
@@ -85,12 +84,56 @@ bool DisassemblerDoc::processCommand(CommandType type, int line, i64 param1, str
         break;
 
     case CommandType::CodeEntry:
+        // Make sure we don't already have this entry point.
+        {
+            if (optional<int> lineIndex = findLine(addr); lineIndex)
+            {
+                int i = *lineIndex;
+                Line& line = getLine(i);
+
+                NX_ASSERT(line.type != LineType::Blank);
+                NX_ASSERT(line.type != LineType::FullComment);
+                if (line.type == LineType::Label ||
+                    line.type == LineType::Instruction)
+                {
+                    Overlay::currentOverlay()->error("Code already generated for this entry point");
+                    return false;
+                }
+                else
+                {
+                    // Get memory addresses:
+                    //
+                    //  +------+-----------+------------+
+                    //  a1     addr        c           a3
+                    //
+                    MemAddr a1 = line.startAddress;
+                    MemAddr a3 = line.endAddress;
+                    MemAddr c = addr;
+
+                    i = deleteLine(i);
+                    if (c - a1 >= 0)
+                    {
+                        insertLine(i++, Line{ LineType::UnknownRange, commandIndex, a1, addr - 1, {} });
+                        insertLine(i++, Line{ LineType::Blank, commandIndex, {}, {}, {} });
+                        insertLine(i++, Line{ LineType::UnknownRange, commandIndex, addr, a3, {} });
+                    }
+
+                }
+            }
+            else
+            {
+                Overlay::currentOverlay()->error("Invalid code entry point.");
+                return false;
+            }
+        }
         break;
 
     default:
         NX_ASSERT(0);
     }
 
+    m_commands.emplace_back(type, line, addr, text);
+    changed();
     return true;
 }
 
@@ -105,18 +148,21 @@ int DisassemblerDoc::getCommandIndex(int line) const
     return m_lines[line].commandIndex;
 }
 
-void DisassemblerDoc::deleteLine(int line)
+int DisassemblerDoc::deleteLine(int line)
 {
     int commandIndex = m_lines[line].commandIndex;
 
     bool confirmDelete = false;
-    for (const auto& line : m_lines)
+    if (m_lines[line].type == LineType::Instruction ||
+        m_lines[line].type == LineType::Label)
     {
-        if (line.commandIndex == commandIndex &&
-            !line.text.empty())
+        for (const auto& line : m_lines)
         {
-            confirmDelete = true;
-            break;
+            if (line.commandIndex == commandIndex && !m_commands[line.commandIndex].text.empty())
+            {
+                confirmDelete = true;
+                break;
+            }
         }
     }
 
@@ -127,22 +173,37 @@ void DisassemblerDoc::deleteLine(int line)
 
     if (shouldDelete)
     {
-        // Remove all lines that reference the deleted command
-        vector<Line> newLines;
-        copy_if(m_lines.begin(), m_lines.end(), back_inserter(newLines), [commandIndex](const Line& line) {
-            return line.commandIndex != commandIndex;
-        });
-        m_lines = newLines;
-
-        // Delete the command
-        m_commands.erase(m_commands.begin() + commandIndex);
-
-        // Adjust command index references in lines to cater for missing command
-        for (Line& line : m_lines)
+        if (m_lines[line].type == LineType::UnknownRange)
         {
-            if (line.commandIndex > commandIndex) --line.commandIndex;
+            // Unknown ranges are always generated and not from a command.  They are also only a single line.
+            m_lines.erase(m_lines.begin() + line);
+        }
+        else
+        {
+            // Adjust the result index according to how many lines are deleted before the current line
+            int l = line;
+            for (int i = 0; i < l; ++i)
+            {
+                if (m_lines[i].commandIndex == commandIndex) --line;
+            }
+
+            // Remove all lines that reference the deleted command
+            remove_if(m_lines.begin(), m_lines.end(), [commandIndex](const Line& line) {
+                return line.commandIndex == commandIndex;
+            });
+
+            // Delete the command
+            m_commands.erase(m_commands.begin() + commandIndex);
+
+            // Adjust command index references in lines to cater for missing command
+            for (Line& line : m_lines)
+            {
+                if (line.commandIndex > commandIndex) --line.commandIndex;
+            }
         }
     }
+
+    return line;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -196,11 +257,11 @@ bool DisassemblerDoc::load(Spectrum& speccy, string fileName)
             {
                 CommandType type = (CommandType)dcmd.peek8(x + 0);
                 int line = (int)dcmd.peek32(x + 1);
-                i64 p1 = dcmd.peek64(x + 5);
-                string text = dcmd.peekString(x + 13);
-                x += (13 + (int)text.size() + 1);
+                MemAddr addr = dcmd.peekAddr(x + 5);
+                string text = dcmd.peekString(x + 9);
+                x += (9 + (int)text.size() + 1);
 
-                if (!processCommand(type, line, p1, text)) return false;
+                if (!processCommand(type, line, addr, text)) return false;
             }
         }
     }
@@ -230,7 +291,7 @@ bool DisassemblerDoc::save(string fileName)
     {
         dcmd.poke8((u8)command.type);
         dcmd.poke32(command.line);
-        dcmd.poke64(command.param1);
+        dcmd.pokeAddr(command.addr);
         dcmd.pokeString(command.text);
     }
     f.addSection(dcmd);
@@ -239,3 +300,23 @@ bool DisassemblerDoc::save(string fileName)
     return f.save(fileName);
 }
 
+optional<int> DisassemblerDoc::findLine(MemAddr addr) const
+{
+    for (size_t i = 0; i < m_lines.size(); ++i)
+    {
+        const Line& line = m_lines[i];
+        if (line.type == LineType::UnknownRange || line.type == LineType::Instruction)
+        {
+            if (addr >= line.startAddress && addr <= line.endAddress)
+            {
+                return int(i);
+            }
+        }
+        else if (line.type == LineType::Label)
+        {
+            if (addr == line.startAddress) return int(i);
+        }
+    }
+
+    return {};
+}
