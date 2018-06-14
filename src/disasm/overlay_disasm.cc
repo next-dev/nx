@@ -490,6 +490,7 @@ void DisassemblerWindow::switchTo(const DisassemblerEditor& editor)
 void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
+    if (getNumEditors() != 0 && getEditor().isEditing()) return;
 
     //
     // Normal
@@ -502,9 +503,12 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             prompt("Code entry", [this](string text) {
                 if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
                 {
+                    MemAddr a = *addr;
                     if (m_nx.getSpeccy().isZ80Address(*addr))
                     {
-                        getEditor().getData().processCommand(DisassemblerDoc::CommandType::CodeEntry, -1, *addr);
+                        prompt("Label", [this, a](string label) {
+                            getEditor().getData().processCommand(DisassemblerDoc::CommandType::CodeEntry, -1, a, label);
+                        });
                     }
                 }
             });

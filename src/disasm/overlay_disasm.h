@@ -27,6 +27,8 @@ public:
     void onText(char ch);
     void render(Draw& draw);
 
+    bool isEditing() const { return m_editor != nullptr; }
+
 private:
     void saveFile();
     void ensureVisibleCursor();

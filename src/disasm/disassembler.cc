@@ -119,6 +119,8 @@ bool DisassemblerDoc::processCommand(CommandType type, int line, MemAddr addr, s
                         insertLine(i++, Line{ LineType::Blank, commandIndex, {}, {}, {} });
                     }
 
+                    insertLine(i++, Line{ LineType::Label, commandIndex, c, c, text });
+
                     Disassembler dis;
                     bool endFound = false;
                     while (!endFound && (c < a3))
