@@ -2,6 +2,7 @@
 // Disassembler document
 //----------------------------------------------------------------------------------------------------------------------
 
+#include <asm/disasm.h>
 #include <disasm/disassembler.h>
 #include <emulator/nxfile.h>
 #include <utils/tinyfiledialogs.h>
@@ -12,6 +13,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
+    : m_speccy(&speccy)
 {
     switch (speccy.getModel())
     {
@@ -19,7 +21,7 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
         m_mmap.resize(65536);
         for (int i = 0; i < 65536; ++i)
         {
-            m_mmap[0] = speccy.peek(u16(i));
+            m_mmap[i] = speccy.peek(u16(i));
         }
         break;
 
@@ -32,24 +34,24 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
         NX_ASSERT(0);
     }
 
-    reset(speccy);
+    reset();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 // Internal functions
 //----------------------------------------------------------------------------------------------------------------------
 
-void DisassemblerDoc::reset(const Spectrum& speccy)
+void DisassemblerDoc::reset()
 {
     m_lines.clear();
     m_commands.clear();
 
-    switch (speccy.getModel())
+    switch (m_speccy->getModel())
     {
     case Model::ZX48:
         {
-            MemAddr start = speccy.convertAddress(Z80MemAddr(0x4000));
-            MemAddr end = speccy.convertAddress(Z80MemAddr(0xffff));
+            MemAddr start = m_speccy->convertAddress(Z80MemAddr(0x4000));
+            MemAddr end = m_speccy->convertAddress(Z80MemAddr(0xffff));
             m_lines.emplace_back(LineType::UnknownRange, -1, start, end, string{});
         }
         break;
@@ -115,9 +117,68 @@ bool DisassemblerDoc::processCommand(CommandType type, int line, MemAddr addr, s
                     {
                         insertLine(i++, Line{ LineType::UnknownRange, commandIndex, a1, addr - 1, {} });
                         insertLine(i++, Line{ LineType::Blank, commandIndex, {}, {}, {} });
-                        insertLine(i++, Line{ LineType::UnknownRange, commandIndex, addr, a3, {} });
                     }
 
+                    Disassembler dis;
+                    bool endFound = false;
+                    while (!endFound && (c < a3))
+                    {
+                        // Grab the next 4 bytes
+                        // #todo: refactor the memory system out so we can clone it and not use memory maps
+                        u16 a = m_speccy->convertAddress(c);
+                        u8 b1 = m_mmap[a];
+                        u8 b2 = (a <= 0xfffe) ? m_mmap[a + 1] : 0;
+                        u8 b3 = (a <= 0xfffd) ? m_mmap[a + 2] : 0;
+                        u8 b4 = (a <= 0xfffc) ? m_mmap[a + 3] : 0;
+                        u16 na = dis.disassemble(a, b1, b2, b3, b4);
+                        c = m_speccy->convertAddress(Z80MemAddr(a));
+                        MemAddr nc = m_speccy->convertAddress(Z80MemAddr(na));
+
+                        // Lets look at the opcode to see if we continue.  We stop at JP, RET, RETI and RETN
+                        switch (b1)
+                        {
+                        case 0xc3:      // JP nnnn
+                        case 0xc9:      // RET
+                        case 0xe9:      // JP (HL)
+                            endFound = true;
+                            break;
+
+                        case 0xed:
+                            switch (b2)
+                            {
+                            case 0x45:
+                            case 0x4d:
+                            case 0x55:
+                            case 0x5d:
+                            case 0x65:
+                            case 0x6d:
+                            case 0x75:
+                            case 0x7d:
+                                endFound = true;
+
+                            default:
+                                break;
+                            }
+                            break;
+
+                        case 0xdd:      // IX
+                        case 0xfd:      // IY
+                            endFound = (b2 == 0xe9);    // JP (IX+n)/(IY+n)
+                            break;
+                        }
+
+                        // Add a line for the code
+                        insertLine(i++, Line{ commandIndex, c, nc - 1, dis.opCodeString(), dis.operandString() });
+
+                        c = nc;
+                        a = na;
+                    }
+
+                    if (c != a3)
+                    {
+                        insertLine(i++, Line{ LineType::Blank, commandIndex, {}, {}, {} });
+                        insertLine(i++, Line{ LineType::UnknownRange, commandIndex, c, a3, {} });
+                    }
                 }
             }
             else
@@ -231,9 +292,9 @@ int DisassemblerDoc::deleteLine(int line)
 //              13      ?       Text
 //----------------------------------------------------------------------------------------------------------------------
 
-bool DisassemblerDoc::load(Spectrum& speccy, string fileName)
+bool DisassemblerDoc::load(string fileName)
 {
-    reset(speccy);
+    reset();
 
     NxFile f;
     if (f.load(fileName))

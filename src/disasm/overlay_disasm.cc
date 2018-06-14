@@ -242,14 +242,16 @@ string DisassemblerEditor::getTitle() const
 
 void DisassemblerEditor::render(Draw& draw)
 {
+    int commandIndex = getData().getCommandIndex(m_currentLine);
     m_longestLine = 0;
 
     // Colours
-    //u8 bkgColour = Draw::attr(Colour::White, Colour::Black, false);
+    u8 bkgColour = Draw::attr(Colour::White, Colour::Black, false);
     u8 commentColour = Draw::attr(Colour::Green, Colour::Black, true);
-    //u8 labelColour = Draw::attr(Colour::Cyan, Colour::Black, true);
+    u8 labelColour = Draw::attr(Colour::Cyan, Colour::Black, true);
     u8 rangeColour = Draw::attr(Colour::Black, Colour::Green, false);
     u8 cursorColour = Draw::attr(Colour::White, Colour::Blue, true) | 0x80;
+    u8 cursor2Colour = Draw::attr(Colour::White, Colour::Black, false);
 
     int y = m_y;
     for (int i = m_topLine; i < getData().getNumLines(); ++i, ++y)
@@ -275,15 +277,25 @@ void DisassemblerEditor::render(Draw& draw)
             break;
 
         case T::Label:
+            m_longestLine = max(m_longestLine, (int)line.text.size() + 1);
+            draw.printString(m_x + 1, y, line.text + ":", false, labelColour);
             break;
 
         case T::Instruction:
+            m_longestLine = max(m_longestLine, 32 + (int)line.operand.size());
+            draw.printString(m_x + 9, y, line.opCode, false, bkgColour);
+            draw.printString(m_x + 15, y, line.operand, false, bkgColour);
+            if (!line.text.empty()) draw.printString(m_x + 33, y, string("; ") + line.text, false, commentColour);
             break;
         }
 
         if (i == m_currentLine)
         {
             draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
+        }
+        else if (line.commandIndex == commandIndex)
+        {
+            draw.printChar(m_x, y, '*', cursor2Colour, gGfxFont);
         }
     }
 
@@ -454,7 +466,7 @@ void DisassemblerWindow::openFile(const string& fileName /* = string() */)
         newFile();
 
         DisassemblerEditor& thisEditor = getEditor();
-        if (thisEditor.getData().load(m_nx.getSpeccy(), fn))
+        if (thisEditor.getData().load(fn))
         {
             thisEditor.setFileName(fn);
         }

@@ -113,7 +113,6 @@ void DisassemblyWindow::setView(u16 newTopAddress)
         if (d && (*d >= 0)) break;
         ++m_firstLabel;
     }
-    //while (m_firstLabel < m_labels.size() && m_labels[m_firstLabel].second < ta) ++m_firstLabel;
 }
 
 void DisassemblyWindow::cursorDown()

@@ -69,8 +69,6 @@ public:
     u16 disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4);
     std::string addressAndBytes(u16 a) const;
     std::string opCodeString() const;
-    std::string operand1String() const;
-    std::string operand2String() const;
     std::string operandString() const;
 
     Lex::Element::Type  opCodeValue() const { return m_opCode; }
@@ -98,6 +96,8 @@ private:
 
     static std::string opCodeString(Lex::Element::Type type);
     static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2);
+    std::string operand1String() const;
+    std::string operand2String() const;
 
     i64 byte(u8 b) const { return (i64)b; }
     i64 word(u8 l, u8 h) const { return (i64)l + 256 * (i64)h; }

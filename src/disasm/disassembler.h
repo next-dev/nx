@@ -21,12 +21,14 @@
 //  CodeEntry       Range line          -                                   -
 //----------------------------------------------------------------------------------------------------------------------
 
+class Spectrum;
+
 class DisassemblerDoc
 {
 public:
     DisassemblerDoc(Spectrum& speccy);
 
-    bool load(Spectrum& speccy, string fileName);
+    bool load(string fileName);
     bool save(string fileName);
     bool hasChanged() const { return m_changed; }
 
@@ -56,13 +58,25 @@ public:
         MemAddr     startAddress;
         MemAddr     endAddress;
         string      text;
+        string      opCode;
+        string      operand;
 
-        Line(LineType type, int commandIndex, MemAddr start, MemAddr end, string text)
+        Line(LineType type, int commandIndex, MemAddr start, MemAddr end, string text, string opCode, string operand)
             : type(type)
             , commandIndex(commandIndex)
             , startAddress(start)
             , endAddress(end)
             , text(move(text))
+            , opCode(move(opCode))
+            , operand(move(operand))
+        {}
+
+        Line(LineType type, int commandIndex, MemAddr start, MemAddr end, string text)
+            : Line(type, commandIndex, start, end, text, {}, {})
+        {}
+
+        Line(int commandIndex, MemAddr start, MemAddr end, string opCode, string operands)
+            : Line(LineType::Instruction, commandIndex, start, end, {}, opCode, operands)
         {}
     };
 
@@ -106,11 +120,12 @@ private:
     // Internal API
     //
 
-    void reset(const Spectrum& speccy);
+    void reset();
     void changed() { m_changed = true; }
     optional<int> findLine(MemAddr addr) const;
 
 private:
+    const Spectrum*     m_speccy;
     vector<u8>          m_mmap;         // Snapshot of memory
     vector<Command>     m_commands;
     bool                m_changed;
