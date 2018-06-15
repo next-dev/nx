@@ -44,7 +44,6 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
 void DisassemblerDoc::reset()
 {
     m_lines.clear();
-    m_commands.clear();
 
     switch (m_speccy->getModel())
     {

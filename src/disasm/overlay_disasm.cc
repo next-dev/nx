@@ -131,23 +131,18 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                             [this](Editor& ed)
                             {
                                 // Reset the command text
-                                getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
-
-                                // Reset the line text
-                                getData().getLine(m_currentLine).text = m_editor->getData().getString();
+                                getData().setComment(m_currentLine, ed.getData().getString());
                             });
-                        m_editor->getData().insert(getData().getLine(m_currentLine).text);
                     }
                     else
                     {
-                        getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, {}, "");
                         m_blockFirstChar = true;
                         m_editorPrefix.clear();
                         m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
                             Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
                             [this](Editor& ed)
                             {
-                                getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
+                                getData().insertComment(m_currentLine, ed.getData().getString());
                                 ++m_currentLine;
                             });
                         }
@@ -193,14 +188,13 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             switch (key)
             {
             case K::SemiColon:
-                getData().processCommand(DisassemblerDoc::CommandType::FullComment, m_currentLine, {}, "");
                 m_blockFirstChar = true;
                 m_editorPrefix.clear();
                 m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
                     Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
                     [this](Editor& ed)
                 {
-                    getData().setText(getData().getCommandIndex(m_currentLine), m_editor->getData().getString());
+                    getData().insertComment(m_currentLine, ed.getData().getString());
                     ++m_currentLine;
                 });
                 break;
@@ -242,7 +236,6 @@ string DisassemblerEditor::getTitle() const
 
 void DisassemblerEditor::render(Draw& draw)
 {
-    int commandIndex = getData().getCommandIndex(m_currentLine);
     m_longestLine = 0;
 
     // Colours
@@ -293,10 +286,6 @@ void DisassemblerEditor::render(Draw& draw)
         {
             draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
         }
-        else if (line.commandIndex == commandIndex)
-        {
-            draw.printChar(m_x, y, '*', cursor2Colour, gGfxFont);
-        }
     }
 
     if (m_editor)
@@ -335,7 +324,7 @@ void DisassemblerEditor::saveFile()
             finalName += ".dis";
         }
 
-        if (!getData().save(finalName.c_str()))
+        if (!getData()._save(finalName.c_str()))
         {
             tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
         }
@@ -466,7 +455,7 @@ void DisassemblerWindow::openFile(const string& fileName /* = string() */)
         newFile();
 
         DisassemblerEditor& thisEditor = getEditor();
-        if (thisEditor.getData().load(fn))
+        if (thisEditor.getData()._load(fn))
         {
             thisEditor.setFileName(fn);
         }
@@ -507,7 +496,7 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     if (m_nx.getSpeccy().isZ80Address(*addr))
                     {
                         prompt("Label", [this, a](string label) {
-                            getEditor().getData().processCommand(DisassemblerDoc::CommandType::CodeEntry, -1, a, label);
+                            getEditor().getData().generateCode(a, label);
                         });
                     }
                 }
@@ -626,7 +615,7 @@ bool DisassemblerWindow::saveAll()
 
         if (!fileName.empty() || saveUnnamedFiles)
         {
-            editor.getData().save(editor.getFileName());
+            editor.getData()._save(editor.getFileName());
         }
     }
 
