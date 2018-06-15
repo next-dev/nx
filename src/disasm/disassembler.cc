@@ -230,7 +230,7 @@ int DisassemblerDoc::deleteLine(int line)
     }
 
     bool shouldDelete = confirmDelete
-        ? tinyfd_messageBox("Are you sure?", "Comments have been added to the area you will delete.  Are you sure you want to lose your changes?",
+        ? tinyfd_messageBox("Are you sure?", "Comments or labels have been added to the area you will delete.  Are you sure you want to lose your changes?",
             "yesno", "question", 0)
         : true;
 
@@ -250,23 +250,29 @@ int DisassemblerDoc::deleteLine(int line)
                 if (m_lines[i].commandIndex == commandIndex) --line;
             }
 
-            // Remove all lines that reference the deleted command
-            remove_if(m_lines.begin(), m_lines.end(), [commandIndex](const Line& line) {
-                return line.commandIndex == commandIndex;
-            });
-
             // Delete the command
             m_commands.erase(m_commands.begin() + commandIndex);
 
-            // Adjust command index references in lines to cater for missing command
-            for (Line& line : m_lines)
-            {
-                if (line.commandIndex > commandIndex) --line.commandIndex;
-            }
+            // Replay all the commands
+            replayCommands();
         }
     }
 
     return line;
+}
+
+void DisassemblerDoc::replayCommands()
+{
+    m_lines.clear();
+
+    MemAddr start = m_speccy->convertAddress(Z80MemAddr(0x4000));
+    MemAddr end = m_speccy->convertAddress(Z80MemAddr(0xffff));
+    m_lines.emplace_back(LineType::UnknownRange, -1, start, end, string{});
+
+    for (const auto& command : m_commands)
+    {
+        processCommand(command.type, command.line, command.addr, command.text);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

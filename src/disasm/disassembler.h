@@ -123,6 +123,7 @@ private:
     void reset();
     void changed() { m_changed = true; }
     optional<int> findLine(MemAddr addr) const;
+    void replayCommands();
 
 private:
     const Spectrum*     m_speccy;
