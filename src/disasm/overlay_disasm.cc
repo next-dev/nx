@@ -113,7 +113,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
             case K::Delete:
                 m_currentLine = getData().deleteLine(m_currentLine);
-                m_currentLine = min(m_currentLine, getData().getNumLines() - 1);
+                m_currentLine = max(0, min(m_currentLine, getData().getNumLines() - 1));
                 ensureVisibleCursor();
                 break;
 
@@ -251,7 +251,7 @@ void DisassemblerEditor::render(Draw& draw)
     int y = m_y;
     if (getData().getNumLines() > 0)
     {
-        int tag = getData().getLine(m_currentLine).tag;
+        int tag = m_currentLine < getData().getNumLines() ? getData().getLine(m_currentLine).tag : -1;
         for (int i = m_topLine; i < getData().getNumLines(); ++i, ++y)
         {
             using T = DisassemblerDoc::LineType;
@@ -291,7 +291,8 @@ void DisassemblerEditor::render(Draw& draw)
             }
         }
     }
-    else
+
+    if (m_currentLine == getData().getNumLines())
     {
         draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
     }

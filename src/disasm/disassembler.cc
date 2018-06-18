@@ -52,6 +52,13 @@ void DisassemblerDoc::reset()
 
 void DisassemblerDoc::insertComment(int line, int tag, string comment)
 {
+    // Insert a blank line if the insert point contains a label or instruction
+    if (line < m_lines.size() &&
+        (m_lines[line].type == LineType::Label ||
+         m_lines[line].type == LineType::Instruction))
+    {
+        insertLine(line, Line{ tag, LineType::Blank, {}, {}, {} });
+    }
     insertLine(line, Line{ tag, LineType::FullComment, MemAddr(), MemAddr(), comment });
 }
 
@@ -67,95 +74,97 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
     if (optional<int> lineIndex = findLine(addr); lineIndex)
     {
         int i = *lineIndex;
-        Line& line = getLine(i);
+        MemAddr end;
 
-        NX_ASSERT(line.type != LineType::Blank);
-        NX_ASSERT(line.type != LineType::FullComment);
-        if (line.type == LineType::Label ||
-            line.type == LineType::Instruction)
+        if (i < getNumLines())
         {
-            Overlay::currentOverlay()->error("Code already generated for this entry point");
-            return -1;
+            Line& line = getLine(i);
+
+            NX_ASSERT(line.type != LineType::Blank);
+            NX_ASSERT(line.type != LineType::FullComment);
+
+            end = line.startAddress;
+            if (line.startAddress <= addr)
+            {
+                Overlay::currentOverlay()->error("Code already generated for this entry point");
+                return -1;
+            }
         }
         else
         {
-            // Get memory addresses:
-            //
-            //  +------+-----------+------------+
-            //  a1     addr        c           a3
-            //
-            MemAddr a1 = line.startAddress;
-            MemAddr a3 = line.endAddress;
-            MemAddr c = addr;
+            end = m_speccy->convertAddress(Z80MemAddr(0xffff));
+        }
 
-            i = deleteLine(i);
+        MemAddr c = addr;
 
-            int startLine = i;
-            insertLine(i++, Line{ tag, LineType::Label, c, c, label });
+        if (i < getNumLines()) i = deleteLine(i);
 
-            Disassembler dis;
-            bool endFound = false;
-            while (!endFound && (c < a3))
+        if (i > 0 && getLine(i-1).type != LineType::Blank) insertLine(i++, Line{ tag, LineType::Blank, {}, {}, {} });
+        int startLine = i;
+        insertLine(i++, Line{ tag, LineType::Label, c, c, label });
+
+        Disassembler dis;
+        bool endFound = false;
+        while (!endFound && (c < end))
+        {
+            // Grab the next 4 bytes
+            // #todo: refactor the memory system out so we can clone it and not use memory maps
+            u16 a = m_speccy->convertAddress(c);
+            u8 b1 = m_mmap[a];
+            u8 b2 = (a <= 0xfffe) ? m_mmap[a + 1] : 0;
+            u8 b3 = (a <= 0xfffd) ? m_mmap[a + 2] : 0;
+            u8 b4 = (a <= 0xfffc) ? m_mmap[a + 3] : 0;
+            u16 na = dis.disassemble(a, b1, b2, b3, b4);
+            c = m_speccy->convertAddress(Z80MemAddr(a));
+            MemAddr nc = m_speccy->convertAddress(Z80MemAddr(na));
+
+            // Lets look at the opcode to see if we continue.  We stop at JP, RET, RETI and RETN
+            switch (b1)
             {
-                // Grab the next 4 bytes
-                // #todo: refactor the memory system out so we can clone it and not use memory maps
-                u16 a = m_speccy->convertAddress(c);
-                u8 b1 = m_mmap[a];
-                u8 b2 = (a <= 0xfffe) ? m_mmap[a + 1] : 0;
-                u8 b3 = (a <= 0xfffd) ? m_mmap[a + 2] : 0;
-                u8 b4 = (a <= 0xfffc) ? m_mmap[a + 3] : 0;
-                u16 na = dis.disassemble(a, b1, b2, b3, b4);
-                c = m_speccy->convertAddress(Z80MemAddr(a));
-                MemAddr nc = m_speccy->convertAddress(Z80MemAddr(na));
+            case 0xc3:      // JP nnnn
+            case 0xc9:      // RET
+            case 0xe9:      // JP (HL)
+                endFound = true;
+                break;
 
-                // Lets look at the opcode to see if we continue.  We stop at JP, RET, RETI and RETN
-                switch (b1)
+            case 0xed:
+                switch (b2)
                 {
-                case 0xc3:      // JP nnnn
-                case 0xc9:      // RET
-                case 0xe9:      // JP (HL)
+                case 0x45:
+                case 0x4d:
+                case 0x55:
+                case 0x5d:
+                case 0x65:
+                case 0x6d:
+                case 0x75:
+                case 0x7d:
                     endFound = true;
-                    break;
 
-                case 0xed:
-                    switch (b2)
-                    {
-                    case 0x45:
-                    case 0x4d:
-                    case 0x55:
-                    case 0x5d:
-                    case 0x65:
-                    case 0x6d:
-                    case 0x75:
-                    case 0x7d:
-                        endFound = true;
-
-                    default:
-                        break;
-                    }
-                    break;
-
-                case 0xdd:      // IX
-                case 0xfd:      // IY
-                    endFound = (b2 == 0xe9);    // JP (IX+n)/(IY+n)
+                default:
                     break;
                 }
+                break;
 
-                // Add a line for the code
-                insertLine(i++, Line{ tag, c, nc - 1, dis.opCodeString(), dis.operandString() });
-
-                c = nc;
-                a = na;
+            case 0xdd:      // IX
+            case 0xfd:      // IY
+                endFound = (b2 == 0xe9);    // JP (IX+n)/(IY+n)
+                break;
             }
 
-            if (c != a3)
-            {
-                insertLine(i++, Line{ tag, LineType::Blank, {},{},{} });
-            }
+            // Add a line for the code
+            insertLine(i++, Line{ tag, c, nc - 1, dis.opCodeString(), dis.operandString() });
 
-            changed();
-            return startLine;
+            c = nc;
+            a = na;
         }
+
+        if (c != end)
+        {
+            insertLine(i++, Line{ tag, LineType::Blank, {},{},{} });
+        }
+
+        changed();
+        return startLine;
     }
     else
     {
@@ -181,6 +190,12 @@ int DisassemblerDoc::deleteLine(int line)
     m_lines.erase(remove_if(m_lines.begin(), m_lines.end(), [tag](const auto& line) {
         return line.tag == tag;
     }), m_lines.end());
+
+    while ((newLine < (int)m_lines.size()) &&
+        (m_lines[newLine].type == LineType::Blank))
+    {
+        m_lines.erase(m_lines.begin() + newLine);
+    }
 
     changed();
     return newLine;
@@ -306,5 +321,5 @@ optional<int> DisassemblerDoc::findLine(MemAddr addr) const
         }
     }
 
-    return {};
+    return (int)m_lines.size();
 }
