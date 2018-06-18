@@ -653,7 +653,7 @@ void Window::text(char ch)
 // Window prompts
 //----------------------------------------------------------------------------------------------------------------------
 
-void Window::prompt(string promptString, function<void(string)> handler)
+void Window::prompt(string promptString, function<void(string)> handler, bool consumeKey)
 {
     if (isPrompting()) return;
 
@@ -662,7 +662,7 @@ void Window::prompt(string promptString, function<void(string)> handler)
     m_editor.setPosition(m_x + 2 + promptSize, m_y + 1, m_width - 3 - promptSize, 1);
     m_editor.clear();
     m_handler = handler;
-    m_ignoreFirstChar = true;
+    m_ignoreFirstChar = consumeKey;
 }
 
 void Window::killPrompt()

@@ -34,14 +34,15 @@ public:
 
     int getNumLines() const { return (int)m_lines.size(); }
     int deleteLine(int line);
+    int getNextTag() { return m_nextTag++; }
 
     //
     // Use cases
     //
 
-    void insertComment(int line, string comment);
+    void insertComment(int line, int tag, string comment);
     void setComment(int line, string comment);
-    int generateCode(MemAddr addr, string label);
+    int generateCode(MemAddr addr, int tag, string label);
 
     //
     // Lines
@@ -50,7 +51,6 @@ public:
     enum class LineType
     {
         Blank,              // Blank Line
-        UnknownRange,       // Unknown range of memory
         FullComment,        // Line-based comment
         Label,
         Instruction,
@@ -58,17 +58,17 @@ public:
 
     struct Line
     {
+        int         tag;
         LineType    type;
-        int         commandIndex;   // Index of command that generated this line
         MemAddr     startAddress;
         MemAddr     endAddress;
         string      text;
         string      opCode;
         string      operand;
 
-        Line(LineType type, int commandIndex, MemAddr start, MemAddr end, string text, string opCode, string operand)
-            : type(type)
-            , commandIndex(commandIndex)
+        Line(int tag, LineType type, MemAddr start, MemAddr end, string text, string opCode, string operand)
+            : tag(tag)
+            , type(type)
             , startAddress(start)
             , endAddress(end)
             , text(move(text))
@@ -76,12 +76,12 @@ public:
             , operand(move(operand))
         {}
 
-        Line(LineType type, int commandIndex, MemAddr start, MemAddr end, string text)
-            : Line(type, commandIndex, start, end, text, {}, {})
+        Line(int tag, LineType type, MemAddr start, MemAddr end, string text)
+            : Line(tag, type, start, end, text, {}, {})
         {}
 
-        Line(int commandIndex, MemAddr start, MemAddr end, string opCode, string operands)
-            : Line(LineType::Instruction, commandIndex, start, end, {}, opCode, operands)
+        Line(int tag, MemAddr start, MemAddr end, string opCode, string operands)
+            : Line(tag, LineType::Instruction, start, end, {}, opCode, operands)
         {}
     };
 
@@ -108,4 +108,5 @@ private:
     // Internal database generated from processing commands
     //
     vector<Line>        m_lines;
+    int                 m_nextTag;
 };

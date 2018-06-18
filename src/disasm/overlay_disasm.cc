@@ -118,13 +118,14 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
 
             case K::SemiColon:
-                if (getData().getLine(m_currentLine).type != DisassemblerDoc::LineType::Instruction)
+                if ((getData().getNumLines() == 0) ||
+                    (getData().getLine(m_currentLine).type != DisassemblerDoc::LineType::Instruction))
                 {
-                    if (getData().getLine(m_currentLine).type == DisassemblerDoc::LineType::FullComment)
+                    if ((m_currentLine < getData().getNumLines()) &&
+                        (getData().getLine(m_currentLine).type == DisassemblerDoc::LineType::FullComment))
                     {
                         // Edit full line comment
                         m_blockFirstChar = true;
-                        int index = getData().getLine(m_currentLine).commandIndex;
                         m_editorPrefix.clear();
                         m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
                             Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
@@ -136,13 +137,14 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     }
                     else
                     {
+                        getData().insertComment(m_currentLine, getData().getNextTag(), "");
                         m_blockFirstChar = true;
                         m_editorPrefix.clear();
                         m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
                             Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
                             [this](Editor& ed)
                             {
-                                getData().insertComment(m_currentLine, ed.getData().getString());
+                                getData().setComment(m_currentLine, ed.getData().getString());
                                 ++m_currentLine;
                             });
                         }
@@ -194,7 +196,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
                     [this](Editor& ed)
                 {
-                    getData().insertComment(m_currentLine, ed.getData().getString());
+                    getData().insertComment(m_currentLine, getData().getNextTag(), ed.getData().getString());
                     ++m_currentLine;
                 });
                 break;
@@ -247,45 +249,51 @@ void DisassemblerEditor::render(Draw& draw)
     u8 cursor2Colour = Draw::attr(Colour::White, Colour::Black, false);
 
     int y = m_y;
-    for (int i = m_topLine; i < getData().getNumLines(); ++i, ++y)
+    if (getData().getNumLines() > 0)
     {
-        using T = DisassemblerDoc::LineType;
-        const DisassemblerDoc::Line& line = getData().getLine(i);
-
-        switch (line.type)
+        int tag = getData().getLine(m_currentLine).tag;
+        for (int i = m_topLine; i < getData().getNumLines(); ++i, ++y)
         {
-        case T::Blank:
-            break;
+            using T = DisassemblerDoc::LineType;
+            const DisassemblerDoc::Line& line = getData().getLine(i);
 
-        case T::UnknownRange:
-            m_longestLine = m_width - 2;
-            draw.attrRect(m_x+1, y, m_width-2, 1, rangeColour);
-            draw.printSquashedString(m_x+1, y, stringFormat("-- Unknown area: {0}-{1} --", m_speccy->addressName(line.startAddress), m_speccy->addressName(line.endAddress)), rangeColour);
-            break;
+            switch (line.type)
+            {
+            case T::Blank:
+                break;
 
-        case T::FullComment:
-            m_longestLine = max(m_longestLine, (int)line.text.size());
-            draw.printChar(m_x + 1, y, ';', commentColour);
-            draw.printString(m_x + 3, y, line.text, false, commentColour);
-            break;
+            case T::FullComment:
+                m_longestLine = max(m_longestLine, (int)line.text.size());
+                draw.printChar(m_x + 1, y, ';', commentColour);
+                draw.printString(m_x + 3, y, line.text, false, commentColour);
+                break;
 
-        case T::Label:
-            m_longestLine = max(m_longestLine, (int)line.text.size() + 1);
-            draw.printString(m_x + 1, y, line.text + ":", false, labelColour);
-            break;
+            case T::Label:
+                m_longestLine = max(m_longestLine, (int)line.text.size() + 1);
+                draw.printString(m_x + 1, y, line.text + ":", false, labelColour);
+                break;
 
-        case T::Instruction:
-            m_longestLine = max(m_longestLine, 32 + (int)line.operand.size());
-            draw.printString(m_x + 9, y, line.opCode, false, bkgColour);
-            draw.printString(m_x + 15, y, line.operand, false, bkgColour);
-            if (!line.text.empty()) draw.printString(m_x + 33, y, string("; ") + line.text, false, commentColour);
-            break;
+            case T::Instruction:
+                m_longestLine = max(m_longestLine, 32 + (int)line.operand.size());
+                draw.printString(m_x + 9, y, line.opCode, false, bkgColour);
+                draw.printString(m_x + 15, y, line.operand, false, bkgColour);
+                if (!line.text.empty()) draw.printString(m_x + 33, y, string("; ") + line.text, false, commentColour);
+                break;
+            }
+
+            if (i == m_currentLine)
+            {
+                draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
+            }
+            else if (tag == line.tag)
+            {
+                draw.printChar(m_x, y, '*', cursor2Colour, gGfxFont);
+            }
         }
-
-        if (i == m_currentLine)
-        {
-            draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
-        }
+    }
+    else
+    {
+        draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
     }
 
     if (m_editor)
@@ -496,11 +504,11 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     if (m_nx.getSpeccy().isZ80Address(*addr))
                     {
                         prompt("Label", [this, a](string label) {
-                            getEditor().getData().generateCode(a, label);
-                        });
+                            getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
+                        }, false);
                     }
                 }
-            });
+            }, true);
             break;
 
         default:

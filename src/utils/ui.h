@@ -181,7 +181,7 @@ public:
     // Prompts
     //
     using PromptHandler = function<void(string)>;
-    void prompt(string promptString, PromptHandler handler);
+    void prompt(string promptString, PromptHandler handler, bool consumeKey);
     void killPrompt();
     bool isPrompting() const;
 
