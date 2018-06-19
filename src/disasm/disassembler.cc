@@ -85,13 +85,14 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
     else
     {
         // The blank line comes after the comment in this case.  However, if there is already a blank line
-        // we re-tag it to belong to this comment.
+        // we re-tag it to belong to this comment.  If the following line is another comment, we do not
+        // insert a blank line.
         Line& l = getLine(line);
         if (l.type == LineType::Blank)
         {
             l.tag = tag;
         }
-        else
+        else if (l.type != LineType::FullComment)
         {
             insertLine(line, Line{ tag, LineType::Blank,{},{},{} });
         }
@@ -258,8 +259,9 @@ void DisassemblerDoc::checkBlankLines(int line)
     // If either line is a blank then nothing to do.
     if (line1.type == LineType::Blank || line2.type == LineType::Blank) return;
 
-    // Detect a border
-    if (line1.tag != line2.tag)
+    // Detect a border (where tags differ, except with comments).
+    if (line1.tag != line2.tag &&
+        !(line1.type == LineType::FullComment && line2.type == LineType::FullComment))
     {
         // There's a border
         insertBlankLine(line, line1.tag);
