@@ -16,6 +16,7 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
     : m_speccy(&speccy)
     , m_nextTag(1)
 {
+    insertLine(0, Line{ 0, LineType::END, {}, {}, {} });
     switch (speccy.getModel())
     {
     case Model::ZX48:
@@ -52,16 +53,51 @@ void DisassemblerDoc::reset()
     m_changed = false;
 }
 
-void DisassemblerDoc::insertComment(int line, int tag, string comment)
+void DisassemblerDoc::insertBlankLine(int line, int tag)
 {
-    // Insert a blank line if the insert point contains a label or instruction
-    if (line < m_lines.size() &&
-        (m_lines[line].type == LineType::Label ||
-         m_lines[line].type == LineType::Instruction))
+    insertLine(line, Line{ tag, LineType::Blank, {}, {}, {} });
+}
+
+bool DisassemblerDoc::middleOfCode(int line) const
+{
+    if (line == 0) return false;
+
+    const Line& line1 = getLine(line - 1);
+    const Line& line2 = getLine(line);
+
+    bool code1 = line1.type == LineType::Label || line1.type == LineType::Instruction;
+    bool code2 = line2.type == LineType::Label || line2.type == LineType::Instruction;
+
+    return (code1 && code2);
+}
+
+int DisassemblerDoc::insertComment(int line, int tag, string comment)
+{
+    if (middleOfCode(line))
     {
-        insertLine(line, Line{ tag, LineType::Blank, {}, {}, {} });
+        // We're insert a blank first then the comment.  We also make sure the comment shares the same tag
+        // as the surrounding code.
+        tag = getLine(line).tag;
+        insertLine(line, Line{ tag, LineType::FullComment, MemAddr(), MemAddr(), comment });
+        insertLine(line, Line{ tag, LineType::Blank,{},{},{} });
+        return line + 1;
     }
-    insertLine(line, Line{ tag, LineType::FullComment, MemAddr(), MemAddr(), comment });
+    else
+    {
+        // The blank line comes after the comment in this case.  However, if there is already a blank line
+        // we re-tag it to belong to this comment.
+        Line& l = getLine(line);
+        if (l.type == LineType::Blank)
+        {
+            l.tag = tag;
+        }
+        else
+        {
+            insertLine(line, Line{ tag, LineType::Blank,{},{},{} });
+        }
+        insertLine(line, Line{ tag, LineType::FullComment, MemAddr(), MemAddr(), comment });
+        return line;
+    }
 }
 
 void DisassemblerDoc::setComment(int line, string comment)
@@ -80,13 +116,15 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
 
         if (i < getNumLines())
         {
+            // Code at this address goes to the end of the file
             Line& line = getLine(i);
 
             NX_ASSERT(line.type != LineType::Blank);
             NX_ASSERT(line.type != LineType::FullComment);
 
+            // Find the maximum end point (which is that start address of the section after it).
             end = line.startAddress;
-            if (line.startAddress <= addr)
+            if (end <= addr)
             {
                 Overlay::currentOverlay()->error("Code already generated for this entry point");
                 return -1;
@@ -99,10 +137,15 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
 
         MemAddr c = addr;
 
-        if (i < getNumLines()) i = deleteLine(i);
-
-        if (i > 0 && getLine(i-1).type != LineType::Blank) insertLine(i++, Line{ tag, LineType::Blank, {}, {}, {} });
         int startLine = i;
+
+        // Insert a blank line if the previous line is not blank
+        if (startLine > 0 && getLine(startLine - 1).type != LineType::Blank)
+        {
+            insertBlankLine(i++, tag);
+        }
+
+        // Insert the label
         insertLine(i++, Line{ tag, LineType::Label, c, c, label });
 
         Disassembler dis;
@@ -199,8 +242,28 @@ int DisassemblerDoc::deleteLine(int line)
         m_lines.erase(m_lines.begin() + newLine);
     }
 
+    checkBlankLines(newLine);
+
     changed();
     return newLine;
+}
+
+void DisassemblerDoc::checkBlankLines(int line)
+{
+    if (line == 0) return;
+
+    Line& line1 = getLine(line - 1);
+    Line& line2 = getLine(line);
+
+    // If either line is a blank then nothing to do.
+    if (line1.type == LineType::Blank || line2.type == LineType::Blank) return;
+
+    // Detect a border
+    if (line1.tag != line2.tag)
+    {
+        // There's a border
+        insertBlankLine(line, line1.tag);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -337,7 +400,7 @@ bool DisassemblerDoc::save(string fileName)
 
 optional<int> DisassemblerDoc::findLine(MemAddr addr) const
 {
-    for (size_t i = 0; i < m_lines.size(); ++i)
+    for (size_t i = 0; i < m_lines.size() - 1; ++i)
     {
         const Line& line = m_lines[i];
         if (line.type == LineType::Label || line.type == LineType::Instruction)
@@ -353,7 +416,7 @@ optional<int> DisassemblerDoc::findLine(MemAddr addr) const
         }
     }
 
-    return (int)m_lines.size();
+    return (int)m_lines.size() - 1;
 }
 
 string DisassemblerDoc::addLabel(string label, MemAddr addr)

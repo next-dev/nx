@@ -118,37 +118,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
 
             case K::SemiColon:
-                if ((getData().getNumLines() == 0) ||
-                    (getData().getLine(m_currentLine).type != DisassemblerDoc::LineType::Instruction))
-                {
-                    if ((m_currentLine < getData().getNumLines()) &&
-                        (getData().getLine(m_currentLine).type == DisassemblerDoc::LineType::FullComment))
-                    {
-                        // Edit full line comment
-                        m_blockFirstChar = true;
-                        m_editorPrefix.clear();
-                        m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
-                            Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
-                            [this](Editor& ed)
-                            {
-                                // Reset the command text
-                                getData().setComment(m_currentLine, ed.getData().getString());
-                            });
-                    }
-                    else
-                    {
-                        getData().insertComment(m_currentLine, getData().getNextTag(), "");
-                        m_blockFirstChar = true;
-                        m_editorPrefix.clear();
-                        m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
-                            Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
-                            [this](Editor& ed)
-                            {
-                                getData().setComment(m_currentLine, ed.getData().getString());
-                                ++m_currentLine;
-                            });
-                        }
-                }
+                insertComment();
                 break;
 
             default:
@@ -187,23 +157,11 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
         else if (shift && !ctrl && !alt)
         {
-            switch (key)
-            {
-            case K::SemiColon:
-                m_blockFirstChar = true;
-                m_editorPrefix.clear();
-                m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
-                    Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
-                    [this](Editor& ed)
-                {
-                    getData().insertComment(m_currentLine, getData().getNextTag(), ed.getData().getString());
-                    ++m_currentLine;
-                });
-                break;
-
-            default:
-                break;
-            }
+//             switch (key)
+//             {
+//             default:
+//                 break;
+//             }
         }
     }
     else
@@ -342,6 +300,33 @@ void DisassemblerEditor::saveFile()
             setFileName(finalName);
         }
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// DisassemblerEditor use cases
+//----------------------------------------------------------------------------------------------------------------------
+
+void DisassemblerEditor::insertComment()
+{
+    using LT = DisassemblerDoc::LineType;
+
+    // If we're inserting a comment before a blank line, we re-tag the blank line to match the comment.
+    int tag = getData().getNextTag();
+
+    // Insert an empty comment to editor, we'll set it later
+    m_currentLine = getData().insertComment(m_currentLine, tag, "");
+    ensureVisibleCursor();
+
+    m_blockFirstChar = true;
+    m_editorPrefix.clear();
+    m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
+        Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
+        [this](Editor& ed)
+    {
+        // Reset the command text
+        getData().setComment(m_currentLine, ed.getData().getString());
+        ++m_currentLine;
+    });
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -498,27 +483,30 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
         switch (key)
         {
         case K::C:      // Code entry point
-            prompt("Code entry", [this](string text) {
-                if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
-                {
-                    MemAddr a = *addr;
-                    if (m_nx.getSpeccy().isZ80Address(a))
+            if (getNumEditors() > 0)
+            {
+                prompt("Code entry", [this](string text) {
+                    if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
                     {
-                        prompt("Label", [this, a](string label) {
-                            if (label.empty())
-                            {
-                                Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
-                                label = stringFormat("L{0}", hexWord(addr));
-                            }
+                        MemAddr a = *addr;
+                        if (m_nx.getSpeccy().isZ80Address(a))
+                        {
+                            prompt("Label", [this, a](string label) {
+                                if (label.empty())
+                                {
+                                    Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
+                                    label = stringFormat("L{0}", hexWord(addr));
+                                }
 
-                            // Attempt to add the label
-                            label = getEditor().getData().addLabel(label, a);
+                                // Attempt to add the label
+                                label = getEditor().getData().addLabel(label, a);
 
-                            getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
-                        }, false);
+                                getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
+                            }, false);
+                        }
                     }
-                }
-            }, true);
+                }, true);
+            }
             break;
 
         default:
@@ -664,9 +652,9 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         "Shift-Ctrl-S|Save as",
         "Ctrl-Tab|Switch buffers",
         "Ctrl-B|Build",
-        ";|Add/Edit comment",
-        "Ctrl-;|Add/Edit line comment",
-        "Shift-;|Insert comment",
+        "Enter|Edit",
+        ";|Add comment",
+        "Shift-;|Insert instruction comment",
         "C|Add code entry point",
         })
 {

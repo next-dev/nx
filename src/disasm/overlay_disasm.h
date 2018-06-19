@@ -33,6 +33,11 @@ private:
     void saveFile();
     void ensureVisibleCursor();
 
+    //
+    // Use cases
+    //
+    void insertComment();
+
 private:
     Spectrum*           m_speccy;
     DisassemblerDoc     m_data;

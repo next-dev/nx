@@ -32,7 +32,7 @@ public:
     bool save(string fileName);
     bool hasChanged() const { return m_changed; }
 
-    int getNumLines() const { return (int)m_lines.size(); }
+    int getNumLines() const { return (int)m_lines.size() - 1; }
     int deleteLine(int line);
     int getNextTag() { return m_nextTag++; }
 
@@ -42,7 +42,8 @@ public:
     // Use cases
     //
 
-    void insertComment(int line, int tag, string comment);
+    void insertBlankLine(int line, int tag);
+    int insertComment(int line, int tag, string comment);
     void setComment(int line, string comment);
     int generateCode(MemAddr addr, int tag, string label);
 
@@ -56,6 +57,7 @@ public:
         FullComment,        // Line-based comment
         Label,
         Instruction,
+        END
     };
 
     struct Line
@@ -100,6 +102,8 @@ private:
     void reset();
     void changed() { m_changed = true; }
     optional<int> findLine(MemAddr addr) const;
+    void checkBlankLines(int line);
+    bool middleOfCode(int line) const;
 
 private:
     const Spectrum*     m_speccy;
