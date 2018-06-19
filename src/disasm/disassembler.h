@@ -28,8 +28,8 @@ class DisassemblerDoc
 public:
     DisassemblerDoc(Spectrum& speccy);
 
-    bool _load(string fileName);
-    bool _save(string fileName);
+    bool load(string fileName);
+    bool save(string fileName);
     bool hasChanged() const { return m_changed; }
 
     int getNumLines() const { return (int)m_lines.size(); }

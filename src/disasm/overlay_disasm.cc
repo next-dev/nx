@@ -333,7 +333,7 @@ void DisassemblerEditor::saveFile()
             finalName += ".dis";
         }
 
-        if (!getData()._save(finalName.c_str()))
+        if (!getData().save(finalName.c_str()))
         {
             tinyfd_messageBox("ERROR", "Unable to open file!", "ok", "warning", 0);
         }
@@ -464,7 +464,7 @@ void DisassemblerWindow::openFile(const string& fileName /* = string() */)
         newFile();
 
         DisassemblerEditor& thisEditor = getEditor();
-        if (thisEditor.getData()._load(fn))
+        if (thisEditor.getData().load(fn))
         {
             thisEditor.setFileName(fn);
         }
@@ -624,7 +624,7 @@ bool DisassemblerWindow::saveAll()
 
         if (!fileName.empty() || saveUnnamedFiles)
         {
-            editor.getData()._save(editor.getFileName());
+            editor.getData().save(editor.getFileName());
         }
     }
 

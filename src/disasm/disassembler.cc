@@ -226,7 +226,7 @@ int DisassemblerDoc::deleteLine(int line)
 //              13      ?       Text
 //----------------------------------------------------------------------------------------------------------------------
 
-bool DisassemblerDoc::_load(string fileName)
+bool DisassemblerDoc::load(string fileName)
 {
     reset();
 
@@ -263,6 +263,7 @@ bool DisassemblerDoc::_load(string fileName)
 
                 m_lines.emplace_back(tag, type, start, end, text, opCode, operand);
             }
+            m_nextTag = dcmd.peek32(x);
         }
     }
 
@@ -270,7 +271,7 @@ bool DisassemblerDoc::_load(string fileName)
     return true;
 }
 
-bool DisassemblerDoc::_save(string fileName)
+bool DisassemblerDoc::save(string fileName)
 {
     NxFile f;
 
@@ -297,6 +298,7 @@ bool DisassemblerDoc::_save(string fileName)
         dcmd.pokeString(line.opCode);
         dcmd.pokeString(line.operand);
     }
+    dcmd.poke32((u32)m_nextTag);
     f.addSection(dcmd);
     m_changed = false;
 
