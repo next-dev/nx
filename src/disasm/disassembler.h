@@ -36,6 +36,8 @@ public:
     int deleteLine(int line);
     int getNextTag() { return m_nextTag++; }
 
+    string addLabel(string label, MemAddr addr);
+
     //
     // Use cases
     //
@@ -105,8 +107,12 @@ private:
     bool                m_changed;
 
     //
-    // Internal database generated from processing commands
+    // Internal database
     //
     vector<Line>        m_lines;
     int                 m_nextTag;
+
+    using LabelInfo = pair<string, MemAddr>;
+    map<string, LabelInfo>      m_labelMap;
+    map<MemAddr, LabelInfo>     m_addrMap;
 };

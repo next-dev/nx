@@ -47,6 +47,8 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
 void DisassemblerDoc::reset()
 {
     m_lines.clear();
+    m_labelMap.clear();
+    m_addrMap.clear();
     m_changed = false;
 }
 
@@ -265,6 +267,21 @@ bool DisassemblerDoc::load(string fileName)
             }
             m_nextTag = dcmd.peek32(x);
         }
+
+        if (f.checkSection('LABL', 0))
+        {
+            const BlockSection& labl = f['LABL'];
+            u32 numLabels = labl.peek32(0);
+            int x = 4;
+            for (u32 i = 0; i < numLabels; ++i)
+            {
+                string label = labl.peekString(x);
+                x += ((int)label.size() + 5);
+                MemAddr a = labl.peekAddr(x);
+                x += 4;
+                addLabel(label, a);
+            }
+        }
     }
 
     m_changed = false;
@@ -300,8 +317,21 @@ bool DisassemblerDoc::save(string fileName)
     }
     dcmd.poke32((u32)m_nextTag);
     f.addSection(dcmd);
-    m_changed = false;
 
+    //
+    // LABL section
+    //
+    BlockSection labl('LABL', 0);
+    NX_ASSERT(m_labelMap.size() == m_addrMap.size());
+    u32 numLabels = (u32)m_labelMap.size();
+    labl.poke32(numLabels);
+    for (const auto& label : m_labelMap)
+    {
+        labl.pokeString(label.first);
+        labl.pokeAddr(label.second.second);
+    }
+
+    m_changed = false;
     return f.save(fileName);
 }
 
@@ -324,4 +354,20 @@ optional<int> DisassemblerDoc::findLine(MemAddr addr) const
     }
 
     return (int)m_lines.size();
+}
+
+string DisassemblerDoc::addLabel(string label, MemAddr addr)
+{
+    auto it = m_addrMap.find(addr);
+    if (it != m_addrMap.end())
+    {
+        // We already have a label for this address.
+        return it->second.first;
+    }
+
+    // This is a new label
+    LabelInfo info = make_pair(label, addr);
+    m_labelMap[label] = info;
+    m_addrMap[addr] = info;
+    return label;
 }

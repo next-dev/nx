@@ -502,9 +502,18 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
                 {
                     MemAddr a = *addr;
-                    if (m_nx.getSpeccy().isZ80Address(*addr))
+                    if (m_nx.getSpeccy().isZ80Address(a))
                     {
                         prompt("Label", [this, a](string label) {
+                            if (label.empty())
+                            {
+                                Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
+                                label = stringFormat("L{0}", hexWord(addr));
+                            }
+
+                            // Attempt to add the label
+                            label = getEditor().getData().addLabel(label, a);
+
                             getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
                         }, false);
                     }
