@@ -653,7 +653,8 @@ void Window::text(char ch)
 // Window prompts
 //----------------------------------------------------------------------------------------------------------------------
 
-void Window::prompt(string promptString, string originalText, function<void(string)> handler, bool consumeKey)
+void Window::prompt(string promptString, string originalText, function<void(string)> handler,
+    ConsumeKeyState consumeKey, RequireInputState requireInput)
 {
     if (isPrompting()) return;
 
@@ -663,7 +664,8 @@ void Window::prompt(string promptString, string originalText, function<void(stri
     m_editor.clear();
     m_editor.getData().insert(originalText);
     m_handler = handler;
-    m_ignoreFirstChar = consumeKey;
+    m_ignoreFirstChar = consumeKey == ConsumeKeyState::Yes;
+    m_requireInput = requireInput;
 }
 
 void Window::killPrompt()
@@ -708,6 +710,12 @@ void Window::doEditorText(char ch)
     }
     else
     {
+        if (ch == 13 &&
+            m_requireInput == RequireInputState::Yes &&
+            m_editor.getData().getString().empty())
+        {
+            return;
+        }
         m_editor.text(ch);
     }
 }

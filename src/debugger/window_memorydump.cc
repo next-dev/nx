@@ -182,7 +182,7 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool 
             case K::G:
                 prompt("Goto", {}, [this](string text) {
                     jumpToAddress(text);
-                }, true);
+                }, ConsumeKeyState::Yes, RequireInputState::No);
                 break;
 
             default:
@@ -212,7 +212,7 @@ void MemoryDumpWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool 
             case K::G:
                 prompt("Goto", {}, [this](string text) {
                     jumpToAddress(text);
-                }, true);
+                }, ConsumeKeyState::Yes, RequireInputState::No);
                 break;
 
             case K::C:

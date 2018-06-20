@@ -535,10 +535,10 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                             label = getEditor().getData().addLabel(label, a);
 
                             getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
-                        }, false);
+                        }, ConsumeKeyState::No, RequireInputState::No);
                     }
                 }
-            }, true);
+            }, ConsumeKeyState::Yes, RequireInputState::Yes);
             break;
 
         case K::Return:
@@ -557,7 +557,7 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                         {
                             Overlay::currentOverlay()->error("Cannot replace label name with already existing label.");
                         }
-                    }, true);
+                    }, ConsumeKeyState::Yes, RequireInputState::No);
                 }
             }
             break;
@@ -726,7 +726,7 @@ void DisassemblerOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool
 
     if (down && !shift && !ctrl && !alt)
     {
-        if (key == K::Escape)
+        if (key == K::Escape && !m_window.isPrompting())
         {
             getEmulator().hideAll();
         }

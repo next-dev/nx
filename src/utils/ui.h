@@ -181,7 +181,10 @@ public:
     // Prompts
     //
     using PromptHandler = function<void(string)>;
-    void prompt(string promptString, string originalText, PromptHandler handler, bool consumeKey);
+    enum class ConsumeKeyState { Yes, No };
+    enum class RequireInputState { Yes, No };
+
+    void prompt(string promptString, string originalText, PromptHandler handler, ConsumeKeyState consumeKey, RequireInputState requireInput);
     void killPrompt();
     bool isPrompting() const;
 
@@ -209,10 +212,11 @@ protected:
     string          m_title;
     u8              m_bkgColour;
 
-    Editor          m_editor;           // Editor to manager input
-    string          m_prompt;           // Prefix text on prompt
-    PromptHandler   m_handler;          // Function called when enter pressed
-    bool            m_ignoreFirstChar;  // Set to true to ignore the first character typed
+    Editor              m_editor;           // Editor to manager input
+    string              m_prompt;           // Prefix text on prompt
+    PromptHandler       m_handler;          // Function called when enter pressed
+    bool                m_ignoreFirstChar;  // Set to true to ignore the first character typed
+    RequireInputState   m_requireInput;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

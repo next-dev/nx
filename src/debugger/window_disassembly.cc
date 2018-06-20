@@ -277,7 +277,7 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool
                     Z80MemAddr z80Addr = m_nx.getSpeccy().convertAddress(*addr);
                     setCursor(z80Addr);
                 }
-            }, true);
+            }, ConsumeKeyState::Yes, RequireInputState::No);
             break;
 
         default:
