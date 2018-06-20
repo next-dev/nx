@@ -22,6 +22,7 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 class Spectrum;
+class Disassembler;
 
 class DisassemblerDoc
 {
@@ -47,6 +48,8 @@ public:
     void setComment(int line, string comment);
     int generateCode(MemAddr addr, int tag, string label);
     bool replaceLabel(int line, string oldLabel, string newLabel);
+    optional<u16> extractAddress(int line) const;
+    MemAddr disassemble(Disassembler& dis, MemAddr addr) const;     // Return address points after instruction
 
     //
     // Lines

@@ -112,6 +112,17 @@ void DisassemblerDoc::setComment(int line, string comment)
     }
 }
 
+MemAddr DisassemblerDoc::disassemble(Disassembler& dis, MemAddr addr) const
+{
+    u16 a = m_speccy->convertAddress(addr);
+    u8 b1 = m_mmap[a];
+    u8 b2 = (a <= 0xfffe) ? m_mmap[a + 1] : 0;
+    u8 b3 = (a <= 0xfffd) ? m_mmap[a + 2] : 0;
+    u8 b4 = (a <= 0xfffc) ? m_mmap[a + 3] : 0;
+    u16 na = dis.disassemble(a, b1, b2, b3, b4);
+    return m_speccy->convertAddress(Z80MemAddr(na));
+}
+
 int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
 {
     if (optional<int> lineIndex = findLine(addr); lineIndex)
@@ -159,17 +170,11 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
         {
             // Grab the next 4 bytes
             // #todo: refactor the memory system out so we can clone it and not use memory maps
-            u16 a = m_speccy->convertAddress(c);
-            u8 b1 = m_mmap[a];
-            u8 b2 = (a <= 0xfffe) ? m_mmap[a + 1] : 0;
-            u8 b3 = (a <= 0xfffd) ? m_mmap[a + 2] : 0;
-            u8 b4 = (a <= 0xfffc) ? m_mmap[a + 3] : 0;
-            u16 na = dis.disassemble(a, b1, b2, b3, b4);
-            c = m_speccy->convertAddress(Z80MemAddr(a));
-            MemAddr nc = m_speccy->convertAddress(Z80MemAddr(na));
+            u16 c16 = m_speccy->convertAddress(c);
+            MemAddr nc = disassemble(dis, c);
 
             // Lets look at the opcode to see if we continue.  We stop at JP, RET, RETI and RETN
-            switch (b1)
+            switch (m_mmap[c16])
             {
             case 0xc3:      // JP nnnn
             case 0xc9:      // RET
@@ -178,7 +183,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
                 break;
 
             case 0xed:
-                switch (b2)
+                switch (m_mmap[(c16 + 1)])
                 {
                 case 0x45:
                 case 0x4d:
@@ -197,7 +202,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
 
             case 0xdd:      // IX
             case 0xfd:      // IY
-                endFound = (b2 == 0xe9);    // JP (IX+n)/(IY+n)
+                endFound = (m_mmap[c16 + 1] == 0xe9);    // JP (IX+n)/(IY+n)
                 break;
             }
 
@@ -205,7 +210,6 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
             insertLine(i++, Line{ tag, c, nc - 1, dis.opCodeString(), dis.operandString() });
 
             c = nc;
-            a = na;
         }
 
         if (c != end)
@@ -294,6 +298,109 @@ void DisassemblerDoc::checkBlankLines(int line)
         // There's a border
         insertBlankLine(line, line1.tag);
     }
+}
+
+optional<u16> DisassemblerDoc::extractAddress(int lineNum) const
+{
+    const Line& line = getLine(lineNum);
+    if (line.type != LineType::Instruction) return {};
+
+    static const int addresses[256] = {
+    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+        0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
+        5,  1,  0,  0,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
+        5,  1,  1,  0,  0,  0,  0,  0,  5,  0,  1,  0,  0,  0,  0,  0,      // 20-2F
+        5,  1,  1,  0,  0,  0,  0,  0,  5,  0,  1,  0,  0,  0,  0,  0,      // 30-3F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 40-4F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 50-5F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 60-6F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 70-7F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
+        0,  0,  1,  1,  1,  0,  0,  0,  0,  0,  1,  0,  1,  1,  0,  0,      // C0-CF
+        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // D0-DF
+        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // E0-EF
+        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // F0-FF
+    };
+
+    static const int ixAddresses[256] = {
+    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
+        0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,      // 20-2F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 30-3F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 40-4F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 50-5F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 60-6F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 70-7F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // C0-CF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // D0-DF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // E0-EF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // F0-FF
+    };
+
+    static const int edAddresses[256] = {
+    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 20-2F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 30-3F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 40-4F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 50-5F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 60-6F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 70-7F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // C0-CF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // D0-DF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // E0-EF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // F0-FF
+    };
+
+    MemAddr c = line.startAddress;
+    u16 a = m_speccy->convertAddress(c);
+    Disassembler dis;
+    MemAddr nc = disassemble(dis, c);
+    u16 na = m_speccy->convertAddress(nc);
+
+    const int* adds = addresses;
+
+    switch (m_mmap[a])
+    {
+    case 0xdd:
+    case 0xfd:
+        adds = ixAddresses;
+        ++a;
+        break;
+
+    case 0xed:
+        adds = edAddresses;
+        ++a;
+        break;
+    }
+
+    int offset = adds[m_mmap[a]];
+    if (offset == 0) return {};
+    if (offset >= 4)
+    {
+        offset -= 4;
+        a = na + m_mmap[a + offset];
+
+    }
+    else
+    {
+        a = m_mmap[a + offset] + m_mmap[a + offset + 1] * 256;
+    }
+
+    return a;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

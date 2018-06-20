@@ -25,6 +25,8 @@ public:
     DisassemblerDoc::Line&  getCurrentLine()                { return getData().getLine(m_currentLine); }
     int                     getCurrentLineIndex() const     { return m_currentLine; }
 
+    optional<u16>           extractAddress() const          { return getData().extractAddress(m_currentLine); }
+
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
     void onText(char ch);
     void render(Draw& draw);

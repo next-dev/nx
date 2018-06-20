@@ -518,27 +518,31 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
         switch (key)
         {
         case K::C:      // Code entry point
-            prompt("Code entry", string(), [this](string text) {
-                if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
-                {
-                    MemAddr a = *addr;
-                    if (m_nx.getSpeccy().isZ80Address(a))
+            {
+                optional<u16> address = getEditor().extractAddress();
+                string preEntry = address ? string("$") + hexWord(*address) : "";
+                prompt("Code entry", preEntry, [this](string text) {
+                    if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
                     {
-                        prompt("Label", string(), [this, a](string label) {
-                            if (label.empty())
-                            {
-                                Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
-                                label = stringFormat("L{0}", hexWord(addr));
-                            }
+                        MemAddr a = *addr;
+                        if (m_nx.getSpeccy().isZ80Address(a))
+                        {
+                            prompt("Label", string(), [this, a](string label) {
+                                if (label.empty())
+                                {
+                                    Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
+                                    label = stringFormat("L{0}", hexWord(addr));
+                                }
 
-                            // Attempt to add the label
-                            label = getEditor().getData().addLabel(label, a);
+                                // Attempt to add the label
+                                label = getEditor().getData().addLabel(label, a);
 
-                            getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
-                        }, ConsumeKeyState::No, RequireInputState::No);
+                                getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
+                            }, ConsumeKeyState::No, RequireInputState::No);
+                        }
                     }
-                }
-            }, ConsumeKeyState::Yes, RequireInputState::Yes);
+                }, ConsumeKeyState::Yes, RequireInputState::Yes);
+            }
             break;
 
         case K::Return:
