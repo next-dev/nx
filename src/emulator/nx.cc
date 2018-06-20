@@ -639,7 +639,7 @@ Nx::Nx(int argc, char** argv)
     m_emulator.select();
     if (!loadedFiles)
     {
-        loadNxSnapshot((m_tempPath / "cache.nx").osPath());
+        loadNxSnapshot((m_tempPath / "cache.nx").osPath(), true);
     }
 }
 
@@ -1184,7 +1184,7 @@ bool Nx::saveSnaSnapshot(string fileName)
 #define CHECK_AGE(blk, maxVersion) \
     if (f.hasSection(blk) && f[blk].version() > (maxVersion)) return false;
 
-bool Nx::loadNxSnapshot(string fileName)
+bool Nx::loadNxSnapshot(string fileName, bool allowFailure)
 {
     NxFile f;
 
@@ -1335,7 +1335,7 @@ bool Nx::loadNxSnapshot(string fileName)
         return true;
     } // if (f.load(...
 
-    Overlay::currentOverlay()->error("Unable to open .nx file");
+    if (!allowFailure) Overlay::currentOverlay()->error("Unable to open .nx file");
     return false;
 }
 

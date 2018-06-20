@@ -171,7 +171,7 @@ private:
     bool loadSnaSnapshot(string fileName);
     bool loadZ80Snapshot(string fileName);
     bool loadTape(string fileName);
-    bool loadNxSnapshot(string fileName);
+    bool loadNxSnapshot(string fileName, bool allowFailure = false);
 
     // Saving
     bool saveSnaSnapshot(string fileName);
