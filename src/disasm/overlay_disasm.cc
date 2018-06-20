@@ -504,7 +504,11 @@ void DisassemblerWindow::switchTo(const DisassemblerEditor& editor)
 void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
-    if (getNumEditors() != 0 && getEditor().isEditing()) return;
+    if (getNumEditors() != 0 && getEditor().isEditing())
+    {
+        getEditor().onKey(key, down, shift, ctrl, alt);
+        return;
+    };
 
     //
     // Normal
