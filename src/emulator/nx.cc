@@ -770,6 +770,10 @@ void Nx::run()
 #endif
             switch (event.type)
             {
+            case sf::Event::LostFocus:
+                m_emulator.clearKeys();
+                break;
+
             case sf::Event::Closed:
                 if (m_editorOverlay.getWindow().needToSave() || m_disassemblerOverlay.getWindow().needToSave())
                 {
