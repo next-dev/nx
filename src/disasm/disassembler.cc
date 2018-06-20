@@ -99,13 +99,17 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         insertLine(line, Line{ tag, LineType::FullComment, MemAddr(), MemAddr(), comment });
         return line;
     }
+    changed();
 }
 
 void DisassemblerDoc::setComment(int line, string comment)
 {
     NX_ASSERT(m_lines[line].type == LineType::FullComment || m_lines[line].type == LineType::Instruction);
-    m_lines[line].text = comment;
-    changed();
+    if (m_lines[line].text != comment)
+    {
+        m_lines[line].text = comment;
+        changed();
+    }
 }
 
 int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
@@ -217,7 +221,31 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
         Overlay::currentOverlay()->error("Invalid code entry point.");
         return -1;
     }
+}
 
+bool DisassemblerDoc::replaceLabel(int line, string oldLabel, string newLabel)
+{
+    NX_ASSERT(getLine(line).type == LineType::Label);
+
+    auto itLabel = m_labelMap.find(oldLabel);
+    NX_ASSERT(itLabel != m_labelMap.end());
+
+    MemAddr a = itLabel->second.second;
+
+    m_labelMap.erase(itLabel);
+    m_addrMap.erase(m_addrMap.find(a));
+
+    auto it = m_labelMap.find(newLabel);
+    if (it == m_labelMap.end())
+    {
+        // New label doesn't exist so let's add it.
+        addLabel(newLabel, a);
+        getLine(line).text = newLabel;
+        changed();
+        return true;
+    }
+
+    return false;
 }
 
 int DisassemblerDoc::deleteLine(int line)
@@ -329,6 +357,11 @@ bool DisassemblerDoc::load(string fileName)
                 x += (int)operand.size() + 1;
 
                 m_lines.emplace_back(tag, type, start, end, text, opCode, operand);
+
+                if (type == LineType::Label)
+                {
+                    addLabel(text, start);
+                }
             }
             m_nextTag = dcmd.peek32(x);
         }

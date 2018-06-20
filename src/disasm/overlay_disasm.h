@@ -22,6 +22,8 @@ public:
     const string&           getFileName() const     { return m_fileName; }
     void                    setFileName(string fn)  { m_fileName = move(fn); }
     string                  getTitle() const;
+    DisassemblerDoc::Line&  getCurrentLine()                { return getData().getLine(m_currentLine); }
+    int                     getCurrentLineIndex() const     { return m_currentLine; }
 
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt);
     void onText(char ch);
@@ -37,6 +39,7 @@ private:
     // Use cases
     //
     void insertComment();
+    void editComment(bool moveToNextLine);
 
 private:
     Spectrum*           m_speccy;

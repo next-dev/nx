@@ -270,7 +270,7 @@ void DisassemblyWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool
             break;
 
         case K::G:
-            prompt("Goto", [this](string text)
+            prompt("Goto", {}, [this](string text)
             {
                 if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
                 {

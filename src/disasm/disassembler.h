@@ -46,6 +46,7 @@ public:
     int insertComment(int line, int tag, string comment);
     void setComment(int line, string comment);
     int generateCode(MemAddr addr, int tag, string label);
+    bool replaceLabel(int line, string oldLabel, string newLabel);
 
     //
     // Lines

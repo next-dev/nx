@@ -653,7 +653,7 @@ void Window::text(char ch)
 // Window prompts
 //----------------------------------------------------------------------------------------------------------------------
 
-void Window::prompt(string promptString, function<void(string)> handler, bool consumeKey)
+void Window::prompt(string promptString, string originalText, function<void(string)> handler, bool consumeKey)
 {
     if (isPrompting()) return;
 
@@ -661,6 +661,7 @@ void Window::prompt(string promptString, function<void(string)> handler, bool co
     int promptSize = Draw::squashedStringWidth(m_prompt);
     m_editor.setPosition(m_x + 2 + promptSize, m_y + 1, m_width - 3 - promptSize, 1);
     m_editor.clear();
+    m_editor.getData().insert(originalText);
     m_handler = handler;
     m_ignoreFirstChar = consumeKey;
 }

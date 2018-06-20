@@ -121,6 +121,28 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 insertComment();
                 break;
 
+            case K::Return:
+                using LT = DisassemblerDoc::LineType;
+                switch (getData().getLine(m_currentLine).type)
+                {
+                case LT::Blank:
+                case LT::END:
+                    // Do nothing
+                    break;
+
+                case LT::FullComment:
+                    editComment(false);
+                    break;
+
+                case LT::Instruction:
+                    // #todo: edit instruction comment
+                    break;
+
+                case LT::Label:
+                    // This is handled in DisassemblerWindow to enable prompting.
+                    break;
+                }
+
             default:
                 break;
             }
@@ -173,17 +195,22 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
 void DisassemblerEditor::onText(char ch)
 {
-    if (!m_blockFirstChar && m_editor)
+    if (!m_blockFirstChar)
     {
-        m_editor->text(ch);
+        if (m_editor)
+        {
+            // Send the text to the editor
+            m_editor->text(ch);
+
+            if (ch == 13)
+            {
+                // Enter was pressed - close editor
+                delete m_editor;
+                m_editor = nullptr;
+            }
+        }
     }
     m_blockFirstChar = false;
-
-    if (m_editor && ch == 13)
-    {
-        delete m_editor;
-        m_editor = nullptr;
-    }
 }
 
 string DisassemblerEditor::getTitle() const
@@ -308,8 +335,6 @@ void DisassemblerEditor::saveFile()
 
 void DisassemblerEditor::insertComment()
 {
-    using LT = DisassemblerDoc::LineType;
-
     // If we're inserting a comment before a blank line, we re-tag the blank line to match the comment.
     int tag = getData().getNextTag();
 
@@ -317,16 +342,22 @@ void DisassemblerEditor::insertComment()
     m_currentLine = getData().insertComment(m_currentLine, tag, "");
     ensureVisibleCursor();
 
+    editComment(true);
+}
+
+void DisassemblerEditor::editComment(bool moveToNextLine)
+{
     m_blockFirstChar = true;
     m_editorPrefix.clear();
     m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
         Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
-        [this](Editor& ed)
-    {
-        // Reset the command text
-        getData().setComment(m_currentLine, ed.getData().getString());
-        ++m_currentLine;
-    });
+        [this, moveToNextLine](Editor& ed)
+        {
+            // Reset the command text
+            getData().setComment(m_currentLine, ed.getData().getString());
+            if (moveToNextLine) ++m_currentLine;
+        });
+    m_editor->getData().insert(getData().getLine(m_currentLine).text);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -478,34 +509,52 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
     //
     // Normal
     //
-    if (down && !shift && !ctrl && !alt)
+    if (getNumEditors() > 0 && down && !shift && !ctrl && !alt)
     {
         switch (key)
         {
         case K::C:      // Code entry point
-            if (getNumEditors() > 0)
-            {
-                prompt("Code entry", [this](string text) {
-                    if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
+            prompt("Code entry", string(), [this](string text) {
+                if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
+                {
+                    MemAddr a = *addr;
+                    if (m_nx.getSpeccy().isZ80Address(a))
                     {
-                        MemAddr a = *addr;
-                        if (m_nx.getSpeccy().isZ80Address(a))
-                        {
-                            prompt("Label", [this, a](string label) {
-                                if (label.empty())
-                                {
-                                    Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
-                                    label = stringFormat("L{0}", hexWord(addr));
-                                }
+                        prompt("Label", string(), [this, a](string label) {
+                            if (label.empty())
+                            {
+                                Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
+                                label = stringFormat("L{0}", hexWord(addr));
+                            }
 
-                                // Attempt to add the label
-                                label = getEditor().getData().addLabel(label, a);
+                            // Attempt to add the label
+                            label = getEditor().getData().addLabel(label, a);
 
-                                getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
-                            }, false);
-                        }
+                            getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
+                        }, false);
                     }
-                }, true);
+                }
+            }, true);
+            break;
+
+        case K::Return:
+            {
+                DisassemblerDoc::Line& line = getEditor().getCurrentLine();
+                if (line.type == DisassemblerDoc::LineType::Label)
+                {
+                    prompt("Rename label", line.text, [&line, this](string label) {
+                        if (label.empty())
+                        {
+                            Z80MemAddr addr = m_nx.getSpeccy().convertAddress(line.startAddress);
+                            label = stringFormat("L{0}", hexWord(addr));
+                        }
+
+                        if (!getEditor().getData().replaceLabel(getEditor().getCurrentLineIndex(), line.text, label))
+                        {
+                            Overlay::currentOverlay()->error("Cannot replace label name with already existing label.");
+                        }
+                    }, true);
+                }
             }
             break;
 
