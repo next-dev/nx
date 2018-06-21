@@ -77,9 +77,10 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
     {
         // We're insert a blank first then the comment.  We also make sure the comment shares the same tag
         // as the surrounding code.
-        tag = getLine(line).tag;
-        insertLine(line, Line{ tag, LineType::FullComment, MemAddr(), MemAddr(), comment });
-        insertLine(line, Line{ tag, LineType::Blank,{},{},{} });
+        Line& l = getLine(line);
+        tag = l.tag;
+        insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, l.startAddress, comment });
+        insertLine(line, Line{ tag, LineType::Blank, l.startAddress, l.startAddress, {} });
         return line + 1;
     }
     else
@@ -94,9 +95,9 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         }
         else if (l.type != LineType::FullComment)
         {
-            insertLine(line, Line{ tag, LineType::Blank,{},{},{} });
+            insertLine(line, Line{ tag, LineType::Blank, l.startAddress, l.startAddress, {} });
         }
-        insertLine(line, Line{ tag, LineType::FullComment, MemAddr(), MemAddr(), comment });
+        insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, l.startAddress, comment });
         return line;
     }
     changed();
@@ -136,7 +137,6 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
             Line& line = getLine(i);
 
             NX_ASSERT(line.type != LineType::Blank);
-            NX_ASSERT(line.type != LineType::FullComment);
 
             // Find the maximum end point (which is that start address of the section after it).
             end = line.startAddress;
@@ -545,13 +545,13 @@ optional<int> DisassemblerDoc::findLine(MemAddr addr) const
     for (size_t i = 0; i < m_lines.size() - 1; ++i)
     {
         const Line& line = m_lines[i];
-        if (line.type == LineType::Label || line.type == LineType::Instruction)
-        {
+//         if (line.type == LineType::Label || line.type == LineType::Instruction || line.type == LineType::FullComment)
+//         {
             if (addr < line.startAddress)
             {
                 return int(i);
             }
-        }
+//         }
     }
 
     return (int)m_lines.size() - 1;
