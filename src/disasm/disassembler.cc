@@ -547,14 +547,10 @@ optional<int> DisassemblerDoc::findLine(MemAddr addr) const
         const Line& line = m_lines[i];
         if (line.type == LineType::Label || line.type == LineType::Instruction)
         {
-            if (addr >= line.startAddress && addr <= line.endAddress)
+            if (addr < line.startAddress)
             {
                 return int(i);
             }
-        }
-        else if (line.type == LineType::Label)
-        {
-            if (addr == line.startAddress) return int(i);
         }
     }
 
