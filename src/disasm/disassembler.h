@@ -22,7 +22,6 @@
 //----------------------------------------------------------------------------------------------------------------------
 
 class Spectrum;
-class Disassembler;
 
 class DisassemblerDoc
 {
@@ -120,7 +119,6 @@ private:
     vector<Line>        m_lines;
     int                 m_nextTag;
 
-    using LabelInfo = pair<string, MemAddr>;
-    map<string, LabelInfo>      m_labelMap;
-    map<MemAddr, LabelInfo>     m_addrMap;
+    map<string, Disassembler::LabelInfo>    m_labelMap;
+    map<MemAddr, Disassembler::LabelInfo>   m_addrMap;
 };

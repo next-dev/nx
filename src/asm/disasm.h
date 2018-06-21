@@ -7,9 +7,11 @@
 #include <config.h>
 #include <types.h>
 #include <asm/lex.h>
+#include <emulator/spectrum.h>
 
 #include <string>
 #include <vector>
+#include <optional>
 
 enum class OperandType
 {
@@ -66,10 +68,13 @@ enum class OperandType
 class Disassembler
 {
 public:
+    using LabelInfo = pair<string, MemAddr>;
+    using Addresses = map<MemAddr, LabelInfo>;
+
     u16 disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4);
     std::string addressAndBytes(u16 a) const;
     std::string opCodeString() const;
-    std::string operandString() const;
+    std::string operandString(Addresses addresses) const;
 
     Lex::Element::Type  opCodeValue() const { return m_opCode; }
     Lex::Element::Type  opCode2Value() const { return m_opCode2; }
@@ -77,6 +82,8 @@ public:
     OperandType         operand2Value() const { return m_operand2; }
     i64                 param1Value() const { return m_param1; }
     i64                 param2Value() const { return m_param2; }
+
+    optional<u16>       extractAddress() const;
 
 private:
     void result(Lex::Element::Type opCode, int instructionSize);
@@ -95,9 +102,9 @@ private:
     void decode(u8 opCode, u8& x, u8& y, u8& z, u8& p, u8& q);
 
     static std::string opCodeString(Lex::Element::Type type);
-    static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2);
-    std::string operand1String() const;
-    std::string operand2String() const;
+    static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2, Addresses addresses);
+    std::string operand1String(Addresses addresses) const;
+    std::string operand2String(Addresses addresses) const;
 
     i64 byte(u8 b) const { return (i64)b; }
     i64 word(u8 l, u8 h) const { return (i64)l + 256 * (i64)h; }
@@ -129,6 +136,7 @@ private:
     void disassembleED(u8 b2, u8 b3, u8 b4);
 
 private:
+    u16                 m_srcAddr;
     Lex::Element::Type  m_opCode;
     Lex::Element::Type  m_opCode2;
     OperandType         m_operand1;

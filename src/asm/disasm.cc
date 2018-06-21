@@ -200,6 +200,7 @@ u16 Disassembler::disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4)
     u8 x, y, z, p, q;
     decode(b1, x, y, z, p, q);
     m_bytes = { b1, b2, b3, b4 };
+    m_srcAddr = a;
 
     switch (x)
     {
@@ -773,7 +774,7 @@ std::string Disassembler::opCodeString(T type)
 
 // opCode2 is normally T::Unknown.  If not, param2 is the 1st operand value.
 //
-std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2)
+std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2, Addresses addresses)
 {
     if (opCode2 == T::Unknown)
     {
@@ -843,12 +844,12 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         if (opCode2 == T::RES || opCode2 == T::SET)
         {
             // <OPCODE> n,<OPERAND STRING>
-            return opCodeString(opCode2) + " " + intString((int)param2, 0) + "," + operandString(type, param, T::Unknown, 0);
+            return opCodeString(opCode2) + " " + intString((int)param2, 0) + "," + operandString(type, param, T::Unknown, 0, addresses);
         }
         else
         {
             // <OPCODE> <OPERAND STRING>
-            return opCodeString(opCode2) + " " + operandString(type, param, T::Unknown, 0);
+            return opCodeString(opCode2) + " " + operandString(type, param, T::Unknown, 0, addresses);
         }
     }
 }
@@ -858,17 +859,17 @@ std::string Disassembler::opCodeString() const
     return opCodeString(m_opCode);
 }
 
-std::string Disassembler::operand1String() const
+std::string Disassembler::operand1String(Addresses addresses) const
 {
-    return operandString(m_operand1, m_param1, T::Unknown, 0);
+    return operandString(m_operand1, m_param1, T::Unknown, 0, addresses);
 }
 
-std::string Disassembler::operand2String() const
+std::string Disassembler::operand2String(Addresses addresses) const
 {
-    return operandString(m_operand2, m_param2, m_opCode2, m_param1);
+    return operandString(m_operand2, m_param2, m_opCode2, m_param1, addresses);
 }
 
-std::string Disassembler::operandString() const
+std::string Disassembler::operandString(Addresses addresses) const
 {
     if (m_operand1 == O::None)
     {
@@ -876,14 +877,14 @@ std::string Disassembler::operandString() const
     }
     else
     {
-        string s = operand1String();
+        string s = operand1String(addresses);
         if (m_operand2 == O::None)
         {
             return s;
         }
         else
         {
-            return s + "," + operand2String();
+            return s + "," + operand2String(addresses);
         }
     }
 }
@@ -932,6 +933,103 @@ void Disassembler::result(Lex::Element::Type opCode, Lex::Element::Type opCode2,
     m_param1 = value1;
     m_param2 = value2;
     m_bytes.erase(m_bytes.begin() + instructionSize, m_bytes.end());
+}
+
+optional<u16> Disassembler::extractAddress() const
+{
+    static const int addresses[256] = {
+    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+        0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
+        5,  1,  0,  0,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
+        5,  1,  1,  0,  0,  0,  0,  0,  5,  0,  1,  0,  0,  0,  0,  0,      // 20-2F
+        5,  1,  1,  0,  0,  0,  0,  0,  5,  0,  1,  0,  0,  0,  0,  0,      // 30-3F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 40-4F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 50-5F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 60-6F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 70-7F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
+        0,  0,  1,  1,  1,  0,  0,  0,  0,  0,  1,  0,  1,  1,  0,  0,      // C0-CF
+        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // D0-DF
+        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // E0-EF
+        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // F0-FF
+    };
+
+    static const int ixAddresses[256] = {
+    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
+        0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,      // 20-2F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 30-3F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 40-4F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 50-5F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 60-6F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 70-7F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // C0-CF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // D0-DF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // E0-EF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // F0-FF
+    };
+
+    static const int edAddresses[256] = {
+    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 20-2F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 30-3F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 40-4F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 50-5F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 60-6F
+        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 70-7F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // C0-CF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // D0-DF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // E0-EF
+        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // F0-FF
+    };
+
+    const int* adds = addresses;
+
+    int i = 0;
+    switch (m_bytes[0])
+    {
+    case 0xdd:
+    case 0xfd:
+        adds = ixAddresses;
+        ++i;
+        break;
+
+    case 0xed:
+        adds = edAddresses;
+        ++i;
+        break;
+    }
+
+    int offset = adds[m_bytes[0]];
+    u16 a = 0;
+    if (offset == 0) return {};
+    if (offset >= 4)
+    {
+        offset -= 4;
+        a = m_srcAddr + (u16)m_bytes.size() + (u16)m_bytes[i + offset];
+
+    }
+    else
+    {
+        a = (u16)m_bytes[i + offset] + (u16)m_bytes[i + offset + 1] * 256;
+    }
+
+    return a;
+
 }
 
 //----------------------------------------------------------------------------------------------------------------------

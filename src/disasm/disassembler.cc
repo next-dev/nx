@@ -207,7 +207,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
             }
 
             // Add a line for the code
-            insertLine(i++, Line{ tag, c, nc - 1, dis.opCodeString(), dis.operandString() });
+            insertLine(i++, Line{ tag, c, nc - 1, dis.opCodeString(), dis.operandString(m_addrMap) });
 
             c = nc;
         }
@@ -302,105 +302,9 @@ void DisassemblerDoc::checkBlankLines(int line)
 
 optional<u16> DisassemblerDoc::extractAddress(int lineNum) const
 {
-    const Line& line = getLine(lineNum);
-    if (line.type != LineType::Instruction) return {};
-
-    static const int addresses[256] = {
-    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-        0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
-        5,  1,  0,  0,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
-        5,  1,  1,  0,  0,  0,  0,  0,  5,  0,  1,  0,  0,  0,  0,  0,      // 20-2F
-        5,  1,  1,  0,  0,  0,  0,  0,  5,  0,  1,  0,  0,  0,  0,  0,      // 30-3F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 40-4F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 50-5F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 60-6F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 70-7F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
-        0,  0,  1,  1,  1,  0,  0,  0,  0,  0,  1,  0,  1,  1,  0,  0,      // C0-CF
-        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // D0-DF
-        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // E0-EF
-        0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  1,  0,  1,  0,  0,  0,      // F0-FF
-    };
-
-    static const int ixAddresses[256] = {
-    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
-        0,  1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,      // 20-2F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 30-3F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 40-4F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 50-5F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 60-6F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 70-7F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // C0-CF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // D0-DF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // E0-EF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // F0-FF
-    };
-
-    static const int edAddresses[256] = {
-    //  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 00-0F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 10-1F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 20-2F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 30-3F
-        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 40-4F
-        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 50-5F
-        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 60-6F
-        0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,      // 70-7F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 80-8F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // 90-9F
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // A0-AF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // B0-BF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // C0-CF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // D0-DF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // E0-EF
-        0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,      // F0-FF
-    };
-
-    MemAddr c = line.startAddress;
-    u16 a = m_speccy->convertAddress(c);
     Disassembler dis;
-    MemAddr nc = disassemble(dis, c);
-    u16 na = m_speccy->convertAddress(nc);
-
-    const int* adds = addresses;
-
-    switch (m_mmap[a])
-    {
-    case 0xdd:
-    case 0xfd:
-        adds = ixAddresses;
-        ++a;
-        break;
-
-    case 0xed:
-        adds = edAddresses;
-        ++a;
-        break;
-    }
-
-    int offset = adds[m_mmap[a]];
-    if (offset == 0) return {};
-    if (offset >= 4)
-    {
-        offset -= 4;
-        a = na + m_mmap[a + offset];
-
-    }
-    else
-    {
-        a = m_mmap[a + offset] + m_mmap[a + offset + 1] * 256;
-    }
-
-    return a;
+    MemAddr m = disassemble(dis, getLine(lineNum).startAddress);
+    return dis.extractAddress();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -567,7 +471,7 @@ string DisassemblerDoc::addLabel(string label, MemAddr addr)
     }
 
     // This is a new label
-    LabelInfo info = make_pair(label, addr);
+    Disassembler::LabelInfo info = make_pair(label, addr);
     m_labelMap[label] = info;
     m_addrMap[addr] = info;
     return label;

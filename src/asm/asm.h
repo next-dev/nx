@@ -74,7 +74,7 @@ private:
     u8                      m_currentPass;
 };
 
-using Labels = vector<pair<string, MemAddr>>;
+using Labels = vector<Disassembler::LabelInfo>;
 
 
 //----------------------------------------------------------------------------------------------------------------------

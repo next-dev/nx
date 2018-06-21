@@ -209,10 +209,12 @@ void DisassemblyWindow::onDraw(Draw& draw)
                             : bkg2;
             u16 next = disassemble(d, a);
 
+            // #todo: populate this with current labels
+            Disassembler::Addresses addresses;
             draw.attrRect(m_x, m_y + row, m_width, 1, colour);
             draw.printString(m_x + 2, m_y + row, d.addressAndBytes(a).c_str(), false, colour);
             draw.printString(m_x + 21, m_y + row, d.opCodeString().c_str(), false, colour);
-            draw.printString(m_x + 26, m_y + row, d.operandString().c_str(), false, colour);
+            draw.printString(m_x + 26, m_y + row, d.operandString(addresses).c_str(), false, colour);
 
             if (a != pc && m_nx.getSpeccy().hasUserBreakpointAt(ta))
             {

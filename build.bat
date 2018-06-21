@@ -13,5 +13,5 @@ if exist "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxil
 )
 cd /d %folder%
 pushd _build
-msbuild nx.sln /t:rebuild /p:configuration=Release /p:platform=Win64
+msbuild nx.sln /t:rebuild /p:configuration=Release /p:platform=Win64 /m
 popd
