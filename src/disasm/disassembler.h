@@ -37,6 +37,7 @@ public:
     int getNextTag() { return m_nextTag++; }
 
     string addLabel(string label, MemAddr addr);
+    const map<MemAddr, Disassembler::LabelInfo>& getLabelsByAddr() const { return m_addrMap; }
 
     //
     // Use cases
@@ -65,30 +66,17 @@ public:
 
     struct Line
     {
-        int         tag;
-        LineType    type;
-        MemAddr     startAddress;
-        MemAddr     endAddress;
-        string      text;
-        string      opCode;
-        string      operand;
+        int             tag;
+        LineType        type;
+        Disassembler    disasm;
+        MemAddr         startAddress;
+        string          text;
 
-        Line(int tag, LineType type, MemAddr start, MemAddr end, string text, string opCode, string operand)
+        Line(int tag, LineType type, MemAddr start, string text)
             : tag(tag)
             , type(type)
             , startAddress(start)
-            , endAddress(end)
             , text(move(text))
-            , opCode(move(opCode))
-            , operand(move(operand))
-        {}
-
-        Line(int tag, LineType type, MemAddr start, MemAddr end, string text)
-            : Line(tag, type, start, end, text, {}, {})
-        {}
-
-        Line(int tag, MemAddr start, MemAddr end, string opCode, string operands)
-            : Line(tag, LineType::Instruction, start, end, {}, opCode, operands)
         {}
     };
 

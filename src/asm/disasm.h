@@ -71,10 +71,56 @@ public:
     using LabelInfo = pair<string, MemAddr>;
     using Addresses = map<MemAddr, LabelInfo>;
 
+    Disassembler()
+    {
+
+    }
+
+    Disassembler(const Disassembler& other)
+        : m_srcAddr(other.m_srcAddr)
+        , m_opCode(other.m_opCode)
+        , m_opCode2(other.m_opCode2)
+        , m_operand1(other.m_operand1)
+        , m_operand2(other.m_operand2)
+        , m_param1(other.m_param1)
+        , m_param2(other.m_param2)
+        , m_comment(other.m_comment)
+        , m_bytes(other.m_bytes)
+    {
+    }
+
+    Disassembler& operator=(const Disassembler& other)
+    {
+        m_srcAddr = other.m_srcAddr;
+        m_opCode = other.m_opCode;
+        m_opCode2 = other.m_opCode2;
+        m_operand1 = other.m_operand1;
+        m_operand2 = other.m_operand2;
+        m_param1 = other.m_param1;
+        m_param2 = other.m_param2;
+        m_comment = other.m_comment;
+        m_bytes = other.m_bytes;
+
+        return *this;
+    }
+
+    Disassembler(Disassembler&& other)
+        : m_srcAddr(other.m_srcAddr)
+        , m_opCode(other.m_opCode)
+        , m_opCode2(other.m_opCode2)
+        , m_operand1(other.m_operand1)
+        , m_operand2(other.m_operand2)
+        , m_param1(other.m_param1)
+        , m_param2(other.m_param2)
+        , m_comment(move(other.m_comment))
+        , m_bytes(move(other.m_bytes))
+    {
+    }
+
     u16 disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4);
     std::string addressAndBytes(u16 a) const;
     std::string opCodeString() const;
-    std::string operandString(Addresses addresses) const;
+    std::string operandString(const Spectrum& speccy, const Addresses& addresses) const;
 
     Lex::Element::Type  opCodeValue() const { return m_opCode; }
     Lex::Element::Type  opCode2Value() const { return m_opCode2; }
@@ -82,6 +128,8 @@ public:
     OperandType         operand2Value() const { return m_operand2; }
     i64                 param1Value() const { return m_param1; }
     i64                 param2Value() const { return m_param2; }
+    const vector<u8>&   bytes() const { return m_bytes; }
+    u16                 srcZ80Addr() const { return m_srcAddr; }
 
     optional<u16>       extractAddress() const;
 
@@ -102,9 +150,10 @@ private:
     void decode(u8 opCode, u8& x, u8& y, u8& z, u8& p, u8& q);
 
     static std::string opCodeString(Lex::Element::Type type);
-    static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2, Addresses addresses);
-    std::string operand1String(Addresses addresses) const;
-    std::string operand2String(Addresses addresses) const;
+    static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2,
+        const Spectrum& speccy, const Addresses& addresses);
+    std::string operand1String(const Spectrum& speccy, const Addresses& addresses) const;
+    std::string operand2String(const Spectrum& speccy, const Addresses& addresses) const;
 
     i64 byte(u8 b) const { return (i64)b; }
     i64 word(u8 l, u8 h) const { return (i64)l + 256 * (i64)h; }

@@ -774,7 +774,8 @@ std::string Disassembler::opCodeString(T type)
 
 // opCode2 is normally T::Unknown.  If not, param2 is the 1st operand value.
 //
-std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2, Addresses addresses)
+std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2,
+    const Spectrum& speccy, const Addresses& addresses)
 {
     if (opCode2 == T::Unknown)
     {
@@ -785,7 +786,18 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
             return intString((int)param, 0);
 
         case O::AddressedExpression:
-            return string("($") + hexWord(u16(param)) + ')';
+            {
+                MemAddr a = speccy.convertAddress(Z80MemAddr((u16)param));
+                auto it = addresses.find(a);
+                if (it == addresses.end())
+                {
+                    return string("($") + hexWord(u16(param)) + ')';
+                }
+                else
+                {
+                    return string("(") + it->second.first + ')';
+                }
+            }
 
         case O::IX_Expression:
             return string("(ix") + ((i8)(u8)param < 0 ? "" : "+") + intString((int)(i8)(u8)param, 0) + ')';
@@ -829,7 +841,20 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         case O::Address_C:              return "(c)";
 
         case O::Expression8:            return string("$") + hexByte(u8(param));
-        case O::Expression16:           return string("$") + hexWord(u16(param));
+        case O::Expression16:
+            {
+                MemAddr a = speccy.convertAddress(Z80MemAddr((u16)param));
+                auto it = addresses.find(a);
+                if (it == addresses.end())
+                {
+                    return string("$") + hexWord(u16(param));
+                }
+                else
+                {
+                    return it->second.first;
+                }
+            }
+
         case O::AddressedExpression8:   return string("($") + hexByte(u8(param)) + ')';
 
         case O::F:	                    return "f";
@@ -844,12 +869,12 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         if (opCode2 == T::RES || opCode2 == T::SET)
         {
             // <OPCODE> n,<OPERAND STRING>
-            return opCodeString(opCode2) + " " + intString((int)param2, 0) + "," + operandString(type, param, T::Unknown, 0, addresses);
+            return opCodeString(opCode2) + " " + intString((int)param2, 0) + "," + operandString(type, param, T::Unknown, 0, speccy, addresses);
         }
         else
         {
             // <OPCODE> <OPERAND STRING>
-            return opCodeString(opCode2) + " " + operandString(type, param, T::Unknown, 0, addresses);
+            return opCodeString(opCode2) + " " + operandString(type, param, T::Unknown, 0, speccy, addresses);
         }
     }
 }
@@ -859,17 +884,17 @@ std::string Disassembler::opCodeString() const
     return opCodeString(m_opCode);
 }
 
-std::string Disassembler::operand1String(Addresses addresses) const
+std::string Disassembler::operand1String(const Spectrum& speccy, const Addresses& addresses) const
 {
-    return operandString(m_operand1, m_param1, T::Unknown, 0, addresses);
+    return operandString(m_operand1, m_param1, T::Unknown, 0, speccy, addresses);
 }
 
-std::string Disassembler::operand2String(Addresses addresses) const
+std::string Disassembler::operand2String(const Spectrum& speccy, const Addresses& addresses) const
 {
-    return operandString(m_operand2, m_param2, m_opCode2, m_param1, addresses);
+    return operandString(m_operand2, m_param2, m_opCode2, m_param1, speccy, addresses);
 }
 
-std::string Disassembler::operandString(Addresses addresses) const
+std::string Disassembler::operandString(const Spectrum& speccy, const Addresses& addresses) const
 {
     if (m_operand1 == O::None)
     {
@@ -877,14 +902,14 @@ std::string Disassembler::operandString(Addresses addresses) const
     }
     else
     {
-        string s = operand1String(addresses);
+        string s = operand1String(speccy, addresses);
         if (m_operand2 == O::None)
         {
             return s;
         }
         else
         {
-            return s + "," + operand2String(addresses);
+            return s + "," + operand2String(speccy, addresses);
         }
     }
 }

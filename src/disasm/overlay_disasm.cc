@@ -259,10 +259,15 @@ void DisassemblerEditor::render(Draw& draw)
                 break;
 
             case T::Instruction:
-                m_longestLine = max(m_longestLine, 32 + (int)line.operand.size());
-                draw.printString(m_x + 9, y, line.opCode, false, bkgColour);
-                draw.printString(m_x + 15, y, line.operand, false, bkgColour);
-                if (!line.text.empty()) draw.printString(m_x + 33, y, string("; ") + line.text, false, commentColour);
+                {
+                    string opCodeStr = line.disasm.opCodeString();
+                    string operandStr = line.disasm.operandString(*m_speccy, getData().getLabelsByAddr());
+
+                    m_longestLine = max(m_longestLine, 32 + (int)operandStr.size());
+                    draw.printString(m_x + 9, y, opCodeStr, false, bkgColour);
+                    draw.printString(m_x + 15, y, operandStr, false, bkgColour);
+                    if (!line.text.empty()) draw.printString(m_x + 33, y, string("; ") + line.text, false, commentColour);
+                }
                 break;
             }
 
