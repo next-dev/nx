@@ -97,7 +97,9 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         {
             insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {} });
         }
-        insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, comment });
+
+        Line& l2 = getLine(line);
+        insertLine(line, Line{ tag, LineType::FullComment, l2.startAddress, comment });
         return line;
     }
     changed();
@@ -372,8 +374,8 @@ bool DisassemblerDoc::load(string fileName)
                 int tag = dcmd.peek32(x);
                 LineType type = (LineType)dcmd.peek8(x+4);
                 MemAddr start = dcmd.peekAddr(x + 5);
-                string text = dcmd.peekString(x + 13);
-                x += (13 + (int)text.size() + 1);
+                string text = dcmd.peekString(x + 9);
+                x += (9 + (int)text.size() + 1);
                 u16 srcAddr = dcmd.peek16(x);
                 x += 2;
                 u8 b1 = dcmd.peek8(x++);
