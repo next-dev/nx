@@ -25,6 +25,7 @@ DisassemblerEditor::DisassemblerEditor(Spectrum& speccy, int xCell, int yCell, i
     , m_editor(nullptr)
     , m_blockFirstChar(false)
     , m_currentLine(0)
+    , m_navIndex(0)
 {
 
 }
@@ -115,10 +116,12 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 m_currentLine = getData().deleteLine(m_currentLine);
                 m_currentLine = max(0, min(m_currentLine, getData().getNumLines() - 1));
                 ensureVisibleCursor();
+                clearJumps(m_currentLine);
                 break;
 
             case K::SemiColon:
                 insertComment();
+                clearJumps(m_currentLine);
                 break;
 
             case K::Return:
@@ -142,6 +145,13 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     // This is handled in DisassemblerWindow to enable prompting.
                     break;
                 }
+                markJump();
+                break;
+
+            case K::Space:
+                // This activates the jump.
+                jump();
+                break;
 
             default:
                 break;
@@ -184,6 +194,26 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 //             default:
 //                 break;
 //             }
+        }
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Alt-keys
+        //--------------------------------------------------------------------------------------------------------------
+
+        else if (!shift && !ctrl && alt)
+        {
+            switch (key)
+            {
+            case K::Left:
+                // Previous nav point.
+                prevJump();
+                break;
+
+            case K::Right:
+                // Next nav point.
+                nextJump();
+                break;
+            }
         }
     }
     else
@@ -363,6 +393,50 @@ void DisassemblerEditor::editComment(bool moveToNextLine)
             if (moveToNextLine) ++m_currentLine;
         });
     m_editor->getData().insert(getData().getLine(m_currentLine).text);
+}
+
+void DisassemblerEditor::markJump()
+{
+    if (m_lineNav.size() > 0 && m_lineNav.back() == m_currentLine) return;
+    m_lineNav.erase(m_lineNav.begin() + m_navIndex, m_lineNav.end());
+    m_lineNav.push_back(m_currentLine);
+    m_navIndex = (int)m_lineNav.size();
+}
+
+void DisassemblerEditor::jump()
+{
+    optional<u16> addr = extractAddress();
+    if (addr)
+    {
+        MemAddr a = m_speccy->convertAddress(Z80MemAddr(*addr));
+        optional<int> jumpLine = getData().findLabelLine(a);
+        if (jumpLine)
+        {
+            markJump();
+            m_currentLine = *jumpLine;
+            markJump();
+            --m_navIndex;
+            ensureVisibleCursor();
+        }
+    }
+}
+
+void DisassemblerEditor::prevJump()
+{
+    if (m_navIndex > 0 && (int)m_lineNav.size() > m_navIndex)
+    {
+        --m_navIndex;
+        m_currentLine = m_lineNav[m_navIndex];
+    }
+}
+
+void DisassemblerEditor::nextJump()
+{
+    if (m_navIndex < (int)m_lineNav.size()-1)
+    {
+        ++m_navIndex;
+        m_currentLine = m_lineNav[m_navIndex];
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -718,6 +792,7 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         ";|Add comment",
         "Shift-;|Insert instruction comment",
         "C|Add code entry point",
+        "Space|Jump to label",
         })
 {
 }

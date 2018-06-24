@@ -35,6 +35,8 @@ public:
     int getNumLines() const { return (int)m_lines.size() - 1; }
     int deleteLine(int line);
     int getNextTag() { return m_nextTag++; }
+    optional<int> findLine(MemAddr addr) const;
+    optional<int> findLabelLine(MemAddr addr) const;
 
     string addLabel(string label, MemAddr addr);
     const map<MemAddr, Disassembler::LabelInfo>& getLabelsByAddr() const { return m_addrMap; }
@@ -92,7 +94,6 @@ private:
 
     void reset();
     void changed() { m_changed = true; }
-    optional<int> findLine(MemAddr addr) const;
     void checkBlankLines(int line);
     bool middleOfCode(int line) const;
 

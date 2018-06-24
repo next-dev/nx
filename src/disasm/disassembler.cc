@@ -318,7 +318,9 @@ void DisassemblerDoc::checkBlankLines(int line)
 optional<u16> DisassemblerDoc::extractAddress(int lineNum) const
 {
     Disassembler dis;
-    MemAddr m = disassemble(dis, getLine(lineNum).startAddress);
+    const Line& line = getLine(lineNum);
+    if (line.type != LineType::Instruction) return {};
+    MemAddr m = disassemble(dis, line.startAddress);
     return dis.extractAddress();
 }
 
@@ -471,16 +473,31 @@ optional<int> DisassemblerDoc::findLine(MemAddr addr) const
     for (size_t i = 0; i < m_lines.size() - 1; ++i)
     {
         const Line& line = m_lines[i];
-//         if (line.type == LineType::Label || line.type == LineType::Instruction || line.type == LineType::FullComment)
-//         {
-            if (addr < line.startAddress)
-            {
-                return int(i);
-            }
-//         }
+        if (addr <= line.startAddress)
+        {
+            return int(i);
+        }
     }
 
     return (int)m_lines.size() - 1;
+}
+
+optional<int> DisassemblerDoc::findLabelLine(MemAddr addr) const
+{
+    for (size_t i = 0; i < m_lines.size() - 1; ++i)
+    {
+        const Line& line = m_lines[i];
+        if (line.type != LineType::Label) continue;
+
+        if (addr == line.startAddress)
+        {
+            return int(i);
+        }
+
+        if (addr < line.startAddress) return {};
+    }
+
+    return {};
 }
 
 string DisassemblerDoc::addLabel(string label, MemAddr addr)
@@ -498,3 +515,4 @@ string DisassemblerDoc::addLabel(string label, MemAddr addr)
     m_addrMap[addr] = info;
     return label;
 }
+

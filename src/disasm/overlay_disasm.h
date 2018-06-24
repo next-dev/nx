@@ -42,6 +42,11 @@ private:
     //
     void insertComment();
     void editComment(bool moveToNextLine);
+    void markJump();
+    void jump();
+    void prevJump();
+    void nextJump();
+    void clearJumps(int atLine)                 { m_lineNav.clear(); m_lineNav.push_back(atLine); m_navIndex = 0; }
 
 private:
     Spectrum*           m_speccy;
@@ -58,6 +63,10 @@ private:
     bool                m_blockFirstChar;   // Stop the character that initiates the editor to be consumed by it
     string              m_editorPrefix;
     int                 m_currentLine;
+    int                 m_nextTag;
+    vector<int>         m_lineNav;          // list of lines that we've navigated across
+    int                 m_navIndex;
+
 };
 
 
