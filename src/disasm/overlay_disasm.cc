@@ -312,7 +312,7 @@ void DisassemblerEditor::render(Draw& draw)
             case T::FullComment:
                 m_longestLine = max(m_longestLine, (int)line.text.size());
                 draw.printChar(x, y, ';', commentColour);
-                draw.printString(x + 2, y, line.text, false, commentColour);
+                draw.printSquashedString(x + 2, y, line.text, commentColour);
                 break;
 
             case T::Label:
@@ -333,7 +333,7 @@ void DisassemblerEditor::render(Draw& draw)
                     m_longestLine = max(m_longestLine, 32 + (int)operandStr.size());
                     draw.printString(x + 8, y, opCodeStr, false, bkgColour);
                     draw.printString(x + 14, y, operandStr, false, bkgColour);
-                    if (!line.text.empty()) draw.printString(x + 32, y, string("; ") + line.text, false, commentColour);
+                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
                 }
                 break;
             }
@@ -421,7 +421,8 @@ void DisassemblerEditor::editComment(bool moveToNextLine)
 {
     m_blockFirstChar = true;
     m_editorPrefix.clear();
-    m_editor = new Editor(m_x + 3, m_y + (m_currentLine - m_topLine), m_width - 4, 1,
+    int x = m_showAddresses ? m_x + 7 : m_x + 3;
+    m_editor = new Editor(x, m_y + (m_currentLine - m_topLine), (m_x + m_width) - x, 1,
         Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
         [this, moveToNextLine](Editor& ed)
         {
@@ -436,7 +437,8 @@ void DisassemblerEditor::editInstructionComment()
 {
     m_blockFirstChar = true;
     m_editorPrefix.clear();
-    m_editor = new Editor(m_x + 35, m_y + (m_currentLine - m_topLine), m_width - 36, 1,
+    int x = m_showAddresses ? m_x + 37 : m_x + 33;
+    m_editor = new Editor(x, m_y + (m_currentLine - m_topLine), m_x + m_width - x, 1,
         Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
         [this](Editor& ed)
     {

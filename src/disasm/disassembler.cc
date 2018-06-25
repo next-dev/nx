@@ -262,6 +262,25 @@ int DisassemblerDoc::deleteLine(int line)
     bool unknownRangeFound = false;
     MemAddr start, end;
 
+    // Check to see if we're deleting a full-line comment.
+    if (m_lines[line].type == LineType::FullComment)
+    {
+        // We just delete the comment line
+        m_lines.erase(m_lines.begin() + line);
+        if ((line > 0) &&
+            (m_lines[line-1].type == LineType::Blank) &&
+            (m_lines[line].type != LineType::FullComment))
+        {
+            // Erase the blank too
+            m_lines.erase(m_lines.begin() + line - 1);
+        }
+        return line;
+    }
+
+    //
+    // Otherwise we delete the section and clean up blank lines
+    //
+
     for (int i = 0; i < line; ++i)
     {
         Line& line = m_lines[i];
