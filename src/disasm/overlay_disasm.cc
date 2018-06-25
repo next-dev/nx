@@ -847,7 +847,7 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         "Shift-;|Force line comment",
         "C|Add code entry point",
         "Space|Jump to label",
-        "L|Show addresses",
+        "L|Toggle addresses",
         })
 {
 }
