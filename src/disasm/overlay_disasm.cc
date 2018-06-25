@@ -26,6 +26,7 @@ DisassemblerEditor::DisassemblerEditor(Spectrum& speccy, int xCell, int yCell, i
     , m_blockFirstChar(false)
     , m_currentLine(0)
     , m_navIndex(0)
+    , m_showAddresses(false)
 {
 
 }
@@ -161,6 +162,10 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 jump();
                 break;
 
+            case K::L:
+                m_showAddresses = !m_showAddresses;
+                break;
+
             default:
                 break;
             }
@@ -287,8 +292,10 @@ void DisassemblerEditor::render(Draw& draw)
     u8 rangeColour = Draw::attr(Colour::Black, Colour::Green, false);
     u8 cursorColour = Draw::attr(Colour::White, Colour::Blue, true) | 0x80;
     u8 cursor2Colour = Draw::attr(Colour::White, Colour::Black, false);
+    u8 addrColour = Draw::attr(Colour::Red, Colour::Black, false);
 
     int y = m_y;
+    int x = m_showAddresses ? m_x + 5 : m_x + 1;
     if (getData().getNumLines() > 0)
     {
         int tag = m_currentLine < getData().getNumLines() ? getData().getLine(m_currentLine).tag : -1;
@@ -304,13 +311,13 @@ void DisassemblerEditor::render(Draw& draw)
 
             case T::FullComment:
                 m_longestLine = max(m_longestLine, (int)line.text.size());
-                draw.printChar(m_x + 1, y, ';', commentColour);
-                draw.printString(m_x + 3, y, line.text, false, commentColour);
+                draw.printChar(x, y, ';', commentColour);
+                draw.printString(x + 2, y, line.text, false, commentColour);
                 break;
 
             case T::Label:
                 m_longestLine = max(m_longestLine, (int)line.text.size() + 1);
-                draw.printString(m_x + 1, y, line.text + ":", false, labelColour);
+                draw.printString(x, y, line.text + ":", false, labelColour);
                 break;
 
             case T::Instruction:
@@ -318,10 +325,15 @@ void DisassemblerEditor::render(Draw& draw)
                     string opCodeStr = line.disasm.opCodeString();
                     string operandStr = line.disasm.operandString(*m_speccy, getData().getLabelsByAddr());
 
+                    if (m_showAddresses)
+                    {
+                        u16 a = m_speccy->convertAddress(line.startAddress);
+                        draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
+                    }
                     m_longestLine = max(m_longestLine, 32 + (int)operandStr.size());
-                    draw.printString(m_x + 9, y, opCodeStr, false, bkgColour);
-                    draw.printString(m_x + 15, y, operandStr, false, bkgColour);
-                    if (!line.text.empty()) draw.printString(m_x + 33, y, string("; ") + line.text, false, commentColour);
+                    draw.printString(x + 8, y, opCodeStr, false, bkgColour);
+                    draw.printString(x + 14, y, operandStr, false, bkgColour);
+                    if (!line.text.empty()) draw.printString(x + 32, y, string("; ") + line.text, false, commentColour);
                 }
                 break;
             }
@@ -835,6 +847,7 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         "Shift-;|Force line comment",
         "C|Add code entry point",
         "Space|Jump to label",
+        "L|Show addresses",
         })
 {
 }

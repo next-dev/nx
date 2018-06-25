@@ -67,6 +67,7 @@ private:
     int                 m_nextTag;
     vector<int>         m_lineNav;          // list of lines that we've navigated across
     int                 m_navIndex;
+    bool                m_showAddresses;
 
 };
 
