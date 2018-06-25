@@ -85,12 +85,12 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 m_lineOffset = min(max(0, int(m_longestLine - 2)), m_lineOffset + 1);
                 break;
 
-            case K::PageUp:
+            case K::PageDown:
                 m_currentLine = min(m_currentLine + m_height, getData().getNumLines() - 1);
                 ensureVisibleCursor();
                 break;
 
-            case K::PageDown:
+            case K::PageUp:
                 m_currentLine = max(0, m_currentLine - m_height);
                 ensureVisibleCursor();
                 break;
@@ -225,6 +225,18 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             case K::Right:
                 // Next nav point.
                 nextJump();
+                break;
+
+            case K::Up:
+                if (m_currentLine > 0) --m_currentLine;
+                while (m_currentLine > 0 && getCurrentLine().type != DisassemblerDoc::LineType::Label) --m_currentLine;
+                ensureVisibleCursor();
+                break;
+
+            case K::Down:
+                if (m_currentLine < getData().getNumLines()) ++m_currentLine;
+                while (m_currentLine < getData().getNumLines() && getCurrentLine().type != DisassemblerDoc::LineType::Label) ++m_currentLine;
+                ensureVisibleCursor();
                 break;
             }
         }
