@@ -16,12 +16,13 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
     : m_speccy(&speccy)
     , m_nextTag(1)
 {
-    insertLine(0, Line{ 0, LineType::END, {}, {} });
+    insertLine(0, Line{ 0, LineType::END, {}, {}, 0 });
     switch (speccy.getModel())
     {
     case Model::ZX48:
         {
             m_mmap.resize(65536);
+            m_mtype.resize(65536, false);
             for (int i = 0; i < 65536; ++i)
             {
                 m_mmap[i] = speccy.peek(u16(i));
@@ -51,11 +52,12 @@ void DisassemblerDoc::reset()
     m_labelMap.clear();
     m_addrMap.clear();
     m_changed = false;
+    for (int i = 0; i < 65536; ++i) m_mtype[i] = false;
 }
 
 void DisassemblerDoc::insertBlankLine(int line, int tag)
 {
-    insertLine(line, Line{ tag, LineType::Blank, {}, {} });
+    insertLine(line, Line{ tag, LineType::Blank, {}, {}, 0 });
 }
 
 bool DisassemblerDoc::middleOfCode(int line) const
@@ -79,8 +81,8 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         // as the surrounding code.
         Line& l = getLine(line);
         tag = l.tag;
-        insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, comment });
-        insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {} });
+        insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, comment, 0 });
+        insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {}, 0 });
         return line + 1;
     }
     else
@@ -95,11 +97,11 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         }
         else if (l.type != LineType::FullComment)
         {
-            insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {} });
+            insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {}, 0 });
         }
 
         Line& l2 = getLine(line);
-        insertLine(line, Line{ tag, LineType::FullComment, l2.startAddress, comment });
+        insertLine(line, Line{ tag, LineType::FullComment, l2.startAddress, comment, 0 });
         return line;
     }
     changed();
@@ -164,7 +166,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
         }
 
         // Insert the label
-        insertLine(i++, Line{ tag, LineType::Label, c, label });
+        insertLine(i++, Line{ tag, LineType::Label, c, label, 0 });
 
         Disassembler dis;
         bool endFound = false;
@@ -173,8 +175,14 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
             // Grab the next 4 bytes
             // #todo: refactor the memory system out so we can clone it and not use memory maps
             u16 c16 = m_speccy->convertAddress(c);
-            Line l{ tag, LineType::Instruction, c, {} };
+            if (m_mtype[c16])
+            {
+                Overlay::currentOverlay()->error("Code already generated for this entry point");
+                return -1;
+            }
+            Line l{ tag, LineType::Instruction, c, {}, 0 };
             MemAddr nc = disassemble(l.disasm, c);
+            l.size = (nc - c);
 
             // Lets look at the opcode to see if we continue.  We stop at JP, RET, RETI and RETN
             switch (m_mmap[c16])
@@ -211,13 +219,15 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
 
             // Add a line for the code
             insertLine(i++, l);
+            int sizeInstruction = nc - c;
+            for (; sizeInstruction > 0; --sizeInstruction) m_mtype[c16++] = true;
 
             c = nc;
         }
 
         if (c != end)
         {
-            insertLine(i++, Line{ tag, LineType::Blank, {}, {} });
+            insertLine(i++, Line{ tag, LineType::Blank, {}, {}, 0 });
         }
 
         changed();
@@ -281,12 +291,16 @@ int DisassemblerDoc::deleteLine(int line)
     // Otherwise we delete the section and clean up blank lines
     //
 
+    // Ensure the return value (the final line selected) is correct.
+    //
     for (int i = 0; i < line; ++i)
     {
         Line& line = m_lines[i];
         if (line.tag == tag) --newLine;
     }
 
+    // Remove any labels from the database.
+    //
     for_each(m_lines.begin(), m_lines.end(), [this, tag](Line& line) {
         if (line.tag == tag && line.type == LineType::Label)
         {
@@ -297,6 +311,25 @@ int DisassemblerDoc::deleteLine(int line)
         }
     });
 
+    // Remove the imprint on the m_mtype array.
+    //
+    for_each(m_lines.begin(), m_lines.end(), [this, tag](Line& line) {
+        if (line.tag == tag &&
+            (line.type == LineType::Instruction ||
+                line.type == LineType::DataBytes ||
+                line.type == LineType::DataString ||
+                line.type == LineType::DataWords))
+        {
+            u16 a = m_speccy->convertAddress(line.startAddress);
+            for (int i = 0; i < line.size; ++i)
+            {
+                m_mtype[a++] = false;
+            }
+        }
+    });
+
+    // Remove the lines
+    //
     auto startRemovals = remove_if(m_lines.begin(), m_lines.end(), [tag](const auto& line) {
         return line.tag == tag;
     });
@@ -403,9 +436,14 @@ bool DisassemblerDoc::load(string fileName)
                 u8 b2 = dcmd.peek8(x++);
                 u8 b3 = dcmd.peek8(x++);
                 u8 b4 = dcmd.peek8(x++);
+                int size = (int)dcmd.peek8(x++);
 
-                m_lines.emplace_back(tag, type, start, text);
-                m_lines.back().disasm.disassemble(srcAddr, b1, b2, b3, b4);
+                m_lines.emplace_back(tag, type, start, text, size);
+                u16 na = m_lines.back().disasm.disassemble(srcAddr, b1, b2, b3, b4);
+                for (int i = 0; i < (na - srcAddr); ++i)
+                {
+                    m_mtype[srcAddr++] = true;
+                }
 
                 if (type == LineType::Label)
                 {
@@ -466,6 +504,7 @@ bool DisassemblerDoc::save(string fileName)
             dcmd.poke8(bytes[i]);
         }
         for (; i < 4; ++i) dcmd.poke8(0);
+        dcmd.poke8((u8)line.size);
     }
     dcmd.poke32((u32)m_nextTag);
     f.addSection(dcmd);

@@ -60,6 +60,7 @@ typedef struct
     string text;
     uint16 srcAddr <format=hex>;
     unsigned byte b1[4] <format=hex>;
+    unsigned byte size;
 }
 NX_LINE;
 

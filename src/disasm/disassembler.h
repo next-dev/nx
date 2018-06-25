@@ -53,6 +53,18 @@ public:
     optional<u16> extractAddress(int line) const;
     MemAddr disassemble(Disassembler& dis, MemAddr addr) const;     // Return address points after instruction
 
+    enum class DataType
+    {
+        Byte,
+        String,
+        Word,
+        Binary,
+    };
+    int generateData(MemAddr addr, DataType type, int size);
+    void increaseDataSize(int line, int maxSize);
+    void decreaseDataSize(int line);
+    void addNewDataLine(int line);
+
     //
     // Lines
     // Used for rendering and generated from commands via processCommand() function.
@@ -63,6 +75,9 @@ public:
         FullComment,        // Line-based comment
         Label,
         Instruction,
+        DataBytes,
+        DataString,
+        DataWords,
         END
     };
 
@@ -73,12 +88,14 @@ public:
         Disassembler    disasm;
         MemAddr         startAddress;
         string          text;
+        int             size;
 
-        Line(int tag, LineType type, MemAddr start, string text)
+        Line(int tag, LineType type, MemAddr start, string text, int size)
             : tag(tag)
             , type(type)
             , startAddress(start)
             , text(move(text))
+            , size(size)
         {}
     };
 
@@ -100,6 +117,7 @@ private:
 private:
     const Spectrum*     m_speccy;
     vector<u8>          m_mmap;         // Snapshot of memory
+    vector<bool>        m_mtype;
     bool                m_changed;
 
     //
