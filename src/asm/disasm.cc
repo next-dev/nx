@@ -788,14 +788,21 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         case O::AddressedExpression:
             {
                 MemAddr a = speccy.convertAddress(Z80MemAddr((u16)param));
-                auto it = addresses.find(a);
-                if (it == addresses.end())
+                if (a.bank().getGroup() == MemGroup::RAM)
                 {
-                    return string("($") + hexWord(u16(param)) + ')';
+                    auto it = addresses.find(a);
+                    if (it == addresses.end())
+                    {
+                        return string("($") + hexWord(u16(param)) + ')';
+                    }
+                    else
+                    {
+                        return string("(") + it->second.first + ')';
+                    }
                 }
                 else
                 {
-                    return string("(") + it->second.first + ')';
+                    return string("($") + hexWord(u16(param)) + ')';
                 }
             }
 
@@ -844,14 +851,21 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         case O::Expression16:
             {
                 MemAddr a = speccy.convertAddress(Z80MemAddr((u16)param));
-                auto it = addresses.find(a);
-                if (it == addresses.end())
+                if (a.bank().getGroup() == MemGroup::RAM)
                 {
-                    return string("$") + hexWord(u16(param));
+                    auto it = addresses.find(a);
+                    if (it == addresses.end())
+                    {
+                        return string("$") + hexWord(u16(param));
+                    }
+                    else
+                    {
+                        return it->second.first;
+                    }
                 }
                 else
                 {
-                    return it->second.first;
+                    return string("$") + hexWord(u16(param));
                 }
             }
 

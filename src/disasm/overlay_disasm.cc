@@ -120,7 +120,14 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
 
             case K::SemiColon:
-                insertComment();
+                if (getData().getLine(m_currentLine).type == DisassemblerDoc::LineType::Instruction)
+                {
+                    editInstructionComment();
+                }
+                else
+                {
+                    insertComment();
+                }
                 clearJumps(m_currentLine);
                 break;
 
@@ -139,6 +146,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
                 case LT::Instruction:
                     // #todo: edit instruction comment
+                    editInstructionComment();
                     break;
 
                 case LT::Label:
@@ -189,11 +197,16 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
         else if (shift && !ctrl && !alt)
         {
-//             switch (key)
-//             {
-//             default:
-//                 break;
-//             }
+            switch (key)
+            {
+            case K::SemiColon:
+                insertComment();
+                clearJumps(m_currentLine);
+                break;
+
+            default:
+                break;
+            }
         }
 
         //--------------------------------------------------------------------------------------------------------------
@@ -267,7 +280,7 @@ void DisassemblerEditor::render(Draw& draw)
     if (getData().getNumLines() > 0)
     {
         int tag = m_currentLine < getData().getNumLines() ? getData().getLine(m_currentLine).tag : -1;
-        for (int i = m_topLine; i < getData().getNumLines(); ++i, ++y)
+        for (int i = m_topLine; (i < getData().getNumLines()) && (y < (m_y + m_height)); ++i, ++y)
         {
             using T = DisassemblerDoc::LineType;
             const DisassemblerDoc::Line& line = getData().getLine(i);
@@ -395,6 +408,21 @@ void DisassemblerEditor::editComment(bool moveToNextLine)
     m_editor->getData().insert(getData().getLine(m_currentLine).text);
 }
 
+void DisassemblerEditor::editInstructionComment()
+{
+    m_blockFirstChar = true;
+    m_editorPrefix.clear();
+    m_editor = new Editor(m_x + 35, m_y + (m_currentLine - m_topLine), m_width - 36, 1,
+        Draw::attr(Colour::Green, Colour::Black, true), false, m_width - 5, 0,
+        [this](Editor& ed)
+    {
+        // Reset the command text
+        getData().setComment(m_currentLine, ed.getData().getString());
+        ++m_currentLine;
+    });
+    m_editor->getData().insert(getData().getLine(m_currentLine).text);
+}
+
 void DisassemblerEditor::markJump()
 {
     if (m_lineNav.size() > 0 && m_lineNav.back() == m_currentLine) return;
@@ -427,6 +455,7 @@ void DisassemblerEditor::prevJump()
     {
         --m_navIndex;
         m_currentLine = m_lineNav[m_navIndex];
+        ensureVisibleCursor();
     }
 }
 
@@ -436,6 +465,7 @@ void DisassemblerEditor::nextJump()
     {
         ++m_navIndex;
         m_currentLine = m_lineNav[m_navIndex];
+        ensureVisibleCursor();
     }
 }
 
@@ -790,7 +820,7 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         "Ctrl-B|Build",
         "Enter|Edit",
         ";|Add comment",
-        "Shift-;|Insert instruction comment",
+        "Shift-;|Force line comment",
         "C|Add code entry point",
         "Space|Jump to label",
         })

@@ -42,6 +42,7 @@ private:
     //
     void insertComment();
     void editComment(bool moveToNextLine);
+    void editInstructionComment();
     void markJump();
     void jump();
     void prevJump();
