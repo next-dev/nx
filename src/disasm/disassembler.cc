@@ -16,7 +16,7 @@ DisassemblerDoc::DisassemblerDoc(Spectrum& speccy)
     : m_speccy(&speccy)
     , m_nextTag(1)
 {
-    insertLine(0, Line{ 0, LineType::END, {}, {}, 0 });
+    insertLine(0, Line{ 0, LineType::END, {}, {}, {}, 0 });
     switch (speccy.getModel())
     {
     case Model::ZX48:
@@ -57,7 +57,7 @@ void DisassemblerDoc::reset()
 
 void DisassemblerDoc::insertBlankLine(int line, int tag)
 {
-    insertLine(line, Line{ tag, LineType::Blank, {}, {}, 0 });
+    insertLine(line, Line{ tag, LineType::Blank, {}, {}, {}, 0 });
 }
 
 bool DisassemblerDoc::middleOfCode(int line) const
@@ -81,8 +81,8 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         // as the surrounding code.
         Line& l = getLine(line);
         tag = l.tag;
-        insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, comment, 0 });
-        insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {}, 0 });
+        insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, {}, comment, 0 });
+        insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {}, {}, 0 });
         return line + 1;
     }
     else
@@ -97,11 +97,11 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         }
         else if (l.type != LineType::FullComment)
         {
-            insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {}, 0 });
+            insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {}, {}, 0 });
         }
 
         Line& l2 = getLine(line);
-        insertLine(line, Line{ tag, LineType::FullComment, l2.startAddress, comment, 0 });
+        insertLine(line, Line{ tag, LineType::FullComment, l2.startAddress, {}, comment, 0 });
         return line;
     }
     changed();
@@ -146,7 +146,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
             end = line.startAddress;
             if (end <= addr)
             {
-                Overlay::currentOverlay()->error("Code already generated for this entry point");
+                Overlay::currentOverlay()->error("Code/Data already generated for this entry point");
                 return -1;
             }
         }
@@ -166,7 +166,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
         }
 
         // Insert the label
-        insertLine(i++, Line{ tag, LineType::Label, c, label, 0 });
+        insertLine(i++, Line{ tag, LineType::Label, c, label, {}, 0 });
 
         Disassembler dis;
         bool endFound = false;
@@ -180,7 +180,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
                 Overlay::currentOverlay()->error("Code already generated for this entry point");
                 return -1;
             }
-            Line l{ tag, LineType::Instruction, c, {}, 0 };
+            Line l{ tag, LineType::Instruction, c, {}, {}, 0 };
             MemAddr nc = disassemble(l.disasm, c);
             l.size = (nc - c);
 
@@ -227,7 +227,103 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
 
         if (c != end)
         {
-            insertLine(i++, Line{ tag, LineType::Blank, {}, {}, 0 });
+            insertBlankLine(i, tag);
+        }
+
+        changed();
+        return startLine;
+    }
+    else
+    {
+        Overlay::currentOverlay()->error("Invalid code entry point.");
+        return -1;
+    }
+}
+
+int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size, string label)
+{
+    // #todo: refactor this to use shared code with generateCode
+    if (optional<int> lineIndex = findLine(addr); lineIndex)
+    {
+        int i = *lineIndex;
+        MemAddr end;
+
+        if (i < getNumLines())
+        {
+            Line& line = getLine(i);
+            NX_ASSERT(line.type != LineType::Blank);
+
+            // Find the maximum end-point
+            end = line.startAddress;
+            if (end <= addr)
+            {
+                Overlay::currentOverlay()->error("Code/Data already generated for this entry point");
+                return -1;
+            }
+        }
+        else
+        {
+            end = m_speccy->convertAddress(Z80MemAddr(0xffff));
+        }
+
+        // Check to see if we have room
+        u16 a = m_speccy->convertAddress(addr);
+        int bytes = size;
+        if (type == DataType::Word) bytes *= 2;
+        if (int(a) + bytes > 65535)
+        {
+            Overlay::currentOverlay()->error("No room for data");
+            return -1;
+        }
+        for (int i = 0; i < bytes; ++i)
+        {
+            if (m_mtype[a + i])
+            {
+                Overlay::currentOverlay()->error("Code/Data already generated for this entry point");
+                return -1;
+            }
+        }
+
+        // Generate the lines
+        // Insert a blank line if the previous line is not blank
+        int startLine = i;
+        if (startLine > 0 && getLine(startLine - 1).type != LineType::Blank)
+        {
+            insertBlankLine(i++, tag);
+            ++startLine;
+        }
+
+        // Figure out the line type from the data type
+        LineType lt;
+        switch (type)
+        {
+        case DataType::Byte:    lt = LineType::DataBytes;       break;
+        case DataType::String:  lt = LineType::DataString;      break;
+        case DataType::Word:    lt = LineType::DataWords;       break;
+
+        default:
+            NX_ASSERT(0);
+        }
+
+        // Insert a label if the label is greater than 6 characters
+        string dataLabel;
+        if (label.size() > 6)
+        {
+            Line l{ tag, LineType::Label, addr, label, {}, 0 };
+            insertLine(i++, l);
+        }
+        else
+        {
+            dataLabel = label;
+        }
+
+        // Insert the data line
+        Line l{ tag, lt, addr, dataLabel, {}, bytes };
+        insertLine(i++, l);
+
+        if ((addr + bytes) != end)
+        {
+            insertBlankLine(i, tag);
         }
 
         changed();
@@ -257,7 +353,7 @@ bool DisassemblerDoc::replaceLabel(int line, string oldLabel, string newLabel)
     {
         // New label doesn't exist so let's add it.
         addLabel(newLabel, a);
-        getLine(line).text = newLabel;
+        getLine(line).label = newLabel;
         changed();
         return true;
     }
@@ -304,7 +400,7 @@ int DisassemblerDoc::deleteLine(int line)
     for_each(m_lines.begin(), m_lines.end(), [this, tag](Line& line) {
         if (line.tag == tag && line.type == LineType::Label)
         {
-            auto it1 = m_labelMap.find(line.text);
+            auto it1 = m_labelMap.find(line.label);
             auto it2 = m_addrMap.find(line.startAddress);
             m_labelMap.erase(it1);
             m_addrMap.erase(it2);
@@ -412,6 +508,8 @@ bool DisassemblerDoc::load(string fileName)
         {
             const BlockSection& mm48 = f['MM48'];
             mm48.peekData(0, m_mmap, 65536);
+            m_mtype.resize(65536);
+            for (int i = 0; i < 65536; ++i) m_mtype[i] = mm48.peek8(65536 + i);
         }
         else
         {
@@ -428,8 +526,10 @@ bool DisassemblerDoc::load(string fileName)
                 int tag = dcmd.peek32(x);
                 LineType type = (LineType)dcmd.peek8(x+4);
                 MemAddr start = dcmd.peekAddr(x + 5);
-                string text = dcmd.peekString(x + 9);
-                x += (9 + (int)text.size() + 1);
+                string label = dcmd.peekString(x + 9);
+                x += (9 + (int)label.size() + 1);
+                string text = dcmd.peekString(x);
+                x += (int)text.size() + 1;
                 u16 srcAddr = dcmd.peek16(x);
                 x += 2;
                 u8 b1 = dcmd.peek8(x++);
@@ -438,34 +538,20 @@ bool DisassemblerDoc::load(string fileName)
                 u8 b4 = dcmd.peek8(x++);
                 int size = (int)dcmd.peek8(x++);
 
-                m_lines.emplace_back(tag, type, start, text, size);
+                m_lines.emplace_back(tag, type, start, label, text, size);
                 u16 na = m_lines.back().disasm.disassemble(srcAddr, b1, b2, b3, b4);
                 for (int i = 0; i < (na - srcAddr); ++i)
                 {
                     m_mtype[srcAddr++] = true;
                 }
 
-                if (type == LineType::Label)
+                if (!label.empty())
                 {
-                    addLabel(text, start);
+                    NX_ASSERT(type != LineType::END && type != LineType::Blank && type != LineType::FullComment);
+                    addLabel(label, start);
                 }
             }
             m_nextTag = dcmd.peek32(x);
-        }
-
-        if (f.checkSection('LABL', 0))
-        {
-            const BlockSection& labl = f['LABL'];
-            u32 numLabels = labl.peek32(0);
-            int x = 4;
-            for (u32 i = 0; i < numLabels; ++i)
-            {
-                string label = labl.peekString(x);
-                x += ((int)label.size() + 5);
-                MemAddr a = labl.peekAddr(x);
-                x += 4;
-                addLabel(label, a);
-            }
         }
     }
 
@@ -483,6 +569,7 @@ bool DisassemblerDoc::save(string fileName)
     BlockSection mm48('MM48', 0);
     NX_ASSERT(m_mmap.size() == 65536);
     mm48.pokeData(m_mmap);
+    for (const bool b : m_mtype) mm48.poke8(b ? 1 : 0);
     f.addSection(mm48);
 
     //
@@ -495,6 +582,7 @@ bool DisassemblerDoc::save(string fileName)
         dcmd.poke32((u32)line.tag);
         dcmd.poke8((u8)line.type);
         dcmd.pokeAddr(line.startAddress);
+        dcmd.pokeString(line.label);
         dcmd.pokeString(line.text);
         int i = 0;
         dcmd.poke16(line.disasm.srcZ80Addr());
@@ -508,19 +596,6 @@ bool DisassemblerDoc::save(string fileName)
     }
     dcmd.poke32((u32)m_nextTag);
     f.addSection(dcmd);
-
-    //
-    // LABL section
-    //
-    BlockSection labl('LABL', 0);
-    NX_ASSERT(m_labelMap.size() == m_addrMap.size());
-    u32 numLabels = (u32)m_labelMap.size();
-    labl.poke32(numLabels);
-    for (const auto& label : m_labelMap)
-    {
-        labl.pokeString(label.first);
-        labl.pokeAddr(label.second.second);
-    }
 
     m_changed = false;
     return f.save(fileName);

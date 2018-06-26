@@ -76,6 +76,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
             case K::Down:
                 if (m_currentLine < getData().getNumLines() - 1) ++m_currentLine;
+                ensureVisibleCursor();
                 break;
 
             case K::Left:
@@ -316,8 +317,8 @@ void DisassemblerEditor::render(Draw& draw)
                 break;
 
             case T::Label:
-                m_longestLine = max(m_longestLine, (int)line.text.size() + 1);
-                draw.printString(x, y, line.text + ":", false, labelColour);
+                m_longestLine = max(m_longestLine, (int)line.label.size() + 1);
+                draw.printString(x, y, line.label + ":", false, labelColour);
                 break;
 
             case T::Instruction:
@@ -335,6 +336,34 @@ void DisassemblerEditor::render(Draw& draw)
                     draw.printString(x + 14, y, operandStr, false, bkgColour);
                     if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
                 }
+                break;
+
+            case T::DataBytes:
+                {
+                    if (!line.label.empty())
+                    {
+                        draw.printString(x, y, line.label, false, labelColour);
+                    }
+                    draw.printString(x + 8, y, "db", false, bkgColour);
+
+                    string ops;
+                    u16 a = m_speccy->convertAddress(line.startAddress);
+                    for (int i = 0; i < line.size; ++i)
+                    {
+                        ops += '$' + hexByte(getData().getByte(i)) + ',';
+                    }
+                    ops.erase(ops.end() - 1);
+
+                    draw.printString(x + 14, y, ops, false, bkgColour);
+                }
+                break;
+
+            case T::DataString:
+                draw.printString(x, y, "TBD: Data bytes", false, bkgColour);
+                break;
+
+            case T::DataWords:
+                draw.printString(x, y, "TBD: Data bytes", false, bkgColour);
                 break;
             }
 
@@ -652,6 +681,35 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
     {
         switch (key)
         {
+        case K::B:      // Byte data entry point
+            {
+                // #todo: refactor this to share code with K::C entry
+                optional<u16> address = getEditor().extractAddress();
+                string preEntry = address ? string("$") + hexWord(*address) : "";
+                prompt("Byte data entry", preEntry, [this](string text) {
+                    if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
+                    {
+                        MemAddr a = *addr;
+                        if (m_nx.getSpeccy().isZ80Address(a))
+                        {
+                            prompt("Label", string(), [this, a](string label) {
+                                if (label.empty())
+                                {
+                                    Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
+                                    label = stringFormat("L{0}", hexWord(addr));
+                                }
+
+                                label = getEditor().getData().addLabel(label, a);
+
+                                getEditor().getData().generateData(a, getEditor().getData().getNextTag(),
+                                    DisassemblerDoc::DataType::Byte, 1, label);
+                            }, ConsumeKeyState::No, RequireInputState::No);
+                        }
+                    }
+                }, ConsumeKeyState::Yes, RequireInputState::Yes);
+            }
+            break;
+
         case K::C:      // Code entry point
             {
                 optional<u16> address = getEditor().extractAddress();

@@ -37,6 +37,8 @@ public:
     int getNextTag() { return m_nextTag++; }
     optional<int> findLine(MemAddr addr) const;
     optional<int> findLabelLine(MemAddr addr) const;
+    u8 getByte(u16 addr) { return m_mmap[addr]; }
+    u16 getWord(u16 addr) { return getByte(addr) + 256 * getByte(addr + 1); }
 
     string addLabel(string label, MemAddr addr);
     const map<MemAddr, Disassembler::LabelInfo>& getLabelsByAddr() const { return m_addrMap; }
@@ -60,7 +62,7 @@ public:
         Word,
         Binary,
     };
-    int generateData(MemAddr addr, DataType type, int size);
+    int generateData(MemAddr addr, int tag, DataType type, int size, string label);
     void increaseDataSize(int line, int maxSize);
     void decreaseDataSize(int line);
     void addNewDataLine(int line);
@@ -75,9 +77,9 @@ public:
         FullComment,        // Line-based comment
         Label,
         Instruction,
-        DataBytes,
-        DataString,
-        DataWords,
+        DataBytes,          // db $01,$02,$03...
+        DataString,         // db "text...",13,...
+        DataWords,          // dw $0001,$0002,...
         END
     };
 
@@ -87,14 +89,16 @@ public:
         LineType        type;
         Disassembler    disasm;
         MemAddr         startAddress;
+        string          label;
         string          text;
         int             size;
 
-        Line(int tag, LineType type, MemAddr start, string text, int size)
+        Line(int tag, LineType type, MemAddr start, string label, string text, int size)
             : tag(tag)
             , type(type)
             , startAddress(start)
-            , text(move(text))
+            , label(label)
+            , text(text)
             , size(size)
         {}
     };
