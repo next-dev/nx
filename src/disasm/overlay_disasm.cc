@@ -147,7 +147,6 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     break;
 
                 case LT::Instruction:
-                    // #todo: edit instruction comment
                     editInstructionComment();
                     break;
 
@@ -665,6 +664,36 @@ void DisassemblerWindow::switchTo(const DisassemblerEditor& editor)
     m_editorOrder.insert(m_editorOrder.begin(), editorIndex);
 }
 
+void DisassemblerWindow::askAddressLabel(string addressPrompt, function<void(MemAddr a, string label)> handler)
+{
+    optional<u16> address = getEditor().extractAddress();
+    string preEntry = address ? string("$") + hexWord(*address) : "";
+    prompt(addressPrompt, preEntry, [this, handler](string text) {
+        if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
+        {
+            MemAddr a = *addr;
+            if (m_nx.getSpeccy().isZ80Address(a))
+            {
+                prompt("Label", string(), [this, a, handler](string label) {
+                    if (label.empty())
+                    {
+                        Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
+                        label = stringFormat("L{0}", hexWord(addr));
+                    }
+
+                    label = getEditor().getData().addLabel(label, a);
+
+                    handler(a, label);
+                }, ConsumeKeyState::No, RequireInputState::No);
+            }
+            else
+            {
+                Overlay::currentOverlay()->error("Invalid address given");
+            }
+        }
+    }, ConsumeKeyState::Yes, RequireInputState::Yes);
+}
+
 void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt)
 {
     using K = sf::Keyboard::Key;
@@ -682,60 +711,16 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
         switch (key)
         {
         case K::B:      // Byte data entry point
-            {
-                // #todo: refactor this to share code with K::C entry
-                optional<u16> address = getEditor().extractAddress();
-                string preEntry = address ? string("$") + hexWord(*address) : "";
-                prompt("Byte data entry", preEntry, [this](string text) {
-                    if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
-                    {
-                        MemAddr a = *addr;
-                        if (m_nx.getSpeccy().isZ80Address(a))
-                        {
-                            prompt("Label", string(), [this, a](string label) {
-                                if (label.empty())
-                                {
-                                    Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
-                                    label = stringFormat("L{0}", hexWord(addr));
-                                }
-
-                                label = getEditor().getData().addLabel(label, a);
-
-                                getEditor().getData().generateData(a, getEditor().getData().getNextTag(),
-                                    DisassemblerDoc::DataType::Byte, 1, label);
-                            }, ConsumeKeyState::No, RequireInputState::No);
-                        }
-                    }
-                }, ConsumeKeyState::Yes, RequireInputState::Yes);
-            }
+            askAddressLabel("Byte data entry", [this](MemAddr a, string label) {
+                getEditor().getData().generateData(a, getEditor().getData().getNextTag(),
+                    DisassemblerDoc::DataType::Byte, 1, label);
+            });
             break;
 
         case K::C:      // Code entry point
-            {
-                optional<u16> address = getEditor().extractAddress();
-                string preEntry = address ? string("$") + hexWord(*address) : "";
-                prompt("Code entry", preEntry, [this](string text) {
-                    if (optional<MemAddr> addr = m_nx.textToAddress(text); addr)
-                    {
-                        MemAddr a = *addr;
-                        if (m_nx.getSpeccy().isZ80Address(a))
-                        {
-                            prompt("Label", string(), [this, a](string label) {
-                                if (label.empty())
-                                {
-                                    Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
-                                    label = stringFormat("L{0}", hexWord(addr));
-                                }
-
-                                // Attempt to add the label
-                                label = getEditor().getData().addLabel(label, a);
-
-                                getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
-                            }, ConsumeKeyState::No, RequireInputState::No);
-                        }
-                    }
-                }, ConsumeKeyState::Yes, RequireInputState::Yes);
-            }
+            askAddressLabel("Code entry", [this](MemAddr a, string label) {
+                getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
+            });
             break;
 
         case K::Return:

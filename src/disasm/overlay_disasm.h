@@ -97,6 +97,8 @@ private:
     void closeFile();
     void switchTo(const DisassemblerEditor& editor);
 
+    void askAddressLabel(string addressPrompt, function<void(MemAddr a, string label)> handler);
+
 protected:
     void onDraw(Draw& draw) override;
     void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
