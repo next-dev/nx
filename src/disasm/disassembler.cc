@@ -318,7 +318,7 @@ int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size
         }
 
         // Insert the data line
-        Line l{ tag, lt, addr, dataLabel, {}, bytes };
+        Line l{ tag, lt, addr, dataLabel, {}, size };
         insertLine(i++, l);
 
         if ((addr + bytes) != end)

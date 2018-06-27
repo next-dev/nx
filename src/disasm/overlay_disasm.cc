@@ -349,11 +349,17 @@ void DisassemblerEditor::render(Draw& draw)
                     u16 a = m_speccy->convertAddress(line.startAddress);
                     for (int i = 0; i < line.size; ++i)
                     {
-                        ops += '$' + hexByte(getData().getByte(i)) + ',';
+                        ops += '$' + hexByte(getData().getByte(a + i)) + ',';
                     }
                     ops.erase(ops.end() - 1);
 
                     draw.printString(x + 14, y, ops, false, bkgColour);
+
+                    if (m_showAddresses)
+                    {
+                        u16 a = m_speccy->convertAddress(line.startAddress);
+                        draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
+                    }
                 }
                 break;
 
@@ -362,7 +368,29 @@ void DisassemblerEditor::render(Draw& draw)
                 break;
 
             case T::DataWords:
-                draw.printString(x, y, "TBD: Data bytes", false, bkgColour);
+                {
+                    if (!line.label.empty())
+                    {
+                        draw.printString(x, y, line.label, false, labelColour);
+                    }
+                    draw.printString(x + 8, y, "dw", false, bkgColour);
+
+                    string ops;
+                    u16 a = m_speccy->convertAddress(line.startAddress);
+                    for (int i = 0; i < line.size; ++i)
+                    {
+                        ops += '$' + hexWord(getData().getWord(a + (i * 2))) + ',';
+                    }
+                    ops.erase(ops.end() - 1);
+
+                    draw.printString(x + 14, y, ops, false, bkgColour);
+
+                    if (m_showAddresses)
+                    {
+                        u16 a = m_speccy->convertAddress(line.startAddress);
+                        draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
+                    }
+                }
                 break;
             }
 
@@ -714,6 +742,20 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             askAddressLabel("Byte data entry", [this](MemAddr a, string label) {
                 getEditor().getData().generateData(a, getEditor().getData().getNextTag(),
                     DisassemblerDoc::DataType::Byte, 1, label);
+            });
+            break;
+
+        case K::W:      // Word data entry point
+            askAddressLabel("Word data entry", [this](MemAddr a, string label) {
+                getEditor().getData().generateData(a, getEditor().getData().getNextTag(),
+                    DisassemblerDoc::DataType::Word, 1, label);
+            });
+            break;
+
+        case K::S:      // String data entry point
+            askAddressLabel("String data entry", [this](MemAddr a, string label) {
+                getEditor().getData().generateData(a, getEditor().getData().getNextTag(),
+                    DisassemblerDoc::DataType::String, 1, label);
             });
             break;
 
