@@ -73,6 +73,22 @@ bool DisassemblerDoc::middleOfCode(int line) const
     return (code1 && code2);
 }
 
+int DisassemblerDoc::numDataBytes(LineType type, int size) const
+{
+    switch (type)
+    {
+    case LineType::DataBytes:
+    case LineType::DataString:
+        return size;
+
+    case LineType::DataWords:
+        return size * 2;
+
+    default:
+        return 0;
+    }
+}
+
 int DisassemblerDoc::insertComment(int line, int tag, string comment)
 {
     if (middleOfCode(line))
@@ -350,6 +366,14 @@ int DisassemblerDoc::increaseDataSize(int line)
 
     Line& l = getLine(line);
 
+    optional<MemAddr> na = nextAddr(line);
+    if (na && (l.startAddress + numDataBytes(l.type, l.size + 1) >= *na))
+    {
+        // No more room to extend data.
+        Overlay::currentOverlay()->error("No more room to extend data.");
+        return line;
+    }
+
     int maxSizePerLine = 0;
     int bytesPerLine = 0;
 
@@ -390,6 +414,7 @@ int DisassemblerDoc::increaseDataSize(int line)
         insertLine(line, newLine);
     }
 
+    changed();
     return line;
 }
 
@@ -688,6 +713,31 @@ optional<int> DisassemblerDoc::findLabelLine(MemAddr addr) const
     }
 
     return {};
+}
+
+optional<MemAddr> DisassemblerDoc::nextAddr(int line)
+{
+    using LT = LineType;
+
+    for (;;)
+    {
+        const Line& l = getLine(++line);
+        switch (l.type)
+        {
+        case LT::DataBytes:
+        case LT::DataWords:
+        case LT::DataString:
+        case LT::Instruction:
+        case LT::Label:
+            return l.startAddress;
+
+        case LT::END:
+            return {};
+
+        default:
+            break;
+        }
+    }
 }
 
 string DisassemblerDoc::addLabel(string label, MemAddr addr)

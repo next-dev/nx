@@ -37,6 +37,7 @@ public:
     int getNextTag() { return m_nextTag++; }
     optional<int> findLine(MemAddr addr) const;
     optional<int> findLabelLine(MemAddr addr) const;
+    optional<MemAddr> nextAddr(int line);
     u8 getByte(u16 addr) { return m_mmap[addr]; }
     u16 getWord(u16 addr) { return getByte(addr) + 256 * getByte(addr + 1); }
 
@@ -117,6 +118,7 @@ private:
     void changed() { m_changed = true; }
     void checkBlankLines(int line);
     bool middleOfCode(int line) const;
+    int numDataBytes(LineType type, int size) const;
 
 private:
     const Spectrum*     m_speccy;
