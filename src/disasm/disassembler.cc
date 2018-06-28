@@ -388,9 +388,13 @@ int DisassemblerDoc::increaseDataSize(int line)
         return line;
 
     case LT::DataBytes:
-    case LT::DataString:
         maxSizePerLine = 8;
         bytesPerLine = 8;
+        break;
+
+    case LT::DataString:
+        maxSizePerLine = 32;
+        bytesPerLine = 32;
         break;
 
     case LT::DataWords:

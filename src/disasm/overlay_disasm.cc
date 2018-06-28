@@ -368,11 +368,59 @@ void DisassemblerEditor::render(Draw& draw)
                         u16 a = m_speccy->convertAddress(line.startAddress);
                         draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
                     }
-                }
+                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
+            }
                 break;
 
             case T::DataString:
-                draw.printString(x, y, "TBD: Data bytes", false, bkgColour);
+                {
+                    if (!line.label.empty())
+                    {
+                        draw.printString(x, y, line.label, false, labelColour);
+                    }
+                    string ops;
+                    bool inString = false;
+                    u16 a = m_speccy->convertAddress(line.startAddress);
+                    for (int i = 0; i < line.size; ++i)
+                    {
+                        u8 b = getData().getByte(a + i);
+                        if (b < 32 || b > 127)
+                        {
+                            if (inString)
+                            {
+                                ops += "\",";
+                                inString = false;
+                            }
+                            ops += '$' + hexByte(b) + ',';
+                        }
+                        else
+                        {
+                            if (!inString)
+                            {
+                                ops += "\"";
+                                inString = true;
+                            }
+                            ops += (char)b;
+                        }
+                    }
+                    if (inString)
+                    {
+                        ops += '"';
+                    }
+                    else
+                    {
+                        ops.erase(ops.end() - 1);
+                    }
+
+                    draw.printString(x + 14, y, ops, false, bkgColour);
+
+                    if (m_showAddresses)
+                    {
+                        u16 a = m_speccy->convertAddress(line.startAddress);
+                        draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
+                    }
+                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
+            }
                 break;
 
             case T::DataWords:
@@ -398,7 +446,8 @@ void DisassemblerEditor::render(Draw& draw)
                         u16 a = m_speccy->convertAddress(line.startAddress);
                         draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
                     }
-                }
+                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
+            }
                 break;
             }
 
