@@ -63,9 +63,9 @@ public:
         Binary,
     };
     int generateData(MemAddr addr, int tag, DataType type, int size, string label);
-    void increaseDataSize(int line, int maxSize);
-    void decreaseDataSize(int line);
-    void addNewDataLine(int line);
+    int increaseDataSize(int line);
+    int decreaseDataSize(int line);
+    int setDataSize(int line, int size);
 
     //
     // Lines

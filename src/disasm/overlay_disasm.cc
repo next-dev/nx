@@ -185,10 +185,18 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
             case K::End:
                 m_topLine = max(0, getData().getNumLines() - (m_height / 2));
+                m_currentLine = getData().getNumLines();
                 break;
 
             case K::S:  // Save
                 saveFile();
+                break;
+
+            case K::Left:   // Decrease size
+                break;
+
+            case K::Right:  // Increase size
+                m_currentLine = getData().increaseDataSize(m_currentLine);
                 break;
 
             default:

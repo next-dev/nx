@@ -336,6 +336,63 @@ int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size
     }
 }
 
+int DisassemblerDoc::increaseDataSize(int line)
+{
+    using LT = LineType;
+
+    while (getLine(line + 1).tag == getLine(line).tag &&
+        (getLine(line + 1).type == LT::DataBytes ||
+         getLine(line + 1).type == LT::DataString ||
+         getLine(line + 1).type == LT::DataWords))
+    {
+        ++line;
+    }
+
+    Line& l = getLine(line);
+
+    int maxSizePerLine = 0;
+    int bytesPerLine = 0;
+
+    switch (l.type)
+    {
+    case LT::Blank:
+    case LT::END:
+    case LT::FullComment:
+    case LT::Instruction:
+    case LT::Label:
+        // These are not valid line types
+        return line;
+
+    case LT::DataBytes:
+    case LT::DataString:
+        maxSizePerLine = 8;
+        bytesPerLine = 8;
+        break;
+
+    case LT::DataWords:
+        maxSizePerLine = 4;
+        bytesPerLine = 8;
+        break;
+
+    default:
+        NX_ASSERT(0);
+    }
+
+    if (l.size < maxSizePerLine)
+    {
+        ++l.size;
+    }
+    else
+    {
+        // Out of room, we create a new line.
+        ++line;
+        Line newLine{ l.tag, l.type, l.startAddress + bytesPerLine, {}, {}, 1 };
+        insertLine(line, newLine);
+    }
+
+    return line;
+}
+
 bool DisassemblerDoc::replaceLabel(int line, string oldLabel, string newLabel)
 {
     NX_ASSERT(getLine(line).type == LineType::Label);
