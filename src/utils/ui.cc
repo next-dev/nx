@@ -321,6 +321,43 @@ int Draw::printChar(int xPixel, int yCell, char c, const u8* font)
     return width;
 }
 
+int Draw::printCharTrunc(int xPixel, int yCell, char c, int maxCellX, const u8* font)
+{
+    // #todo: Put the mask/lshift calculations in a table
+    if (xPixel < 0 || xPixel >= kUiWidth) return 0;
+    if (yCell < 0 || yCell >= kUiHeight) return 0;
+    if (c < 32 || c > 127) c = 32;
+
+    // Calculate the character information (mask, left adjust and width)
+    u8 mask = 0;
+    int lShift = 0;
+    int width = 0;
+    charInfo(font, c, mask, lShift, width);
+    if (xPixel + width >= maxCellX * 8) return 0;
+
+    // Make sure there is only 1 pixel at most to the left of the mask
+    int rShift = xPixel % 8;
+    int cx = xPixel / 8;
+    int y = yCell * 8;
+    const u8* pixels = &font[(c - ' ') * 8];
+    for (u8 b = 0xc0; ((mask << lShift) & b) == 0; ) ++lShift;
+
+    for (int i = 0; i < 8; ++i)
+    {
+        Reg m(~(mask << (8 - rShift + lShift)));
+        Reg w(*pixels++ << (8 - rShift + lShift));
+        andPixel(cx, y + i, m.h);
+        orPixel(cx, y + i, w.h);
+        if ((rShift != 0) && ((xPixel + 8) < kUiWidth))
+        {
+            andPixel(cx + 1, y + i, m.l);
+            orPixel(cx + 1, y + i, w.l);
+        }
+    }
+
+    return width;
+}
+
 int Draw::printString(int xCell, int yCell, const string& str, bool supportHighlight, u8 attr, const u8* font)
 {
     u8 highlight = (attr & 0xf8) | 4;
@@ -350,6 +387,36 @@ int Draw::printString(int xCell, int yCell, const string& str, bool supportHighl
     return xCell;
 }
 
+int Draw::printStringTrunc(int xCell, int yCell, const string& str, bool supportHighlight, u8 attr, int maxX, const u8* font)
+{
+    u8 highlight = (attr & 0xf8) | 4;
+    u8 colour = attr;
+
+    for (char c : str)
+    {
+        if (xCell >= maxX) return xCell;
+        if (supportHighlight && c == '{')
+        {
+            colour = highlight;
+        }
+        else if (supportHighlight && c == '}')
+        {
+            colour = attr;
+        }
+        else
+        {
+            printChar(xCell++, yCell, c, colour, font);
+            if (xCell >= (kUiWidth / 8))
+            {
+                ++yCell;
+                xCell = 0;
+                if (yCell >= (kUiHeight / 8)) return 0;
+            }
+        }
+    }
+    return xCell;
+}
+
 int Draw::printSquashedString(int xCell, int yCell, const string& str, u8 attr, const u8* font)
 {
     int maxWidth = 0;
@@ -357,6 +424,28 @@ int Draw::printSquashedString(int xCell, int yCell, const string& str, u8 attr, 
     for (char c : str)
     {
         int w = printChar(x, yCell, c, font);
+        maxWidth += w;
+        x += w;
+    }
+
+    // Render the attributes as best we can
+    int len = maxWidth / 8 + (maxWidth % 8 ? 1 : 0);
+    for (int i = xCell; i < std::min(kUiWidth / 8, xCell + len); ++i)
+    {
+        pokeAttr(i, yCell, attr);
+    }
+
+    return len;
+}
+
+int Draw::printSquashedStringTrunc(int xCell, int yCell, const string& str, u8 attr, int maxCellX, const u8* font)
+{
+    int maxWidth = 0;
+    int x = xCell * 8;
+    for (char c : str)
+    {
+        int w = printCharTrunc(x, yCell, c, maxCellX, font);
+        if (!w) return x;
         maxWidth += w;
         x += w;
     }

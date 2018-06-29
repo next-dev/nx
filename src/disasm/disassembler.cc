@@ -182,6 +182,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
         }
 
         // Insert the label
+        label = addLabel(label, addr);
         insertLine(i++, Line{ tag, LineType::Label, c, label, {}, 0 });
 
         Disassembler dis;
@@ -284,8 +285,7 @@ int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size
 
         // Check to see if we have room
         u16 a = m_speccy->convertAddress(addr);
-        int bytes = size;
-        if (type == DataType::Word) bytes *= 2;
+        int bytes = size * (type == DataType::Word ? 2 : 1);
         if (int(a) + bytes > 65535)
         {
             Overlay::currentOverlay()->error("No room for data");
@@ -311,11 +311,12 @@ int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size
 
         // Figure out the line type from the data type
         LineType lt;
+        int lineSize = 0;
         switch (type)
         {
-        case DataType::Byte:    lt = LineType::DataBytes;       break;
-        case DataType::String:  lt = LineType::DataString;      break;
-        case DataType::Word:    lt = LineType::DataWords;       break;
+        case DataType::Byte:    lt = LineType::DataBytes;       lineSize = 8;   break;
+        case DataType::String:  lt = LineType::DataString;      lineSize = 32;  break;
+        case DataType::Word:    lt = LineType::DataWords;       lineSize = 4;   break;
 
         default:
             NX_ASSERT(0);
@@ -323,6 +324,7 @@ int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size
 
         // Insert a label if the label is greater than 6 characters
         string dataLabel;
+        label = addLabel(label, addr);
         if (label.size() > 6)
         {
             Line l{ tag, LineType::Label, addr, label, {}, 0 };
@@ -333,14 +335,26 @@ int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size
             dataLabel = label;
         }
 
-        // Insert the data line
-        Line l{ tag, lt, addr, dataLabel, {}, size };
-        insertLine(i++, l);
+        // Insert the data line(s)
+        int numLines = size / lineSize;
+        int modLines = size % lineSize;
+        for (int i = 0; i < numLines; ++i)
+        {
+            Line l{ tag, lt, addr, i == 0 ? dataLabel : string(), {}, lineSize };
+            addr = addr + (lt == LineType::DataWords ? 2 : 1) * lineSize;
+            insertLine(i++, l);
+        }
+        if (modLines)
+        {
+            Line l{ tag, lt, addr, numLines == 0 ? dataLabel : string(), {}, modLines };
+            insertLine(i++, l);
+        }
 
         if ((addr + bytes) != end)
         {
             insertBlankLine(i, tag);
         }
+
 
         changed();
         return startLine;
@@ -350,6 +364,36 @@ int DisassemblerDoc::generateData(MemAddr addr, int tag, DataType type, int size
         Overlay::currentOverlay()->error("Invalid code entry point.");
         return -1;
     }
+}
+
+int DisassemblerDoc::setDataSize(int line, int size)
+{
+    using LT = LineType;
+
+    // Find the first line in this group - it should have the label
+    while (line > 0 && getLine(line - 1).tag == getLine(line).tag) --line;
+    NX_ASSERT(!getLine(line).label.empty());
+
+    // Extract the information we need to recreate it.
+    const Line& l = getLine(line);
+    MemAddr addr = l.startAddress;
+    int tag = l.tag;
+    string label = l.label;
+    int dataLine = line;
+    while (!isData(dataLine)) ++dataLine;
+    DataType type;
+    switch (getLine(dataLine).type)
+    {
+    case LT::DataBytes:     type = DataType::Byte;      break;
+    case LT::DataString:    type = DataType::String;    break;
+    case LT::DataWords:     type = DataType::Word;      break;
+    default:
+        NX_ASSERT(0);
+    }
+
+    // Replace it
+    deleteLine(line);
+    return generateData(addr, tag, type, size, label);
 }
 
 int DisassemblerDoc::increaseDataSize(int line)
@@ -771,6 +815,8 @@ optional<int> DisassemblerDoc::findLine(MemAddr addr) const
 
 optional<int> DisassemblerDoc::findLabelLine(MemAddr addr) const
 {
+    if (addr.bank().getGroup() != MemGroup::RAM) return {};
+
     for (size_t i = 0; i < m_lines.size() - 1; ++i)
     {
         const Line& line = m_lines[i];

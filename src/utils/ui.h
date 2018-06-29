@@ -63,8 +63,11 @@ public:
     //
     void printChar(int xCell, int yCell, char c, u8 attr, const u8* font = gFont);
     int printChar(int xPixel, int yCell, char c, const u8* font = gFont);        // X is in pixels, returns width of character
+    int printCharTrunc(int xPixel, int yCell, char c, int maxCellX, const u8* font = gFont);        // X is in pixels, returns width of character
     int printString(int xCell, int yCell, const string& str, bool supportHighlight, u8 attr, const u8* font = gFont);
+    int printStringTrunc(int xCell, int yCell, const string& str, bool supportHighlight, u8 attr, int maxX, const u8* font = gFont);
     int printSquashedString(int xCell, int yCell, const string& str, u8 attr, const u8* font = gFont);
+    int printSquashedStringTrunc(int xCell, int yCell, const string& str, u8 attr, int maxCellX, const u8* font = gFont);
     static int squashedStringWidth(const string& str, const u8* font = gFont);
     void attrRect(int xCell, int yCell, int width, int height, u8 colour);
     void clearRect(int xCell, int yCell, int width, int height, u8 colour);

@@ -321,12 +321,12 @@ void DisassemblerEditor::render(Draw& draw)
             case T::FullComment:
                 m_longestLine = max(m_longestLine, (int)line.text.size());
                 draw.printChar(x, y, ';', commentColour);
-                draw.printSquashedString(x + 2, y, line.text, commentColour);
+                draw.printSquashedStringTrunc(x + 2, y, line.text, commentColour, m_x + m_width);
                 break;
 
             case T::Label:
                 m_longestLine = max(m_longestLine, (int)line.label.size() + 1);
-                draw.printString(x, y, line.label + ":", false, labelColour);
+                draw.printStringTrunc(x, y, line.label + ":", false, labelColour, m_x + m_width);
                 break;
 
             case T::Instruction:
@@ -341,8 +341,8 @@ void DisassemblerEditor::render(Draw& draw)
                     }
                     m_longestLine = max(m_longestLine, 32 + (int)operandStr.size());
                     draw.printString(x + 8, y, opCodeStr, false, bkgColour);
-                    draw.printString(x + 14, y, operandStr, false, bkgColour);
-                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
+                    draw.printStringTrunc(x + 14, y, operandStr, false, bkgColour, m_x + m_width);
+                    if (!line.text.empty()) draw.printSquashedStringTrunc(x + 32, y, string("; ") + line.text, commentColour, m_x + m_width);
                 }
                 break;
 
@@ -350,7 +350,7 @@ void DisassemblerEditor::render(Draw& draw)
                 {
                     if (!line.label.empty())
                     {
-                        draw.printString(x, y, line.label, false, labelColour);
+                        draw.printStringTrunc(x, y, line.label, false, labelColour, m_x + m_width);
                     }
                     draw.printString(x + 8, y, "db", false, bkgColour);
 
@@ -362,22 +362,22 @@ void DisassemblerEditor::render(Draw& draw)
                     }
                     ops.erase(ops.end() - 1);
 
-                    draw.printString(x + 14, y, ops, false, bkgColour);
+                    draw.printStringTrunc(x + 14, y, ops, false, bkgColour, m_x + m_width);
 
                     if (m_showAddresses)
                     {
                         u16 a = m_speccy->convertAddress(line.startAddress);
                         draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
                     }
-                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
-            }
+                    if (!line.text.empty()) draw.printSquashedStringTrunc(x + 32, y, string("; ") + line.text, commentColour, m_x + m_width);
+                }
                 break;
 
             case T::DataString:
                 {
                     if (!line.label.empty())
                     {
-                        draw.printString(x, y, line.label, false, labelColour);
+                        draw.printStringTrunc(x, y, line.label, false, labelColour, m_x + m_width);
                     }
                     draw.printString(x + 8, y, "db", false, bkgColour);
 
@@ -415,14 +415,14 @@ void DisassemblerEditor::render(Draw& draw)
                         ops.erase(ops.end() - 1);
                     }
 
-                    draw.printString(x + 14, y, ops, false, bkgColour);
+                    draw.printStringTrunc(x + 14, y, ops, false, bkgColour, m_x + m_width);
 
                     if (m_showAddresses)
                     {
                         u16 a = m_speccy->convertAddress(line.startAddress);
                         draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
                     }
-                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
+                    if (!line.text.empty()) draw.printSquashedStringTrunc(x + 32, y, string("; ") + line.text, commentColour, m_x + m_width);
             }
                 break;
 
@@ -430,7 +430,7 @@ void DisassemblerEditor::render(Draw& draw)
                 {
                     if (!line.label.empty())
                     {
-                        draw.printString(x, y, line.label, false, labelColour);
+                        draw.printStringTrunc(x, y, line.label, false, labelColour, m_x + m_width);
                     }
                     draw.printString(x + 8, y, "dw", false, bkgColour);
 
@@ -442,14 +442,14 @@ void DisassemblerEditor::render(Draw& draw)
                     }
                     ops.erase(ops.end() - 1);
 
-                    draw.printString(x + 14, y, ops, false, bkgColour);
+                    draw.printStringTrunc(x + 14, y, ops, false, bkgColour, m_x + m_width);
 
                     if (m_showAddresses)
                     {
                         u16 a = m_speccy->convertAddress(line.startAddress);
                         draw.printSquashedString(m_x + 1, y, hexWord(a), addrColour);
                     }
-                    if (!line.text.empty()) draw.printSquashedString(x + 32, y, string("; ") + line.text, commentColour);
+                    if (!line.text.empty()) draw.printSquashedStringTrunc(x + 32, y, string("; ") + line.text, commentColour, m_x + m_width);
             }
                 break;
             }
@@ -768,9 +768,6 @@ void DisassemblerWindow::askAddressLabel(string addressPrompt, function<void(Mem
                         Z80MemAddr addr = m_nx.getSpeccy().convertAddress(a);
                         label = stringFormat("L{0}", hexWord(addr));
                     }
-
-                    label = getEditor().getData().addLabel(label, a);
-
                     handler(a, label);
                 }, ConsumeKeyState::No, RequireInputState::No);
             }
@@ -823,6 +820,20 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             askAddressLabel("Code entry", [this](MemAddr a, string label) {
                 getEditor().getData().generateCode(a, getEditor().getData().getNextTag(), label);
             });
+            break;
+
+        case K::M:
+            prompt("Resize data", {}, [this](string line) {
+                int size = 1;
+                if (parseNumber(line, size))
+                {
+                    getEditor().getData().setDataSize(getEditor().getCurrentLineIndex(), size);
+                }
+                else
+                {
+                    Overlay::currentOverlay()->error("Invalid number.");
+                }
+            }, ConsumeKeyState::Yes, RequireInputState::Yes);
             break;
 
         case K::Return:
@@ -993,6 +1004,8 @@ DisassemblerOverlay::DisassemblerOverlay(Nx& nx)
         ";|Add comment",
         "Shift-;|Force line comment",
         "C|Add code entry point",
+        "BWS|Byte/Word/String data entry point",
+        "M|Modify data size",
         "Space|Jump to label",
         "L|Toggle addresses",
         })
