@@ -356,6 +356,7 @@ int DisassemblerDoc::increaseDataSize(int line)
 {
     using LT = LineType;
 
+    // Find the last line in the current area
     while (getLine(line + 1).tag == getLine(line).tag &&
         (getLine(line + 1).type == LT::DataBytes ||
          getLine(line + 1).type == LT::DataString ||
@@ -366,6 +367,7 @@ int DisassemblerDoc::increaseDataSize(int line)
 
     Line& l = getLine(line);
 
+    // Figure out how much space we have to extend into
     optional<MemAddr> na = nextAddr(line);
     if (na && (l.startAddress + numDataBytes(l.type, l.size + 1) >= *na))
     {
@@ -419,6 +421,75 @@ int DisassemblerDoc::increaseDataSize(int line)
     }
 
     changed();
+    return line;
+}
+
+bool DisassemblerDoc::isData(int line) const
+{
+    const Line& l = getLine(line);
+    return l.type == LineType::DataBytes ||
+        l.type == LineType::DataString ||
+        l.type == LineType::DataWords;
+}
+
+void DisassemblerDoc::removeLabel(string label)
+{
+    if (!label.empty() && label[0] != '.')
+    {
+        auto it = m_labelMap.find(label);
+        if (it != m_labelMap.end())
+        {
+            MemAddr a = it->second.second;
+            m_labelMap.erase(it);
+            m_addrMap.erase(a);
+        }
+    }
+}
+
+int DisassemblerDoc::decreaseDataSize(int line)
+{
+    using LT = LineType;
+
+    if (!isData(line))
+    {
+        return line;
+    }
+
+    // Find the first line in the data group.
+    int firstLine = line;
+    while (firstLine > 0 && getLine(firstLine - 1).tag == getLine(firstLine).tag) --firstLine;
+    while (!isData(firstLine)) ++firstLine;
+
+    // Find the last line in the current area.
+    while (getLine(line + 1).tag == getLine(line).tag &&
+        (getLine(line + 1).type == LT::DataBytes ||
+         getLine(line + 1).type == LT::DataString ||
+         getLine(line + 1).type == LT::DataWords))
+    {
+        ++line;
+    }
+
+    Line& l = getLine(line);
+
+    if (l.size == 1)
+    {
+        // Is this the first line?
+        if (line == firstLine)
+        {
+            // Cannot decrease any more!
+            return line;
+        }
+
+        // Otherwise, we delete this line
+        removeLabel(l.label);
+        m_lines.erase(m_lines.begin() + line);
+        --line;
+    }
+    else
+    {
+        --l.size;
+    }
+
     return line;
 }
 
@@ -484,12 +555,9 @@ int DisassemblerDoc::deleteLine(int line)
     // Remove any labels from the database.
     //
     for_each(m_lines.begin(), m_lines.end(), [this, tag](Line& line) {
-        if (line.tag == tag && line.type == LineType::Label)
+        if (line.tag == tag)
         {
-            auto it1 = m_labelMap.find(line.label);
-            auto it2 = m_addrMap.find(line.startAddress);
-            m_labelMap.erase(it1);
-            m_addrMap.erase(it2);
+            removeLabel(line.label);
         }
     });
 
@@ -706,7 +774,7 @@ optional<int> DisassemblerDoc::findLabelLine(MemAddr addr) const
     for (size_t i = 0; i < m_lines.size() - 1; ++i)
     {
         const Line& line = m_lines[i];
-        if (line.type != LineType::Label) continue;
+        if (line.label.empty()) continue;
 
         if (addr == line.startAddress)
         {

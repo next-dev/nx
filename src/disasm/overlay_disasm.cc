@@ -193,6 +193,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
 
             case K::Left:   // Decrease size
+                m_currentLine = getData().decreaseDataSize(m_currentLine);
                 break;
 
             case K::Right:  // Increase size
@@ -378,6 +379,8 @@ void DisassemblerEditor::render(Draw& draw)
                     {
                         draw.printString(x, y, line.label, false, labelColour);
                     }
+                    draw.printString(x + 8, y, "db", false, bkgColour);
+
                     string ops;
                     bool inString = false;
                     u16 a = m_speccy->convertAddress(line.startAddress);

@@ -42,6 +42,7 @@ public:
     u16 getWord(u16 addr) { return getByte(addr) + 256 * getByte(addr + 1); }
 
     string addLabel(string label, MemAddr addr);
+    void removeLabel(string label);
     const map<MemAddr, Disassembler::LabelInfo>& getLabelsByAddr() const { return m_addrMap; }
 
     //
@@ -119,6 +120,7 @@ private:
     void checkBlankLines(int line);
     bool middleOfCode(int line) const;
     int numDataBytes(LineType type, int size) const;
+    bool isData(int line) const;
 
 private:
     const Spectrum*     m_speccy;
