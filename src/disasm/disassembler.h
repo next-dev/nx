@@ -8,6 +8,7 @@
 #include <types.h>
 #include <asm/asm.h>
 #include <emulator/spectrum.h>
+#include <set>
 
 //----------------------------------------------------------------------------------------------------------------------
 // DisassemblerDoc
@@ -108,7 +109,18 @@ public:
     const Line& getLine(int i) const { return m_lines[i]; }
     Line& getLine(int i) { return m_lines[i]; }
 
-    void insertLine(int i, Line line) { m_lines.insert(m_lines.begin() + i, line); }
+    void insertLine(int i, Line line);
+
+    //
+    // Bookmarks
+    //
+
+    void toggleBookmark(int line);
+    int nextBookmark(int currentLine);
+    int prevBookmark(int currentLine);
+    void checkBookmarksWhenRemovingLine(int line);
+    void checkBookmarksWhenInsertingLine(int line);
+    vector<int> enumBookmarks();
 
 private:
     //
@@ -121,6 +133,7 @@ private:
     bool middleOfCode(int line) const;
     int numDataBytes(LineType type, int size) const;
     bool isData(int line) const;
+    void deleteSingleLine(int line);
 
 private:
     const Spectrum*     m_speccy;
@@ -136,4 +149,7 @@ private:
 
     map<string, Disassembler::LabelInfo>    m_labelMap;
     map<MemAddr, Disassembler::LabelInfo>   m_addrMap;
+
+    vector<int>            m_bookmarks;
+    vector<int>::iterator  m_currentBookmark;
 };

@@ -51,6 +51,7 @@ void DisassemblerDoc::reset()
     m_lines.clear();
     m_labelMap.clear();
     m_addrMap.clear();
+    m_bookmarks.clear();
     m_changed = false;
     for (int i = 0; i < 65536; ++i) m_mtype[i] = false;
 }
@@ -526,7 +527,7 @@ int DisassemblerDoc::decreaseDataSize(int line)
 
         // Otherwise, we delete this line
         removeLabel(l.label);
-        m_lines.erase(m_lines.begin() + line);
+        deleteSingleLine(line);
         --line;
     }
     else
@@ -562,8 +563,21 @@ bool DisassemblerDoc::replaceLabel(int line, string oldLabel, string newLabel)
     return false;
 }
 
+void DisassemblerDoc::deleteSingleLine(int line)
+{
+    if (line >= m_lines.size()) return;
+    deleteSingleLine(line);
+}
+
+void DisassemblerDoc::insertLine(int i, Line line)
+{
+    m_lines.insert(m_lines.begin() + i, line);
+    checkBookmarksWhenInsertingLine(i);
+}
+
 int DisassemblerDoc::deleteLine(int line)
 {
+    // #todo: maybe speed this up if we assume lines in same tag group are together around this line.
     int tag = m_lines[line].tag;
     int newLine = line;
     bool unknownRangeFound = false;
@@ -573,13 +587,13 @@ int DisassemblerDoc::deleteLine(int line)
     if (m_lines[line].type == LineType::FullComment)
     {
         // We just delete the comment line
-        m_lines.erase(m_lines.begin() + line);
+        deleteSingleLine(line);
         if ((line > 0) &&
             (m_lines[line-1].type == LineType::Blank) &&
             (m_lines[line].type != LineType::FullComment))
         {
             // Erase the blank too
-            m_lines.erase(m_lines.begin() + line - 1);
+            deleteSingleLine(line - 1);
         }
         return line;
     }
@@ -624,8 +638,19 @@ int DisassemblerDoc::deleteLine(int line)
 
     // Remove the lines
     //
-    auto startRemovals = remove_if(m_lines.begin(), m_lines.end(), [tag](const auto& line) {
-        return line.tag == tag;
+    for (int i = 0, line = 0; i < getNumLines(); ++i)
+    {
+        if (getLine(i).tag == tag)
+        {
+            checkBookmarksWhenRemovingLine(line);
+        }
+        else
+        {
+            ++line;
+        }
+    }
+    auto startRemovals = remove_if(m_lines.begin(), m_lines.end(), [this, tag](const auto& line) {
+        return (line.tag == tag);
     });
 
     m_lines.erase(startRemovals, m_lines.end());
@@ -633,7 +658,7 @@ int DisassemblerDoc::deleteLine(int line)
     while ((newLine < (int)m_lines.size()) &&
         (m_lines[newLine].type == LineType::Blank))
     {
-        m_lines.erase(m_lines.begin() + newLine);
+        deleteSingleLine(newLine);
     }
 
     checkBlankLines(newLine);
@@ -751,6 +776,17 @@ bool DisassemblerDoc::load(string fileName)
             }
             m_nextTag = dcmd.peek32(x);
         }
+
+        if (f.checkSection('BOOK', 0))
+        {
+            const BlockSection& book = f['BOOK'];
+            int numMarks = (int)book.peek32(0);
+            for (int i = 0; i < numMarks; ++i)
+            {
+                m_bookmarks.emplace_back((int)book.peek32(4 + (i * 4)));
+            }
+            m_currentBookmark = m_bookmarks.begin();
+        }
     }
 
     m_changed = false;
@@ -794,6 +830,20 @@ bool DisassemblerDoc::save(string fileName)
     }
     dcmd.poke32((u32)m_nextTag);
     f.addSection(dcmd);
+
+    //
+    // Bookmarks section
+    //
+    if (!m_bookmarks.empty())
+    {
+        BlockSection book('BOOK', 0);
+        book.poke32(int(m_bookmarks.size()));
+        for (const auto& mark : m_bookmarks)
+        {
+            book.poke32(mark);
+        }
+        f.addSection(book);
+    }
 
     m_changed = false;
     return f.save(fileName);
@@ -874,3 +924,72 @@ string DisassemblerDoc::addLabel(string label, MemAddr addr)
     return label;
 }
 
+void DisassemblerDoc::toggleBookmark(int line)
+{
+    auto it = find(m_bookmarks.begin(), m_bookmarks.end(), line);
+    if (it == m_bookmarks.end())
+    {
+        // New bookmark
+        m_currentBookmark = m_bookmarks.insert(upper_bound(m_bookmarks.begin(), m_bookmarks.end(), line), line);
+    }
+    else
+    {
+        // Bookmark already exists.  So, remove it
+        m_currentBookmark = m_bookmarks.erase(it);
+        if (m_currentBookmark == m_bookmarks.end()) m_currentBookmark = m_bookmarks.begin();
+    }
+
+    changed();
+}
+
+int DisassemblerDoc::nextBookmark(int currentLine)
+{
+    if (m_bookmarks.empty()) return currentLine;
+    advance(m_currentBookmark, 1);
+    if (m_currentBookmark == m_bookmarks.end()) m_currentBookmark = m_bookmarks.begin();
+    return *m_currentBookmark;
+}
+
+int DisassemblerDoc::prevBookmark(int currentLine)
+{
+    if (m_bookmarks.empty()) return currentLine;
+    if (m_currentBookmark == m_bookmarks.begin())
+    {
+        m_currentBookmark = m_bookmarks.end();
+        --m_currentBookmark;
+    }
+    else
+    {
+        advance(m_currentBookmark, -1);
+    }
+
+    return *m_currentBookmark;
+}
+
+void DisassemblerDoc::checkBookmarksWhenRemovingLine(int line)
+{
+    auto it = lower_bound(m_bookmarks.begin(), m_bookmarks.end(), line);
+    auto f = [](int& elem) { --elem; };
+    if (*it == line)
+    {
+        for_each(it + 1, m_bookmarks.end(), f);
+        m_bookmarks.erase(it);
+    }
+    else
+    {
+        for_each(it, m_bookmarks.end(), f);
+    }
+}
+
+void DisassemblerDoc::checkBookmarksWhenInsertingLine(int line)
+{
+    auto begin = lower_bound(m_bookmarks.begin(), m_bookmarks.end(), line);
+    for_each(begin, m_bookmarks.end(), [](int& elem) {
+        ++elem;
+    });
+}
+
+vector<int> DisassemblerDoc::enumBookmarks()
+{
+    return { m_bookmarks.begin(), m_bookmarks.end() };
+}

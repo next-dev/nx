@@ -166,6 +166,10 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 m_showAddresses = !m_showAddresses;
                 break;
 
+            case K::F2:
+                m_currentLine = getData().nextBookmark(m_currentLine);
+                break;
+
             default:
                 break;
             }
@@ -200,6 +204,10 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 m_currentLine = getData().increaseDataSize(m_currentLine);
                 break;
 
+            case K::F2:
+                getData().toggleBookmark(m_currentLine);
+                break;
+
             default:
                 break;
             }
@@ -216,6 +224,10 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
             case K::SemiColon:
                 insertComment();
                 clearJumps(m_currentLine);
+                break;
+
+            case K::F2:
+                m_currentLine = getData().prevBookmark(m_currentLine);
                 break;
 
             default:
@@ -302,16 +314,26 @@ void DisassemblerEditor::render(Draw& draw)
     u8 cursorColour = Draw::attr(Colour::White, Colour::Blue, true) | 0x80;
     u8 cursor2Colour = Draw::attr(Colour::White, Colour::Black, false);
     u8 addrColour = Draw::attr(Colour::Red, Colour::Black, false);
+    u8 bookmarkColour = Draw::attr(Colour::Red, Colour::Black, false);
 
     int y = m_y;
     int x = m_showAddresses ? m_x + 5 : m_x + 1;
     if (getData().getNumLines() > 0)
     {
         int tag = m_currentLine < getData().getNumLines() ? getData().getLine(m_currentLine).tag : -1;
+        vector<int> bookmarks = getData().enumBookmarks();
+        bookmarks.erase(bookmarks.begin(), lower_bound(bookmarks.begin(), bookmarks.end(), m_topLine));
         for (int i = m_topLine; (i < getData().getNumLines()) && (y < (m_y + m_height)); ++i, ++y)
         {
             using T = DisassemblerDoc::LineType;
             const DisassemblerDoc::Line& line = getData().getLine(i);
+            bool bookmarkLine = false;
+
+            if (!bookmarks.empty() && (i == bookmarks[0]))
+            {
+                bookmarkLine = true;
+                bookmarks.erase(bookmarks.begin());
+            }
 
             switch (line.type)
             {
@@ -454,13 +476,17 @@ void DisassemblerEditor::render(Draw& draw)
                 break;
             }
 
+            if (bookmarkLine)
+            {
+                draw.printChar(m_x, y, ')', bookmarkColour, gGfxFont);
+            }
             if (i == m_currentLine)
             {
-                draw.printChar(m_x, y, '*', cursorColour, gGfxFont);
+                draw.printChar(m_x, y, '*', bookmarkLine ? bookmarkColour | 0x80 : cursorColour, gGfxFont);
             }
             else if (tag == line.tag)
             {
-                draw.printChar(m_x, y, '*', cursor2Colour, gGfxFont);
+                draw.printChar(m_x, y, '*', bookmarkLine ? bookmarkColour : cursor2Colour, gGfxFont);
             }
         }
     }
