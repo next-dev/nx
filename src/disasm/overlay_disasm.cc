@@ -168,6 +168,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
             case K::F2:
                 m_currentLine = getData().nextBookmark(m_currentLine);
+                ensureVisibleCursor();
                 break;
 
             default:
@@ -228,6 +229,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
 
             case K::F2:
                 m_currentLine = getData().prevBookmark(m_currentLine);
+                ensureVisibleCursor();
                 break;
 
             default:
