@@ -703,6 +703,63 @@ bool EditorData::save(const char* fileName)
 }
 
 //----------------------------------------------------------------------------------------------------------------------
+// Search
+//----------------------------------------------------------------------------------------------------------------------
+
+bool EditorData::findString(string str)
+{
+    m_searchString = str;
+    return findNext();
+}
+
+bool EditorData::findNext()
+{
+    DataPos i = find(m_searchString, afterCursorDataPos() + 1, endDataPos(), true);
+    if (i.isValid())
+    {
+        moveTo(toVirtualPos(i));
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool EditorData::findPrev()
+{
+    DataPos i = find(m_searchString, startDataPos(), cursorDataPos(), false);
+    if (i.isValid())
+    {
+        moveTo(toVirtualPos(i));
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+EditorData::DataPos EditorData::find(const string& str, DataPos start, DataPos end, bool forwardSearch)
+{
+    int s = (int)start;
+    int e = (int)end;
+
+    auto it = forwardSearch
+        ? search(m_buffer.begin() + s, m_buffer.begin() + e, str.begin(), str.end())
+        : find_end(m_buffer.begin() + s, m_buffer.begin() + e, str.begin(), str.end());
+    if (it == (m_buffer.begin() + e))
+    {
+        // Didn't find it
+        return DataPos();
+    }
+    else
+    {
+        return DataPos(int(it - m_buffer.begin()));
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
 // Editor
 //----------------------------------------------------------------------------------------------------------------------
 

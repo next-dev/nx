@@ -449,7 +449,7 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
         m_mmap.upload(m_speccy);
     }
 
-    m_assemblerWindow.output("");
+    output("");
     if (numErrors())
     {
         m_assemblerWindow.output(stringFormat("!Assembler error(s): {0}", numErrors()));

@@ -261,27 +261,73 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
         case K::O:  // Open file
             openFile();
             break;
+
+        case K::F:  // Find
+            prompt("Search", "", [this, &resetStatus](string text) {
+                if (getEditor().getData().findString(text))
+                {
+                    getEditor().ensureVisibleCursor();
+                }
+                else
+                {
+                    setStatus("Cannot find.", Draw::attr(Colour::White, Colour::Red, true));
+                }
+                resetStatus = false;
+            }, ConsumeKeyState::Yes, RequireInputState::No);
                 
         default:
             break;
         }
     }
 
-    if (!ctrl && !alt && key == K::F4)
+    if (!ctrl && !alt)
     {
-        if (down)
+        if (key == K::F3)
         {
-            if (shift)
+            if (down) 
             {
-                if (--m_currentError < 0) m_currentError = max(0, (int)m_errors.size() - 1);
+                if (shift)
+                {
+                    if (getEditor().getData().findPrev())
+                    {
+                        getEditor().ensureVisibleCursor();
+                    }
+                    else
+                    {
+                        setStatus("Cannot find.", Draw::attr(Colour::White, Colour::Red, true));
+                        resetStatus = false;
+                    }
+                }
+                else
+                {
+                    if (getEditor().getData().findNext())
+                    {
+                        getEditor().ensureVisibleCursor();
+                    }
+                    else
+                    {
+                        setStatus("Cannot find.", Draw::attr(Colour::White, Colour::Red, true));
+                        resetStatus = false;
+                    }
+                }
             }
-            else
-            {
-                if (++m_currentError >= m_errors.size()) m_currentError = 0;
-            }
-            goToError(m_currentError);
         }
-        resetStatus = false;
+        else if (key == K::F4)
+        {
+            if (down)
+            {
+                if (shift)
+                {
+                    if (--m_currentError < 0) m_currentError = max(0, (int)m_errors.size() - 1);
+                }
+                else
+                {
+                    if (++m_currentError >= m_errors.size()) m_currentError = 0;
+                }
+                goToError(m_currentError);
+            }
+            resetStatus = false;
+        }
     }
 
     if (!m_editors.empty())

@@ -75,7 +75,7 @@ struct PosT
 {
     int m_pos;
 
-    PosT() : m_pos(0) {}
+    PosT() : m_pos(-1) {}
     PosT(int p) : m_pos(p) {}
     PosT(const PosT& p) : m_pos(p.m_pos) {}
 
@@ -102,6 +102,8 @@ struct PosT
     bool operator>= (const PosT& p) const { return m_pos >= p.m_pos; }
     bool operator== (const PosT& p) const { return m_pos == p.m_pos; }
     bool operator!= (const PosT& p) const { return m_pos != p.m_pos; }
+
+    bool isValid() const { return m_pos != -1; }
 
 };
 
@@ -134,6 +136,11 @@ public:
     bool hasChanged() const { return m_changed; }
     char getChar(Pos p) const { return m_buffer[(int)toDataPos(p)]; }
     void setChar(Pos p, char ch) { m_buffer[(int)toDataPos(p)] = ch; }
+    string getSearchTerm() const { return m_searchString; }
+
+    Pos startPos() const { return toVirtualPos(DataPos(0)); }
+    Pos endPos() const { return toVirtualPos(DataPos((int)m_buffer.size())); }
+    Pos cursorPos() const { return toVirtualPos(m_cursor); }
 
     //
     // Commands
@@ -153,6 +160,9 @@ public:
     void cutLine();
     void copyLine();
     void pasteLine();
+    bool findString(string str);
+    bool findNext();
+    bool findPrev();
 
     //
     // File
@@ -179,6 +189,11 @@ private:
     // gap buffer structure that is used internally.  All positions that use
     using DataPos = PosT<1>;
 
+    DataPos startDataPos() const { return DataPos(0); }
+    DataPos cursorDataPos() const { return m_cursor; }
+    DataPos afterCursorDataPos() const { return m_endBuffer; }
+    DataPos endDataPos() const { return DataPos((int)m_buffer.size()); }
+
     bool ensureSpace(int numChars);
     void dump() const;
     Pos toVirtualPos(DataPos actualPos) const;
@@ -193,6 +208,8 @@ private:
     char getChar(DataPos p) const { NX_ASSERT(isValidPos(p));  return m_buffer[(int)p]; }
     void setChar(DataPos p, char ch) { NX_ASSERT(isValidPos(p));  m_buffer[(int)p] = ch; }
 
+    DataPos find(const string& str, DataPos start, DataPos end, bool forwardSearch);
+
 private:
     vector<char>    m_buffer;
     vector<DataPos> m_lines;
@@ -205,6 +222,7 @@ private:
     vector<int>     m_initialTabs;
     int             m_tabSize;
     vector<char>    m_clipboard;
+    string          m_searchString;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
