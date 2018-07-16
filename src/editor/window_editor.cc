@@ -469,6 +469,7 @@ void EditorWindow::goToError(int n)
 
         data.moveTo(pos);
     }
+    getEditor().ensureVisibleCursor();
 
     setStatus(err.m_error, Draw::attr(Colour::Black, Colour::Red, true));
 }
