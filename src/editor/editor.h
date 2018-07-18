@@ -161,8 +161,10 @@ public:
     void copyLine();
     void pasteLine();
     bool findString(string str);
+    void setReplaceTerm(string str);
     bool findNext();
     bool findPrev();
+    bool replace();
 
     //
     // File
@@ -223,6 +225,7 @@ private:
     int             m_tabSize;
     vector<char>    m_clipboard;
     string          m_searchString;
+    string          m_replaceString;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

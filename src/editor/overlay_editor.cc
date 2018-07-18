@@ -22,6 +22,7 @@ EditorOverlay::EditorOverlay(Nx& nx)
         "Ctrl-B|Build",
         "Ctrl-R|Build & Run",
         "Ctrl-F/F3|Find",
+        "Ctrl-H/.|Replace",
         "F4|Next error",
         "Ctrl-X|Cut Line",
         "Ctrl-C|Copy Line",

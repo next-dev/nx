@@ -712,6 +712,11 @@ bool EditorData::findString(string str)
     return findNext();
 }
 
+void EditorData::setReplaceTerm(string str)
+{
+    m_replaceString = str;
+}
+
 bool EditorData::findNext()
 {
     DataPos i = find(m_searchString, afterCursorDataPos() + 1, endDataPos(), true);
@@ -757,6 +762,28 @@ EditorData::DataPos EditorData::find(const string& str, DataPos start, DataPos e
     {
         return DataPos(int(it - m_buffer.begin()));
     }
+}
+
+bool EditorData::replace()
+{
+    // Check to see if we're on a replace term
+    if (endDataPos() - afterCursorDataPos() > (int)m_searchString.size())
+    {
+        DataPos s = afterCursorDataPos();
+        for (int i = 0; m_searchString[i] != 0; ++i, ++s)
+        {
+            if (m_searchString[i] != m_buffer[(int)s]) return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+    deleteChar((int)m_searchString.size());
+    insert(m_replaceString);
+    leftChar((int)m_replaceString.size());
+    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -1113,6 +1140,14 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             m_data.pasteLine();
             break;
 
+        case K::Period:      // Repeat replace
+            if (m_data.replace())
+            {
+                m_data.findNext();
+            }
+            ensureVisibleCursor();
+            break;
+
         default:
             break;
         }
@@ -1135,6 +1170,30 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
 
         case K::L:  // Toggle line numbers
             m_showLineNumbers = !m_showLineNumbers;
+            break;
+
+        case K::Period:  // Replace All
+            if (m_data.replace())
+            {
+                // If we can find at least one
+                m_data.findNext();
+                while (m_data.replace())
+                {
+                    m_data.findNext();
+                }
+
+            }
+            else
+            {
+                if (m_data.findNext())
+                {
+                    while (m_data.replace())
+                    {
+                        m_data.findNext();
+                    }
+                }
+            }
+            ensureVisibleCursor();
             break;
 
         default:

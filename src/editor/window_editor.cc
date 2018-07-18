@@ -273,7 +273,25 @@ void EditorWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl
                     setStatus("Cannot find.", Draw::attr(Colour::White, Colour::Red, true));
                 }
                 resetStatus = false;
+            }, ConsumeKeyState::Yes, RequireInputState::Yes);
+            break;
+
+        case K::H:  // Replace
+            prompt("Search", "", [this, &resetStatus](string text) {
+                prompt("Replace", "", [this, text, &resetStatus](string replaceText) {
+                    EditorData& ed = getEditor().getData();
+                    ed.setReplaceTerm(replaceText);
+                    if (ed.findString(text))
+                    {
+                        getEditor().ensureVisibleCursor();
+                    }
+                    else
+                    {
+                        setStatus("Cannot find.", Draw::attr(Colour::White, Colour::Red, true));
+                    }
+                }, ConsumeKeyState::No, RequireInputState::Yes);
             }, ConsumeKeyState::Yes, RequireInputState::No);
+            break;
                 
         default:
             break;

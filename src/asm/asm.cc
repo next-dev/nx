@@ -985,6 +985,13 @@ void Assembler::nextLine(const Lex::Element*& e)
     buildResult = false;                        \
     } while (0)
 
+#define FAIL_D(msg)                             \
+    do {                                        \
+    m_errors.error(lex, *directiveE, (msg));    \
+    nextLine(e);                                \
+    buildResult = false;                        \
+    } while (0)
+
 optional<MemAddr> Assembler::getZ80AddressFromExpression(Lex& lex, const Lex::Element* e, ExprValue expr)
 {
     MemAddr a;
@@ -1041,6 +1048,8 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 
     while (e->m_type != T::EndOfFile)
     {
+        const Lex::Element* directiveE = e;
+
         // Set if symbol is found
         symbol = 0;
         // Set to true if this is a symbol to add to the symbol table (and symbol must be non-zero).
@@ -1230,7 +1239,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         }
         else if (e->m_type != T::Newline)
         {
-            FAIL("Invalid instruction or directive.");
+            FAIL_D("Invalid instruction or directive.");
         }
         else
         {
@@ -1260,6 +1269,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
 }
 
 #undef FAIL
+#undef FAIL_D
 
 #define PARSE(n, format) if (expect(lex, e, (format), outE)) return (n)
 #define CHECK_PARSE(n, format) PARSE(n, format); return invalidInstruction(lex, e, outE)
