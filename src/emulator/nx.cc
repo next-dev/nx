@@ -1691,13 +1691,13 @@ optional<MemAddr> Nx::textToAddress(string text)
         switch (result->getType())
         {
         case ExprValue::Type::Integer:
-            address = u16(*result);
+            address = u16(result->getInteger());
             break;
 
         case ExprValue::Type::Address:
-            if (getSpeccy().isZ80Address(*result))
+            if (getSpeccy().isZ80Address(result->getAddress()))
             {
-                address = getSpeccy().convertAddress(*result);
+                address = getSpeccy().convertAddress(result->getAddress());
             }
             else
             {

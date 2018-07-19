@@ -110,7 +110,18 @@ public:
 
     struct Options
     {
+        enum class Output
+        {
+            Memory,
+            Null,
+        };
         MemAddr     m_startAddress;
+        Output      m_output;
+
+        Options()
+            : m_startAddress()
+            , m_output(Output::Memory)
+        {}
     };
 
     const Options& getOptions() const { return m_options; }
@@ -153,6 +164,7 @@ private:
     //  '   AF'
     //  f   NZ,Z,NC,C
     //  F   NZ,Z,NC,C,PO,PE,P,M
+    //  $   symbol
     //
     //  Specific 8-bit registers: abcdehlirx        (x = IXH, IXL, IYH or IYL)
     //  Specific 16-bit registers: ABDHSX           (AF, BC, DE, HL, SP, IX/IY)
@@ -200,12 +212,14 @@ private:
     bool doEqu(Lex& lex, i64 symbol, const Lex::Element*& e);
     bool doDb(Lex& lex, const Lex::Element*& e);
     bool doDw(Lex& lex, const Lex::Element*& e);
+    bool doDs(Lex& lex, const Lex::Element*& e);
     bool doOpt(Lex& lex, const Lex::Element*& e);
 
     //
     // Options
     //
     bool doOptStart(Lex& lex, const Lex::Element*& e);
+    bool doOptOutput(Lex& lex, const Lex::Element*& e);
 
     //
     // Emission utilities
@@ -217,10 +231,10 @@ private:
     u8 rot(Lex::Element::Type opCode) const;
     u8 alu(Lex::Element::Type opCode) const;
 
-    void emit8(u8 b);
-    void emit16(u16 w);
-    void emitXYZ(u8 x, u8 y, u8 z);
-    void emitXPQZ(u8 x, u8 p, u8 q, u8 z);
+    bool emit8(Lex& l, const Lex::Element* e, u8 b);
+    bool emit16(Lex& l, const Lex::Element* e, u16 w);
+    bool emitXYZ(Lex& l, const Lex::Element* e, u8 x, u8 y, u8 z);
+    bool emitXPQZ(Lex& l, const Lex::Element* e, u8 x, u8 p, u8 q, u8 z);
 
     u16 make16(Lex& lex, const Lex::Element& e, const Spectrum& speccy, ExprValue result);
 

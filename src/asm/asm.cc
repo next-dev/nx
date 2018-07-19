@@ -242,16 +242,55 @@ struct ShiftRightExpr
     ExprValue operator() (MemAddr, MemAddr)         { NX_ASSERT(0); return ExprValue(); }
 };
 
-ExprValue ExprValue::operator+ (const ExprValue& other) const       { return visit(AddExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator- (const ExprValue& other) const       { return visit(SubExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator* (const ExprValue& other) const       { return visit(MulExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator/ (const ExprValue& other) const       { return visit(DivExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator% (const ExprValue& other) const       { return visit(ModExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator| (const ExprValue& other) const       { return visit(OrExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator& (const ExprValue& other) const       { return visit(AndExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator^ (const ExprValue& other) const       { return visit(XorExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator<< (const ExprValue& other) const      { return visit(ShiftLeftExpr(), m_value, other.m_value); }
-ExprValue ExprValue::operator>> (const ExprValue& other) const      { return visit(ShiftRightExpr(), m_value, other.m_value); }
+ ExprValue ExprValue::opAdd(const ExprValue& a, const ExprValue& b)
+{
+    return visit(AddExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opSub(const ExprValue& a, const ExprValue& b)
+{
+    return visit(SubExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opMul(const ExprValue& a, const ExprValue& b)
+{
+    return visit(MulExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opDiv(const ExprValue& a, const ExprValue& b)
+{
+    return visit(DivExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opMod(const ExprValue& a, const ExprValue& b)
+{
+    return visit(ModExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opOr(const ExprValue& a, const ExprValue& b)
+{
+    return visit(OrExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opAnd(const ExprValue& a, const ExprValue& b)
+{
+    return visit(AndExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opXor(const ExprValue& a, const ExprValue& b)
+{
+    return visit(XorExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opShiftLeft(const ExprValue& a, const ExprValue& b)
+{
+    return visit(ShiftLeftExpr(), a.m_value, b.m_value);
+}
+
+ ExprValue ExprValue::opShiftRight(const ExprValue& a, const ExprValue& b)
+{
+    return visit(ShiftRightExpr(), a.m_value, b.m_value);
+}
 
 //----------------------------------------------------------------------------------------------------------------------
 // Constructor
@@ -446,7 +485,19 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     //
     if (assemble(data, sourceName))
     {
-        m_mmap.upload(m_speccy);
+        switch (m_options.m_output)
+        {
+        case Options::Output::Memory:
+            m_mmap.upload(m_speccy);
+            break;
+
+        case Options::Output::Null:
+            // Do nothing.
+            break;
+
+        default:
+            NX_ASSERT(0);
+        }
     }
 
     output("");
@@ -798,6 +849,11 @@ bool Assembler::expect(Lex& lex, const Lex::Element* e, const char* format, cons
             if (pass) ++e;
             break;
 
+        case '$':
+            pass = e->m_type == T::Symbol;
+            if (pass) ++e;
+            break;
+
         case '*':
             {
                 const Lex::Element* ee;
@@ -1001,7 +1057,7 @@ optional<MemAddr> Assembler::getZ80AddressFromExpression(Lex& lex, const Lex::El
     {
     case ExprValue::Type::Integer:
         {
-            if ((expr.getType() == ExprValue::Type::Integer) && ((i64)expr < 0x10000))
+            if ((expr.getType() == ExprValue::Type::Integer) && (expr.getInteger() < 0x10000))
             {
                 u16 addr = expr.r16();
                 if (addr >= 0x4000 && addr <= 0xffff)
@@ -1021,7 +1077,7 @@ optional<MemAddr> Assembler::getZ80AddressFromExpression(Lex& lex, const Lex::El
         break;
 
     case ExprValue::Type::Address:
-        a = expr;
+        a = expr.getAddress();
         if (!m_speccy.isZ80Address(a))
         {
             FAIL("Only addresses in 64K address space supported");
@@ -1134,6 +1190,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 break;
 
             case T::DB:
+            case T::DEFB:
                 ++e;
                 while (e->m_type != T::Newline)
                 {
@@ -1154,7 +1211,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                     }
                     else
                     {
-                        FAIL("Invalid argument to a DB directive.");
+                        FAIL("Invalid argument to a DEFB directive.");
                         break;
                     }
 
@@ -1178,6 +1235,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 break;
 
             case T::DW:
+            case T::DEFW:
                 ++e;
                 while (e->m_type != T::Newline)
                 {
@@ -1189,7 +1247,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                     }
                     else
                     {
-                        FAIL("Invalid argument to a DW directive.");
+                        FAIL("Invalid argument to a DEFW directive.");
                         break;
                     }
 
@@ -1210,6 +1268,50 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 }
                 ++e;
                 symbolToAdd = true;
+                break;
+
+            case T::DS:
+            case T::DEFS:
+                {
+                    ++e;
+                    const Lex::Element* outE = 0;
+                    if (expectExpression(lex, e, &outE))
+                    {
+                        MemAddr addr = m_mmap.getAddress(m_address);
+                        if (auto expr = m_eval.parseExpression(lex, m_errors, e, addr); expr)
+                        {
+                            if (expr->getType() == ExprValue::Type::Integer)
+                            {
+                                NX_ASSERT(m_speccy.isZ80Address(addr));
+                                i64 z80Addr = (i64)(u16)m_speccy.convertAddress(addr);
+                                if (z80Addr + expr->getInteger() >= 65536)
+                                {
+                                    FAIL("Space is too large.");
+                                }
+
+                                m_address += (int)expr->getInteger();
+                            }
+                            else
+                            {
+                                FAIL("Expression must be an integer.");
+                            }
+                        }
+                        else
+                        {
+                            FAIL("Invalid expression.");
+                        }
+                    }
+                    else
+                    {
+                        FAIL("Expected expression to define space.");
+                    }
+
+                    symbolToAdd = true;
+                    if (e->m_type != T::Newline)
+                    {
+                        FAIL("Invalid DEFS statement.  Expected a newline");
+                    }
+                }
                 break;
 
             case T::LOAD:
@@ -1615,11 +1717,18 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
                 break;
 
             case T::DB:
+            case T::DEFB:
                 buildResult = doDb(lex, ++e);
                 break;
 
             case T::DW:
+            case T::DEFW:
                 buildResult = doDw(lex, ++e);
+                break;
+
+            case T::DS:
+            case T::DEFS:
+                buildResult = doDs(lex, ++e);
                 break;
 
             case T::LOAD:
@@ -1656,7 +1765,7 @@ bool Assembler::CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand op, i64
 
     if (v.getType() == ExprValue::Type::Integer)
     {
-        if (v < a || v > b)
+        if (v.getInteger() < a || v.getInteger() > b)
         {
             m_errors.error(lex, *e, stringFormat("Integer expression out of range.  Must be be between {0} and {1}.", a, b));
             return false;
@@ -1664,7 +1773,7 @@ bool Assembler::CheckIntOpRange(Lex& lex, const Lex::Element* e, Operand op, i64
     }
     else if (v.getType() == ExprValue::Type::Address && b == 0xffff)
     {
-        MemAddr addr(v);
+        MemAddr addr(v.getAddress());
         if (!m_speccy.isZ80Address(addr))
         {
             m_errors.error(lex, *e, stringFormat("Address is not in current Z80 view, and so cannot be converted to a 16-bit value."));
@@ -2071,7 +2180,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     case T::SET:
         {
             if (dstOp.expr.getType() != ExprValue::Type::Integer ||
-                ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 7))
+                (dstOp.expr.getInteger() < 0 || dstOp.expr.getInteger() > 7))
             {
                 m_errors.error(lex, *dstE, "Invalid bit index.  Must be 0-7.");
                 return nullptr;
@@ -2134,6 +2243,10 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
             op8 = *d;
             opSize = 1;
         }
+        else
+        {
+            return nullptr;
+        }
         break;
 
     case T::JP:
@@ -2191,6 +2304,10 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 op8 = *d;
                 opSize = 1;
             }
+            else
+            {
+                return nullptr;
+            }
             break;
 
         case OperandType::NZ:
@@ -2203,6 +2320,10 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 XYZ(0, cc(dstOp.type) + 4, 0);
                 op8 = *d;
                 opSize = 1;
+            }
+            else
+            {
+                return nullptr;
             }
             break;
 
@@ -2223,13 +2344,13 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
     case T::RST:
         if (dstOp.expr.getType() != ExprValue::Type::Integer ||
-            ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 0x56) ||
-            ((i64)dstOp.expr % 8) != 0)
+            (dstOp.expr.getInteger() < 0 || dstOp.expr.getInteger() > 0x56) ||
+            (dstOp.expr.getInteger() % 8) != 0)
         {
             m_errors.error(lex, *dstE, "Invalid value for RST opcode.");
             return nullptr;
         }
-        XYZ(3, u8((i64)dstOp.expr / 8), 7);
+        XYZ(3, u8(dstOp.expr.getInteger() / 8), 7);
         break;
 
         //--------------------------------------------------------------------------------------------------------------
@@ -2559,7 +2680,7 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
                 break;
 
             case OperandType::Expression:
-                if (srcOp.expr.getType() != ExprValue::Type::Integer || (i64)srcOp.expr != 0)
+                if (srcOp.expr.getType() != ExprValue::Type::Integer || srcOp.expr.getInteger() != 0)
                 {
                     m_errors.error(lex, *srcE, "Invalid expression for OUT instruction.  Must be 0 or 8-bit register.");
                     return nullptr;
@@ -2602,13 +2723,13 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
 
     case T::IM:
         if (dstOp.expr.getType() != ExprValue::Type::Integer ||
-            ((i64)dstOp.expr < 0 || (i64)dstOp.expr > 2))
+            (dstOp.expr.getInteger() < 0 || dstOp.expr.getInteger() > 2))
         {
             m_errors.error(lex, *dstE, "Invalid value of IM instruction.  Must be 0-2.");
             return nullptr;
         }
         prefix = 0xed;
-        switch ((i64)dstOp.expr)
+        switch (dstOp.expr.getInteger())
         {
         case 0: XYZ(1, 0, 6);   break;
         case 1: XYZ(1, 2, 6);   break;
@@ -2709,42 +2830,45 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     if (indexPrefix)
     {
         // Has IX or IY in instruction
-        emit8(indexPrefix);
+        if (!emit8(lex, e, indexPrefix)) return nullptr;
         if (prefix)
         {
             // Has $CB has prefix
-            emit8(prefix);
-            emit8(indexOffset);
-            emitXPQZ(x, p, q, z);
+            if (!emit8(lex, e, prefix)) return nullptr;
+            if (!emit8(lex, e, indexOffset)) return nullptr;
+            if (!emitXPQZ(lex, e, x, p, q, z)) return nullptr;
         }
         else
         {
-            emitXPQZ(x, p, q, z);
+            if (!emitXPQZ(lex, e, x, p, q, z)) return nullptr;
 
             if (addressIndex)
             {
                 NX_ASSERT(opSize < 2);
-                emit8(indexOffset);
+                if (!emit8(lex, e, indexOffset)) return nullptr;
             }
 
             switch (opSize)
             {
-            case 0:                 break;
-            case 1: emit8(op8);     break;
-            case 2: emit16(op16);   break;
+            case 0:                                             break;
+            case 1: if (!emit8(lex, e, op8)) return nullptr;    break;
+            case 2: if (!emit16(lex, e, op16)) return nullptr;  break;
             default: NX_ASSERT(0);
             }
         }
     }
     else
     {
-        if (prefix) emit8(prefix);
-        emitXPQZ(x, p, q, z);
+        if (prefix)
+        {
+            if (!emit8(lex, e, prefix)) return nullptr;
+        }
+        if (!emitXPQZ(lex, e, x, p, q, z)) return nullptr;
         switch (opSize)
         {
-        case 0:                                    break;
-        case 1: NX_ASSERT(!prefix);    emit8(op8);    break;
-        case 2:                     emit16(op16);  break;
+        case 0:                                                                     break;
+        case 1: NX_ASSERT(!prefix);     if (!emit8(lex, e, op8)) return nullptr;    break;
+        case 2:                         if (!emit16(lex, e, op16)) return nullptr;  break;
         default: NX_ASSERT(0);
         }
     }
@@ -3101,32 +3225,43 @@ u8 Assembler::alu(Lex::Element::Type opCode) const
     return 0;
 }
 
-void Assembler::emit8(u8 b)
+bool Assembler::emit8(Lex& l, const Lex::Element* e, u8 b)
 {
-    m_mmap.poke8(m_address++, b);
+    if (!m_mmap.poke8(m_address, b))
+    {
+        m_errors.error(l, *e, stringFormat("Assembled into area previously assembled to before (byte @ ${0}).", hexWord(m_speccy.convertAddress(m_mmap.getAddress(m_address)))));
+        return false;
+    }
+    ++m_address;
+    return true;
 }
 
-void Assembler::emit16(u16 w)
+bool Assembler::emit16(Lex& l, const Lex::Element* e, u16 w)
 {
-    m_mmap.poke16(m_address, w);
+    if (!m_mmap.poke16(m_address, w))
+    {
+        m_errors.error(l, *e, stringFormat("Assembled into area previously assembled to before (word @ ${0}).", hexWord(m_speccy.convertAddress(m_mmap.getAddress(m_address)))));
+        return false;
+    }
     m_address += 2;
+    return true;
 }
 
-void Assembler::emitXYZ(u8 x, u8 y, u8 z)
+bool Assembler::emitXYZ(Lex& l, const Lex::Element* e, u8 x, u8 y, u8 z)
 {
     NX_ASSERT(x < 4);
     NX_ASSERT(y < 8);
     NX_ASSERT(z < 8);
-    emit8((x << 6) | (y << 3) | z);
+    return emit8(l, e, (x << 6) | (y << 3) | z);
 }
 
-void Assembler::emitXPQZ(u8 x, u8 p, u8 q, u8 z)
+bool Assembler::emitXPQZ(Lex& l, const Lex::Element* e, u8 x, u8 p, u8 q, u8 z)
 {
     NX_ASSERT(x < 4);
     NX_ASSERT(p < 4);
     NX_ASSERT(q < 2);
     NX_ASSERT(z < 8);
-    emit8((x << 6) | (p << 4) | (q << 3) | z);
+    return emit8(l, e, (x << 6) | (p << 4) | (q << 3) | z);
 }
 
 u16 Assembler::make16(Lex& lex, const Lex::Element& e, const Spectrum& speccy, ExprValue result)
@@ -3137,9 +3272,9 @@ u16 Assembler::make16(Lex& lex, const Lex::Element& e, const Spectrum& speccy, E
         return result.r16();
 
     case ExprValue::Type::Address:
-        if (speccy.isZ80Address(result))
+        if (speccy.isZ80Address(result.getAddress()))
         {
-            return speccy.convertAddress(result);
+            return speccy.convertAddress(result.getAddress());
         }
         else
         {
@@ -3168,17 +3303,17 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
         switch (exp->getType())
         {
         case ExprValue::Type::Integer:
-            if ((i64)*exp < 0 || (i64)*exp > 0xffff)
+            if (exp->getInteger() < 0 || exp->getInteger() > 0xffff)
             {
                 m_errors.error(lex, *start, "Z80 address out of range.");
                 nextLine(e);
                 return false;
             }
-            a = m_speccy.convertAddress(Z80MemAddr((u16)(i64)*exp));
+            a = m_speccy.convertAddress(Z80MemAddr((u16)exp->getInteger()));
             break;
             
         case ExprValue::Type::Address:
-            a = *exp;
+            a = exp->getAddress();
             if (!m_speccy.isZ80Address(a))
             {
                 m_errors.error(lex, *start, "Only Z80 visible addresses allowed at the moment.");
@@ -3242,14 +3377,18 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
             if (auto expr = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); expr)
             {
                 if (expr->getType() != ExprValue::Type::Integer ||
-                    ((i64)*expr < -128 || (i64)*expr > 255))
+                    (expr->getInteger() < -128 || expr->getInteger() > 255))
                 {
                     m_errors.error(lex, *startE, "Byte value is out of range.  Must be -128 to +127 or 0-255.");
                     nextLine(e);
                     return false;
                 }
 
-                emit8(expr->r8());
+                if (!emit8(lex, e, expr->r8()))
+                {
+                    nextLine(e);
+                    return false;
+                }
             }
             else
             {
@@ -3262,7 +3401,11 @@ bool Assembler::doDb(Lex& lex, const Lex::Element*& e)
             const char* end = str + m_eval.getSymbols().length(e->m_symbol);
             for (; str != end; ++str)
             {
-                emit8(*str);
+                if (!emit8(lex, e, *str))
+                {
+                    nextLine(e);
+                    return false;
+                }
             }
             ++e;
         }
@@ -3286,20 +3429,45 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
             const Lex::Element* startE = e;
             if (auto expr = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address)); expr)
             {
-                if (expr->getType() != ExprValue::Type::Integer)
+                if (expr->getType() == ExprValue::Type::Integer)
+                {
+                    if (expr->getInteger() < -32768 || expr->getInteger() > 65535)
+                    {
+                        m_errors.error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
+                        nextLine(e);
+                        return false;
+                    }
+
+                    if (!emit16(lex, e, expr->r16()))
+                    {
+                        nextLine(e);
+                        return false;
+                    }
+                }
+                else if (expr->getType() == ExprValue::Type::Address)
+                {
+                    MemAddr addr = expr->getAddress();
+                    if (m_speccy.isZ80Address(addr))
+                    {
+                        if (!emit16(lex, e, m_speccy.convertAddress(addr)))
+                        {
+                            nextLine(e);
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        m_errors.error(lex, *e, "Address cannot be converted to a word.");
+                        nextLine(e);
+                        return false;
+                    }
+                }
+                else
                 {
                     m_errors.error(lex, *startE, "Integer expression required.");
                     nextLine(e);
                     return false;
                 }
-                else if ((i64)*expr < -32768 || (i64)*expr > 65535)
-                {
-                    m_errors.error(lex, *startE, "Word value is out of range.  Must be -32768 to 65535.");
-                    nextLine(e);
-                    return false;
-                }
-
-                emit16(expr->r16());
             }
             else
             {
@@ -3313,11 +3481,29 @@ bool Assembler::doDw(Lex& lex, const Lex::Element*& e)
     return true;
 }
 
+bool Assembler::doDs(Lex& lex, const Lex::Element*& e)
+{
+    auto expr = m_eval.parseExpression(lex, m_errors, e, m_mmap.getAddress(m_address));
+    NX_ASSERT(expr);
+    for (i64 i = 0; i < expr->getInteger(); ++i)
+    {
+        if (!m_mmap.poke8(m_address++, 0))
+        {
+            m_errors.error(lex, *e, "Space overlaps previously assembled code or data.");
+            nextLine(e);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
 {
     using T = Lex::Element::Type;
 
     i64 startSym = m_eval.getSymbols().addString("start", true);
+    i64 outputSym = m_eval.getSymbols().addString("output", true);
 
     i64 option = 0;
     vector<const Lex::Element*> args;
@@ -3341,6 +3527,10 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
         if (option == startSym)
         {
             return doOptStart(lex, e);
+        }
+        else if (option == outputSym)
+        {
+            return doOptOutput(lex, e);
         }
         else
         {
@@ -3391,6 +3581,37 @@ bool Assembler::doOptStart(Lex& lex, const Lex::Element*& e)
         nextLine(e);
         return false;
     }
+}
+
+bool Assembler::doOptOutput(Lex& lex, const Lex::Element*& e)
+{
+    if (!expect(lex, e, "$"))
+    {
+        m_errors.error(lex, *e, "Syntax error in OUTPUT option.  Should be \"OUTPUT:<type>\".");
+        m_errors.output("Supported types are: MEMORY (default), NULL");
+        nextLine(e);
+        return false;
+    }
+
+    i64 memorySym = m_eval.getSymbols().addString("memory", true);
+    i64 nullSym = m_eval.getSymbols().addString("null", true);
+
+    if (e->m_symbol == memorySym)
+    {
+        m_options.m_output = Options::Output::Memory;
+    }
+    else if (e->m_symbol == nullSym)
+    {
+        m_options.m_output = Options::Output::Null;
+    }
+    else
+    {
+        m_errors.error(lex, *e, "Unknown output type.  Needs to be MEMORY or NULL.");
+        nextLine(e);
+        return false;
+    }
+
+    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

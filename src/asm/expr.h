@@ -40,23 +40,23 @@ public:
     };
 
     Type getType() const { return m_type; }
-    operator i64() const { return get<i64>(m_value); }
-    operator MemAddr() const { return get<MemAddr>(m_value); }
+    i64 getInteger() const { return get<i64>(m_value); }
+    MemAddr getAddress() const { return get<MemAddr>(m_value); }
 
     //
     // Operations
     //
 
-    ExprValue operator+ (const ExprValue& other) const;
-    ExprValue operator- (const ExprValue& other) const;
-    ExprValue operator* (const ExprValue& other) const;
-    ExprValue operator/ (const ExprValue& other) const;
-    ExprValue operator% (const ExprValue& other) const;
-    ExprValue operator| (const ExprValue& other) const;
-    ExprValue operator& (const ExprValue& other) const;
-    ExprValue operator^ (const ExprValue& other) const;
-    ExprValue operator<< (const ExprValue& other) const;
-    ExprValue operator>> (const ExprValue& other) const;
+    static ExprValue ExprValue::opAdd(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opSub(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opMul(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opDiv(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opMod(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opOr(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opAnd(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opXor(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opShiftLeft(const ExprValue& a, const ExprValue& b);
+    static ExprValue ExprValue::opShiftRight(const ExprValue& a, const ExprValue& b);
 
     //
     // Convenience casts

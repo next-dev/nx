@@ -45,7 +45,7 @@ void EditorOverlay::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl,
 
     if (down && !shift && !ctrl && !alt)
     {
-        if (key == K::Escape)
+        if (key == K::Escape && !m_window.isPrompting())
         {
             getEmulator().hideAll();
         }

@@ -145,7 +145,11 @@ public:
 
             // Directives
             DB,
+            DEFB,
             DW,
+            DEFW,
+            DS,
+            DEFS,
             EQU,
             LOAD,
             OPT,

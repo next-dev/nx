@@ -869,14 +869,14 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 DisassemblerDoc::Line& line = getEditor().getCurrentLine();
                 if (line.type == DisassemblerDoc::LineType::Label)
                 {
-                    prompt("Rename label", line.text, [&line, this](string label) {
+                    prompt("Rename label", line.label, [&line, this](string label) {
                         if (label.empty())
                         {
                             Z80MemAddr addr = m_nx.getSpeccy().convertAddress(line.startAddress);
                             label = stringFormat("L{0}", hexWord(addr));
                         }
 
-                        if (!getEditor().getData().replaceLabel(getEditor().getCurrentLineIndex(), line.text, label))
+                        if (!getEditor().getData().replaceLabel(getEditor().getCurrentLineIndex(), line.label, label))
                         {
                             Overlay::currentOverlay()->error("Cannot replace label name with already existing label.");
                         }

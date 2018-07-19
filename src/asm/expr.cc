@@ -419,7 +419,7 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, MemA
             case T::Unary_Minus:
                 if (stack.back().getType() == ExprValue::Type::Integer)
                 {
-                    stack.back() = ExprValue(-stack.back());
+                    stack.back() = ExprValue(-stack.back().getInteger());
                 }
                 else
                 {
@@ -430,7 +430,7 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, MemA
             case T::Tilde:
                 if (stack.back().getType() == ExprValue::Type::Integer)
                 {
-                    stack.back() = ExprValue(~stack.back());
+                    stack.back() = ExprValue(~stack.back().getInteger());
                 }
                 else
                 {
@@ -449,16 +449,16 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, MemA
             a = stack.back();   stack.pop_back();
             switch ((T)v.value)
             {
-            case T::Plus:       stack.emplace_back(a + b);      break;
-            case T::Minus:      stack.emplace_back(a - b);      break;
-            case T::LogicOr:    stack.emplace_back(a | b);      break;
-            case T::LogicAnd:   stack.emplace_back(a & b);      break;
-            case T::LogicXor:   stack.emplace_back(a ^ b);      break;
-            case T::ShiftLeft:  stack.emplace_back(a << b);     break;
-            case T::ShiftRight: stack.emplace_back(a >> b);     break;
-            case T::Multiply:   stack.emplace_back(a * b);      break;
-            case T::Divide:     stack.emplace_back(a / b);      break;
-            case T::Mod:        stack.emplace_back(a % b);      break;
+            case T::Plus:       stack.emplace_back(ExprValue::opAdd(a, b));         break;
+            case T::Minus:      stack.emplace_back(ExprValue::opSub(a, b));         break;
+            case T::Multiply:   stack.emplace_back(ExprValue::opMul(a, b));         break;
+            case T::Divide:     stack.emplace_back(ExprValue::opDiv(a, b));         break;
+            case T::Mod:        stack.emplace_back(ExprValue::opMod(a, b));         break;
+            case T::LogicOr:    stack.emplace_back(ExprValue::opOr(a, b));          break;
+            case T::LogicAnd:   stack.emplace_back(ExprValue::opAnd(a, b));         break;
+            case T::LogicXor:   stack.emplace_back(ExprValue::opXor(a, b));         break;
+            case T::ShiftLeft:  stack.emplace_back(ExprValue::opShiftLeft(a, b));   break;
+            case T::ShiftRight: stack.emplace_back(ExprValue::opShiftRight(a, b));  break;
             default:
                 FAIL();
             }
