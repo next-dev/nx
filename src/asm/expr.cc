@@ -57,10 +57,10 @@ optional<ExprValue> ExpressionEvaluator::parseExpression(const vector<u8>& text)
     return {};
 }
 
-optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, ErrorManager& errs, const Lex::Element*& e, MemAddr currentAddress)
+optional<ExprValue> ExpressionEvaluator::parseExpression(Lex& lex, ErrorManager& errs, const Spectrum& speccy, const Lex::Element*& e, MemAddr currentAddress)
 {
     Expression expr = constructExpression(e);
-    return eval(lex, errs, currentAddress, expr);
+    return eval(lex, errs, speccy, currentAddress, expr);
 }
 
 Expression ExpressionEvaluator::constructExpression(const Lex::Element*& e)
@@ -261,7 +261,7 @@ void ExpressionEvaluator::skipExpression(const Lex::Element*& e)
     }
 }
 
-optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, MemAddr currentAddress, Expression& expr)
+optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, const Spectrum& speccy, MemAddr currentAddress, Expression& expr)
 {
     // #todo: introduce types (value, address, page, offset etc) into expressions.
 
@@ -450,7 +450,7 @@ optional<ExprValue> ExpressionEvaluator::eval(Lex& lex, ErrorManager& errs, MemA
             switch ((T)v.value)
             {
             case T::Plus:       stack.emplace_back(ExprValue::opAdd(a, b));         break;
-            case T::Minus:      stack.emplace_back(ExprValue::opSub(a, b));         break;
+            case T::Minus:      stack.emplace_back(ExprValue::opSub(speccy, a, b)); break;
             case T::Multiply:   stack.emplace_back(ExprValue::opMul(a, b));         break;
             case T::Divide:     stack.emplace_back(ExprValue::opDiv(a, b));         break;
             case T::Mod:        stack.emplace_back(ExprValue::opMod(a, b));         break;
