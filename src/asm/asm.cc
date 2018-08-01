@@ -1100,6 +1100,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
     const Lex::Element* e = elems.data();
     i64 symbol = 0;
     bool symbolToAdd = false;
+    bool valueToAdd = false;
     bool buildResult = true;
     int symAddress = 0;
 
@@ -1111,6 +1112,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         symbol = 0;
         // Set to true if this is a symbol to add to the symbol table (and symbol must be non-zero).
         symbolToAdd = false;
+        valueToAdd = false;
 
         if (e->m_type == T::Symbol)
         {
@@ -1188,7 +1190,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 {
                     FAIL("Missing label in EQU directive.");
                 }
-                symbolToAdd = true;
+                valueToAdd = true;
                 break;
 
             case T::DB:
@@ -1470,6 +1472,16 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             {
                 m_errors.error(lex, *e, "Address space overrun.  There is not enough space to assemble in this area section.");
                 fatal();
+            }
+        }
+
+        if (valueToAdd && symbol)
+        {
+            if (!addValue(symbol, ExprValue((i64)0)))
+            {
+                // #todo: Output the original line where it is defined.
+                m_errors.error(lex, *e, "Symbol already defined.");
+                buildResult = false;
             }
         }
 
