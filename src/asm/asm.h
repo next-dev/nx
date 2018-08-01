@@ -174,6 +174,7 @@ private:
 
     int invalidInstruction(Lex& lex, const Lex::Element* e, const Lex::Element** outE);
     void nextLine(const Lex::Element*& e);
+    void fatal() { m_fatal = true; }
 
     //------------------------------------------------------------------------------------------------------------------
     // Pass 1
@@ -198,7 +199,6 @@ private:
 
     bool pass2(Lex& lex, const vector<Lex::Element>& elems);
     const Lex::Element* assembleInstruction2(Lex& lex, const Lex::Element* e);
-    //Expression buildExpression(const Lex::Element*& e) const;
     bool buildOperand(Lex& lex, const Lex::Element*& e, Operand& op);
     optional<u8> calculateDisplacement(Lex& lex, const Lex::Element* e, ExprValue& expr);
     Path findFile(Path givenPath);
@@ -214,6 +214,7 @@ private:
     bool doDw(Lex& lex, const Lex::Element*& e);
     bool doDs(Lex& lex, const Lex::Element*& e);
     bool doOpt(Lex& lex, const Lex::Element*& e);
+    bool doBin(Lex& lex, const Lex::Element*& e);
 
     //
     // Options
@@ -264,6 +265,7 @@ private:
     //
     MemoryMap                   m_mmap;
     int                         m_address;
+    bool                        m_fatal;
 
     Options                     m_options;
 };

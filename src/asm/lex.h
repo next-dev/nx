@@ -144,6 +144,7 @@ public:
             _END_OPCODES,
 
             // Directives
+            BIN,
             DB,
             DEFB,
             DW,

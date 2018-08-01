@@ -474,6 +474,7 @@ void Assembler::startAssembly(const vector<u8>& data, string sourceName)
     m_eval.clear();
     m_mmap.clear(m_speccy);
     m_address = 0;
+    m_fatal = false;
 
     //
     // Set up the assembler
@@ -1187,6 +1188,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 {
                     FAIL("Missing label in EQU directive.");
                 }
+                symbolToAdd = true;
                 break;
 
             case T::DB:
@@ -1331,6 +1333,110 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                 }
                 break;
 
+            case T::BIN:
+                {
+                    ++e;
+
+                    // #todo: Make this an expression
+                    if (e->m_type == T::String)
+                    {
+                        string name = m_eval.getSymbol(e->m_symbol);
+                        string fname = findFile(name).osPath();
+                        vector<u8> data = NxFile::loadFile(fname);
+                        if (data.empty())
+                        {
+                            FAIL_D(stringFormat("Unable to load \"{0}.\"", fname));
+                        }
+                        i64 fileSize = (i64)data.size();
+                        i64 offset = 0;
+                        i64 length = fileSize;
+
+                        if ((++e)->m_type == T::Comma)
+                        {
+                            // Expect offset
+                            const Lex::Element* outE = 0;
+                            if (expectExpression(lex, ++e, &outE))
+                            {
+                                MemAddr addr = m_mmap.getAddress(m_address);
+                                if (auto expr = m_eval.parseExpression(lex, m_errors, e, addr); expr)
+                                {
+                                    if (expr->getType() == ExprValue::Type::Integer)
+                                    {
+                                        offset = expr->getInteger();
+                                        if (offset > fileSize)
+                                        {
+                                            FAIL("Offset parameter indexes past the end of file.");
+                                        }
+                                        length = fileSize - offset;
+                                        e = outE;
+                                        if (e->m_type == T::Comma)
+                                        {
+                                            // Expect length
+                                            if (expectExpression(lex, ++e, &outE))
+                                            {
+                                                if (auto expr = m_eval.parseExpression(lex, m_errors, e, addr); expr)
+                                                {
+                                                    if (expr->getType() == ExprValue::Type::Integer)
+                                                    {
+                                                        length = expr->getInteger();
+                                                        if (offset + length > fileSize)
+                                                        {
+                                                            FAIL("Length of file section passes end of file.");
+                                                        }
+
+                                                        // Check to see if the file can fit
+                                                        i64 z80Addr = (i64)(u16)m_speccy.convertAddress(addr);
+                                                        if (z80Addr + length >= 65536)
+                                                        {
+                                                            FAIL("Length is too large to fit in memory.");
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        FAIL("Integer expected for length parameter.");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    FAIL("Invalid expression for length parameter.");
+                                                }
+                                            }
+                                            else
+                                            {
+                                                FAIL("Expression expected for length parameter.");
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        FAIL("Integer expected for offset parameter.");
+                                    }
+                                }
+                                else
+                                {
+                                    FAIL("Invalid expression for offset parameter.");
+                                }
+                            }
+                            else
+                            {
+                                FAIL("Expression expected for offset parameter.");
+                            }
+                        }
+
+                        m_address += (int)length;
+                        symbolToAdd = true;
+                        if (e->m_type != T::Newline)
+                        {
+                            FAIL("Invalid BIN statement.  Expected a newline.");
+                        }
+                    }
+                    else
+                    {
+                        FAIL("String expected for filename.");
+                    }
+                }
+                break;
+
             case T::OPT:
                 nextLine(e);
                 break;
@@ -1363,8 +1469,11 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             else
             {
                 m_errors.error(lex, *e, "Address space overrun.  There is not enough space to assemble in this area section.");
+                fatal();
             }
         }
+
+        if (m_fatal) break;
     }
 
     return buildResult;
@@ -1716,6 +1825,10 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
                 buildResult = doEqu(lex, symbol, ++e);
                 break;
 
+            case T::BIN:
+                buildResult = doBin(lex, ++e);
+                break;
+
             case T::DB:
             case T::DEFB:
                 buildResult = doDb(lex, ++e);
@@ -1751,6 +1864,8 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
         {
             ++e;
         }
+
+        if (m_fatal) break;
     }
 
     return buildResult;
@@ -2861,14 +2976,21 @@ const Lex::Element* Assembler::assembleInstruction2(Lex& lex, const Lex::Element
     {
         if (prefix)
         {
-            if (!emit8(lex, e, prefix)) return nullptr;
+            if (!emit8(lex, e, prefix))
+            {
+                return nullptr;
+            }
         }
-        if (!emitXPQZ(lex, e, x, p, q, z)) return nullptr;
+        if (!emitXPQZ(lex, e, x, p, q, z))
+        {
+            fatal();
+            return nullptr;
+        }
         switch (opSize)
         {
-        case 0:                                                                     break;
-        case 1: NX_ASSERT(!prefix);     if (!emit8(lex, e, op8)) return nullptr;    break;
-        case 2:                         if (!emit16(lex, e, op16)) return nullptr;  break;
+        case 0:                                                                             break;
+        case 1: NX_ASSERT(!prefix);     if (!emit8(lex, e, op8))    { return nullptr; }     break;
+        case 2:                         if (!emit16(lex, e, op16))  { return nullptr; }     break;
         default: NX_ASSERT(0);
         }
     }
@@ -3230,6 +3352,7 @@ bool Assembler::emit8(Lex& l, const Lex::Element* e, u8 b)
     if (!m_mmap.poke8(m_address, b))
     {
         m_errors.error(l, *e, stringFormat("Assembled into area previously assembled to before (byte @ ${0}).", hexWord(m_speccy.convertAddress(m_mmap.getAddress(m_address)))));
+        fatal();
         return false;
     }
     ++m_address;
@@ -3241,6 +3364,7 @@ bool Assembler::emit16(Lex& l, const Lex::Element* e, u16 w)
     if (!m_mmap.poke16(m_address, w))
     {
         m_errors.error(l, *e, stringFormat("Assembled into area previously assembled to before (word @ ${0}).", hexWord(m_speccy.convertAddress(m_mmap.getAddress(m_address)))));
+        fatal();
         return false;
     }
     m_address += 2;
@@ -3306,6 +3430,7 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
             if (exp->getInteger() < 0 || exp->getInteger() > 0xffff)
             {
                 m_errors.error(lex, *start, "Z80 address out of range.");
+                fatal();
                 nextLine(e);
                 return false;
             }
@@ -3317,12 +3442,14 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
             if (!m_speccy.isZ80Address(a))
             {
                 m_errors.error(lex, *start, "Only Z80 visible addresses allowed at the moment.");
+                fatal();
                 return false;
             }
             break;
 
         default:
             m_errors.error(lex, *start, "Expression does not produce a valid address.");
+            fatal();
             nextLine(e);
             return false;
         }
@@ -3335,6 +3462,7 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
     else
     {
         m_errors.error(lex, *start, "Invalid expression.");
+        fatal();
         nextLine(e);
         return false;
     }
@@ -3489,7 +3617,6 @@ bool Assembler::doDs(Lex& lex, const Lex::Element*& e)
     {
         if (!m_mmap.poke8(m_address++, 0))
         {
-            m_errors.error(lex, *e, "Space overlaps previously assembled code or data.");
             nextLine(e);
             return false;
         }
@@ -3545,6 +3672,51 @@ bool Assembler::doOpt(Lex& lex, const Lex::Element*& e)
         nextLine(e);
         return false;
     }
+}
+
+bool Assembler::doBin(Lex& lex, const Lex::Element*& e)
+{
+    using T = Lex::Element::Type;
+
+    // #todo: Make this an expression
+    string name = m_eval.getSymbol(e->m_symbol);
+    string fname = findFile(name).osPath();
+    vector<u8> data = NxFile::loadFile(fname);
+    if (data.empty())
+    {
+        m_errors.error(lex, *e, stringFormat("Unable to load \"{0}\"", fname));
+        nextLine(e);
+        return false;
+    }
+    i64 fileSize = (i64)data.size();
+    i64 offset = 0;
+    i64 length = fileSize;
+
+    ++e;
+    if (e->m_type == T::Comma)
+    {
+        MemAddr addr = m_mmap.getAddress(m_address);
+        auto expr = m_eval.parseExpression(lex, m_errors, ++e, addr);
+        offset = expr->getInteger();
+        length = fileSize - offset;
+
+        if (e->m_type == T::Comma)
+        {
+            auto expr = m_eval.parseExpression(lex, m_errors, ++e, addr);
+            length = expr->getInteger();
+        }
+    }
+
+    for (i64 i = offset; i < (offset + length); ++i)
+    {
+        if (!emit8(lex, e, data[i]))
+        {
+            nextLine(e);
+            return false;
+        }
+    }
+
+    return true;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
