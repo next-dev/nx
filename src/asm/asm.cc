@@ -178,7 +178,7 @@ struct SubExpr
 
     ExprValue operator() (i64 x, i64 y)             { return ExprValue(x - y); }
     ExprValue operator() (MemAddr a, i64 x)         { return ExprValue(a - (int)x); }
-    ExprValue operator() (i64 x, MemAddr a)         { return ExprValue(x - (int)(u16)m_speccy.convertAddress(a)); }
+    ExprValue operator() (i64 x, MemAddr a)         { return m_speccy.isZ80Address(a) ? ExprValue(x - (int)(u16)m_speccy.convertAddress(a)) : ExprValue(x); }
     ExprValue operator() (MemAddr a, MemAddr b)     { return ExprValue(a - b); }
 
     const Spectrum& m_speccy;
