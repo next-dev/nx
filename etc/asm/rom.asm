@@ -1,6 +1,7 @@
 
 OPEN    EQU   5633
 PRINT   EQU   8252
+CLS     EQU   3435
 
 ; System variables
 KSTATE  equ   $5c00
