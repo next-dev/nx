@@ -1128,6 +1128,14 @@ bool Editor::key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool a
             ensureVisibleCursor();
             break;
 
+        case K::Up:     // Ctrl-Up
+            if (m_topLine) --m_topLine;
+            break;
+
+        case K::Down:   // Ctrl-Down
+            if (m_topLine < m_data.getNumLines() - 1) ++m_topLine;
+            break;
+
         case K::C:      // Copy
             m_data.copyLine();
             break;
