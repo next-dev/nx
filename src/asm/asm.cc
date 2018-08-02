@@ -1366,7 +1366,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                             if (expectExpression(lex, ++e, &outE))
                             {
                                 MemAddr addr = m_mmap.getAddress(m_address);
-                                if (auto expr = m_eval.parseExpression(lex, m_errors, e, addr); expr)
+                                if (auto expr = m_eval.parseExpression(lex, m_errors, m_speccy, e, addr); expr)
                                 {
                                     if (expr->getType() == ExprValue::Type::Integer)
                                     {
@@ -1382,7 +1382,7 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
                                             // Expect length
                                             if (expectExpression(lex, ++e, &outE))
                                             {
-                                                if (auto expr = m_eval.parseExpression(lex, m_errors, e, addr); expr)
+                                                if (auto expr = m_eval.parseExpression(lex, m_errors, m_speccy, e, addr); expr)
                                                 {
                                                     if (expr->getType() == ExprValue::Type::Integer)
                                                     {
@@ -3714,13 +3714,13 @@ bool Assembler::doBin(Lex& lex, const Lex::Element*& e)
     if (e->m_type == T::Comma)
     {
         MemAddr addr = m_mmap.getAddress(m_address);
-        auto expr = m_eval.parseExpression(lex, m_errors, ++e, addr);
+        auto expr = m_eval.parseExpression(lex, m_errors, m_speccy, ++e, addr);
         offset = expr->getInteger();
         length = fileSize - offset;
 
         if (e->m_type == T::Comma)
         {
-            auto expr = m_eval.parseExpression(lex, m_errors, ++e, addr);
+            auto expr = m_eval.parseExpression(lex, m_errors, m_speccy, ++e, addr);
             length = expr->getInteger();
         }
     }
