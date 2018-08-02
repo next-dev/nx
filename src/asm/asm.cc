@@ -1106,7 +1106,6 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
     const Lex::Element* e = elems.data();
     i64 symbol = 0;
     bool symbolToAdd = false;
-    bool valueToAdd = false;
     bool buildResult = true;
     int symAddress = 0;
 
@@ -1118,7 +1117,6 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
         symbol = 0;
         // Set to true if this is a symbol to add to the symbol table (and symbol must be non-zero).
         symbolToAdd = false;
-        valueToAdd = false;
 
         if (e->m_type == T::Symbol)
         {
@@ -1187,16 +1185,35 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             case T::EQU:
                 if (symbol)
                 {
-                    if (!expect(lex, ++e, "*", &e))
+                    const Lex::Element* outE;
+                    if (!expect(lex, ++e, "*", &outE))
                     {
                         FAIL("Invalid syntax for EQU directive.");
+                    }
+                    else
+                    {
+                        const Lex::Element* startE = e;
+                        MemAddr addr = m_mmap.getAddress(m_address);
+                        if (auto expr = m_eval.parseExpression(lex, m_errors, m_speccy, e, addr); expr)
+                        {
+                            if (!addValue(symbol, *expr))
+                            {
+                                // #todo: Output the original line where it is defined.
+                                m_errors.error(lex, *e, "Symbol already defined.");
+                                buildResult = false;
+                            }
+                        }
+                        else
+                        {
+                            m_errors.error(lex, *startE, "Invalid expression.");
+                            buildResult = false;
+                        }
                     }
                 }
                 else
                 {
                     FAIL("Missing label in EQU directive.");
                 }
-                valueToAdd = true;
                 break;
 
             case T::DB:
@@ -1478,16 +1495,6 @@ bool Assembler::pass1(Lex& lex, const vector<Lex::Element>& elems)
             {
                 m_errors.error(lex, *e, "Address space overrun.  There is not enough space to assemble in this area section.");
                 fatal();
-            }
-        }
-
-        if (valueToAdd && symbol)
-        {
-            if (!addValue(symbol, ExprValue((i64)0)))
-            {
-                // #todo: Output the original line where it is defined.
-                m_errors.error(lex, *e, "Symbol already defined.");
-                buildResult = false;
             }
         }
 
@@ -1840,7 +1847,9 @@ bool Assembler::pass2(Lex& lex, const vector<Lex::Element>& elems)
                 break;
 
             case T::EQU:
-                buildResult = doEqu(lex, symbol, ++e);
+                // Already done the processing in pass 1...
+                nextLine(e);
+                buildResult = true;
                 break;
 
             case T::BIN:
@@ -3481,29 +3490,6 @@ bool Assembler::doOrg(Lex& lex, const Lex::Element*& e)
     {
         m_errors.error(lex, *start, "Invalid expression.");
         fatal();
-        nextLine(e);
-        return false;
-    }
-}
-
-bool Assembler::doEqu(Lex& lex, i64 symbol, const Lex::Element*& e)
-{
-    using T = Lex::Element::Type;
-    const Lex::Element* start = e;
-
-    if (auto expr = m_eval.parseExpression(lex, m_errors, m_speccy, e, m_mmap.getAddress(m_address)); expr)
-    {
-        if (!addValue(symbol, *expr))
-        {
-            m_errors.error(lex, *start, "Variable name already used.");
-            nextLine(e);
-            return false;
-        }
-        return true;
-    }
-    else
-    {
-        m_errors.error(lex, *start, "Invalid expression.");
         nextLine(e);
         return false;
     }

@@ -209,7 +209,6 @@ private:
     // Directives
     //
     bool doOrg(Lex& lex, const Lex::Element*& e);
-    bool doEqu(Lex& lex, i64 symbol, const Lex::Element*& e);
     bool doDb(Lex& lex, const Lex::Element*& e);
     bool doDw(Lex& lex, const Lex::Element*& e);
     bool doDs(Lex& lex, const Lex::Element*& e);
