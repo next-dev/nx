@@ -774,26 +774,26 @@ std::string Disassembler::opCodeString(T type)
 
 // opCode2 is normally T::Unknown.  If not, param2 is the 1st operand value.
 //
-std::string Disassembler::operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2,
+std::string Disassembler::operandString(Operand op, Lex::Element::Type opCode2, i64 param2,
     const Spectrum& speccy, const Addresses& addresses)
 {
     if (opCode2 == T::Unknown)
     {
-        switch (type)
+        switch (op.type)
         {
         case O::Expression:
         case O::Expression4:
-            return intString((int)param, 0);
+            return intString((int)op.param, 0);
 
         case O::AddressedExpression:
             {
-                MemAddr a = speccy.convertAddress(Z80MemAddr((u16)param));
+                MemAddr a = speccy.convertAddress(Z80MemAddr((u16)op.param));
                 if (a.bank().getGroup() == MemGroup::RAM)
                 {
                     auto it = addresses.find(a);
                     if (it == addresses.end())
                     {
-                        return string("($") + hexWord(u16(param)) + ')';
+                        return string("($") + hexWord(u16(op.param)) + ')';
                     }
                     else
                     {
@@ -802,15 +802,15 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
                 }
                 else
                 {
-                    return string("($") + hexWord(u16(param)) + ')';
+                    return string("($") + hexWord(u16(op.param)) + ')';
                 }
             }
 
         case O::IX_Expression:
-            return string("(ix") + ((i8)(u8)param < 0 ? "" : "+") + intString((int)(i8)(u8)param, 0) + ')';
+            return string("(ix") + ((i8)(u8)op.param < 0 ? "" : "+") + intString((int)(i8)(u8)op.param, 0) + ')';
 
         case O::IY_Expression:
-            return string("(iy") + ((i8)(u8)param < 0 ? "" : "+") + intString((int)(i8)(u8)param, 0) + ')';
+            return string("(iy") + ((i8)(u8)op.param < 0 ? "" : "+") + intString((int)(i8)(u8)op.param, 0) + ')';
 
         case O::A:	                    return "a";
         case O::B:	                    return "b";
@@ -847,16 +847,16 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         case O::Address_SP:             return "(sp)";
         case O::Address_C:              return "(c)";
 
-        case O::Expression8:            return string("$") + hexByte(u8(param));
+        case O::Expression8:            return string("$") + hexByte(u8(op.param));
         case O::Expression16:
             {
-                MemAddr a = speccy.convertAddress(Z80MemAddr((u16)param));
+                MemAddr a = speccy.convertAddress(Z80MemAddr((u16)op.param));
                 if (a.bank().getGroup() == MemGroup::RAM)
                 {
                     auto it = addresses.find(a);
                     if (it == addresses.end())
                     {
-                        return string("$") + hexWord(u16(param));
+                        return string("$") + hexWord(u16(op.param));
                     }
                     else
                     {
@@ -865,11 +865,11 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
                 }
                 else
                 {
-                    return string("$") + hexWord(u16(param));
+                    return string("$") + hexWord(u16(op.param));
                 }
             }
 
-        case O::AddressedExpression8:   return string("($") + hexByte(u8(param)) + ')';
+        case O::AddressedExpression8:   return string("($") + hexByte(u8(op.param)) + ')';
 
         case O::F:	                    return "f";
 
@@ -883,12 +883,12 @@ std::string Disassembler::operandString(OperandType type, i64 param, Lex::Elemen
         if (opCode2 == T::RES || opCode2 == T::SET)
         {
             // <OPCODE> n,<OPERAND STRING>
-            return opCodeString(opCode2) + " " + intString((int)param2, 0) + "," + operandString(type, param, T::Unknown, 0, speccy, addresses);
+            return opCodeString(opCode2) + " " + intString((int)param2, 0) + "," + operandString(op, T::Unknown, 0, speccy, addresses);
         }
         else
         {
             // <OPCODE> <OPERAND STRING>
-            return opCodeString(opCode2) + " " + operandString(type, param, T::Unknown, 0, speccy, addresses);
+            return opCodeString(opCode2) + " " + operandString(op, T::Unknown, 0, speccy, addresses);
         }
     }
 }
@@ -900,24 +900,24 @@ std::string Disassembler::opCodeString() const
 
 std::string Disassembler::operand1String(const Spectrum& speccy, const Addresses& addresses) const
 {
-    return operandString(m_operand1, m_param1, T::Unknown, 0, speccy, addresses);
+    return operandString(m_operands[0], T::Unknown, 0, speccy, addresses);
 }
 
 std::string Disassembler::operand2String(const Spectrum& speccy, const Addresses& addresses) const
 {
-    return operandString(m_operand2, m_param2, m_opCode2, m_param1, speccy, addresses);
+    return operandString(m_operands[1], m_opCode2, m_operands[0].param, speccy, addresses);
 }
 
 std::string Disassembler::operandString(const Spectrum& speccy, const Addresses& addresses) const
 {
-    if (m_operand1 == O::None)
+    if (operand1Value() == O::None)
     {
         return "";
     }
     else
     {
         string s = operand1String(speccy, addresses);
-        if (m_operand2 == O::None)
+        if (operand2Value() == O::None)
         {
             return s;
         }
@@ -967,10 +967,10 @@ void Disassembler::result(Lex::Element::Type opCode, Lex::Element::Type opCode2,
 {
     m_opCode = opCode;
     m_opCode2 = opCode2;
-    m_operand1 = op1;
-    m_operand2 = op2;
-    m_param1 = value1;
-    m_param2 = value2;
+    m_operands[0].type = op1;
+    m_operands[0].param = value1;
+    m_operands[1].type = op2;
+    m_operands[1].param = value2;
     m_bytes.erase(m_bytes.begin() + instructionSize, m_bytes.end());
 }
 

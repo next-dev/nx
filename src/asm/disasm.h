@@ -18,8 +18,8 @@ enum class OperandType
     None,                   // No operand exists
     Expression,             // A valid expression
     AddressedExpression,    // A valid address expression (i.e. (nnnn)).
-    IX_Expression,
-    IY_Expression,
+    IX_Expression,          // (IX+nn)
+    IY_Expression,          // (IY+nn)
 
     A,
     B,
@@ -80,13 +80,10 @@ public:
         : m_srcAddr(other.m_srcAddr)
         , m_opCode(other.m_opCode)
         , m_opCode2(other.m_opCode2)
-        , m_operand1(other.m_operand1)
-        , m_operand2(other.m_operand2)
-        , m_param1(other.m_param1)
-        , m_param2(other.m_param2)
         , m_comment(other.m_comment)
         , m_bytes(other.m_bytes)
     {
+        for (int i = 0; i < 2; ++i) m_operands[i] = other.m_operands[i];
     }
 
     Disassembler& operator=(const Disassembler& other)
@@ -94,10 +91,7 @@ public:
         m_srcAddr = other.m_srcAddr;
         m_opCode = other.m_opCode;
         m_opCode2 = other.m_opCode2;
-        m_operand1 = other.m_operand1;
-        m_operand2 = other.m_operand2;
-        m_param1 = other.m_param1;
-        m_param2 = other.m_param2;
+        for (int i = 0; i < 2; ++i) m_operands[i] = other.m_operands[i];
         m_comment = other.m_comment;
         m_bytes = other.m_bytes;
 
@@ -108,13 +102,10 @@ public:
         : m_srcAddr(other.m_srcAddr)
         , m_opCode(other.m_opCode)
         , m_opCode2(other.m_opCode2)
-        , m_operand1(other.m_operand1)
-        , m_operand2(other.m_operand2)
-        , m_param1(other.m_param1)
-        , m_param2(other.m_param2)
         , m_comment(move(other.m_comment))
         , m_bytes(move(other.m_bytes))
     {
+        for (int i = 0; i < 2; ++i) m_operands[i] = other.m_operands[i];
     }
 
     u16 disassemble(u16 a, u8 b1, u8 b2, u8 b3, u8 b4);
@@ -124,14 +115,46 @@ public:
 
     Lex::Element::Type  opCodeValue() const { return m_opCode; }
     Lex::Element::Type  opCode2Value() const { return m_opCode2; }
-    OperandType         operand1Value() const { return m_operand1; }
-    OperandType         operand2Value() const { return m_operand2; }
-    i64                 param1Value() const { return m_param1; }
-    i64                 param2Value() const { return m_param2; }
+    OperandType         operand1Value() const { return m_operands[0].type; }
+    OperandType         operand2Value() const { return m_operands[1].type; }
+    i64                 param1Value() const { return m_operands[0].param; }
+    i64                 param2Value() const { return m_operands[1].param; }
     const vector<u8>&   bytes() const { return m_bytes; }
     u16                 srcZ80Addr() const { return m_srcAddr; }
 
     optional<u16>       extractAddress() const;
+
+    enum class DisplayType
+    {
+        Decimal,
+        Hexadecimal,
+        Binary,
+        Equ,
+        Base,
+        Label,
+    };
+
+    struct Operand
+    {
+        OperandType     type;
+        i64             param;
+        DisplayType     displayMode;
+        i64             symbol;
+
+        Operand()
+            : type(OperandType::None)
+            , param(0)
+            , displayMode(DisplayType::Hexadecimal)
+            , symbol(0)
+        {}
+
+        Operand(const Operand& op)
+            : type(op.type)
+            , param(op.param)
+            , displayMode(op.displayMode)
+            , symbol(op.symbol)
+        {}
+    };
 
 private:
     void result(Lex::Element::Type opCode, int instructionSize);
@@ -150,7 +173,7 @@ private:
     void decode(u8 opCode, u8& x, u8& y, u8& z, u8& p, u8& q);
 
     static std::string opCodeString(Lex::Element::Type type);
-    static std::string operandString(OperandType type, i64 param, Lex::Element::Type opCode2, i64 param2,
+    static std::string operandString(Operand op, Lex::Element::Type opCode2, i64 param2,
         const Spectrum& speccy, const Addresses& addresses);
     std::string operand1String(const Spectrum& speccy, const Addresses& addresses) const;
     std::string operand2String(const Spectrum& speccy, const Addresses& addresses) const;
@@ -184,17 +207,30 @@ private:
     void disassembleDDFDCB(u8 b3, u8 b4, OperandType ix);
     void disassembleED(u8 b2, u8 b3, u8 b4);
 
+    void setDisplayType(int index, DisplayType type, i64 symbol);
+
 private:
+    // Formats are:
+    //
+    //      OPCODE OPERAND1
+    //      OPCODE OPERAND1,OPERAND2
+    //      OPCODE OPERAND1,OPCODE2 OPERAND2            e.g. ld b,rrc (ix+0)
+    //      OPCODE OPERAND1,OPCODE2 PARAM1,OPERAND2     e.g. ld b,res 0,(ix+0)
+    //
+    
+    // Derived data
     u16                 m_srcAddr;
     Lex::Element::Type  m_opCode;
     Lex::Element::Type  m_opCode2;
-    OperandType         m_operand1;
-    OperandType         m_operand2;
-    i64                 m_param1;
-    i64                 m_param2;
+    Operand             m_operands[2];
+
+    // Attached comment
     std::string         m_comment;
+
+    // Original bytes
     std::vector<u8>     m_bytes;
 };
+
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
