@@ -34,7 +34,7 @@ public:
     bool isEditing() const { return m_editor != nullptr; }
 
 private:
-    void saveFile();
+    void saveFile(string fileName);
     void ensureVisibleCursor();
 
     //

@@ -194,7 +194,7 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 break;
 
             case K::S:  // Save
-                saveFile();
+                saveFile(getFileName());
                 break;
 
             case K::Left:   // Decrease size
@@ -266,6 +266,19 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                 while (m_currentLine < getData().getNumLines() && getCurrentLine().type != DisassemblerDoc::LineType::Label) ++m_currentLine;
                 ensureVisibleCursor();
                 break;
+            }
+        }
+
+        //--------------------------------------------------------------------------------------------------------------
+        // Ctrl+Shift
+        //--------------------------------------------------------------------------------------------------------------
+
+        else if (shift && ctrl && !alt)
+        {
+            if (key == K::S)
+            {
+                // Save as
+                saveFile(string{});
             }
         }
     }
@@ -509,11 +522,9 @@ void DisassemblerEditor::render(Draw& draw)
     }
 }
 
-void DisassemblerEditor::saveFile()
+void DisassemblerEditor::saveFile(string fileName)
 {
-    string fileName = getFileName();
-
-    if (fileName.empty())
+        if (fileName.empty())
     {
         const char* filters[] = { "*.dis" };
         const char* fn = tinyfd_saveFileDialog("Save source code", 0, sizeof(filters) / sizeof(filters[0]),
