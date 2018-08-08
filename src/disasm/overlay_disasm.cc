@@ -151,6 +151,9 @@ void DisassemblerEditor::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
                     break;
 
                 case LT::Label:
+                case LT::DataBytes:
+                case LT::DataWords:
+                case LT::DataString:
                     // This is handled in DisassemblerWindow to enable prompting.
                     break;
                 }
@@ -878,7 +881,11 @@ void DisassemblerWindow::onKey(sf::Keyboard::Key key, bool down, bool shift, boo
         case K::Return:
             {
                 DisassemblerDoc::Line& line = getEditor().getCurrentLine();
-                if (line.type == DisassemblerDoc::LineType::Label)
+                if (!line.label.empty() &&
+                    (line.type == DisassemblerDoc::LineType::Label ||
+                     line.type == DisassemblerDoc::LineType::DataBytes ||
+                     line.type == DisassemblerDoc::LineType::DataString ||
+                     line.type == DisassemblerDoc::LineType::DataWords))
                 {
                     prompt("Rename label", line.label, [&line, this](string label) {
                         if (label.empty())

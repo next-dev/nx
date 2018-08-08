@@ -541,20 +541,20 @@ int DisassemblerDoc::decreaseDataSize(int line)
 
 bool DisassemblerDoc::replaceLabel(int line, string oldLabel, string newLabel)
 {
-    NX_ASSERT(getLine(line).type == LineType::Label);
+    NX_ASSERT(!getLine(line).label.empty());
 
     auto itLabel = m_labelMap.find(oldLabel);
     NX_ASSERT(itLabel != m_labelMap.end());
 
     MemAddr a = itLabel->second.second;
 
-    m_labelMap.erase(itLabel);
-    m_addrMap.erase(m_addrMap.find(a));
-
     auto it = m_labelMap.find(newLabel);
     if (it == m_labelMap.end())
     {
-        // New label doesn't exist so let's add it.
+        // New label doesn't exist so let's add it and erase old label
+        m_labelMap.erase(itLabel);
+        m_addrMap.erase(m_addrMap.find(a));
+
         addLabel(newLabel, a);
         getLine(line).label = newLabel;
         changed();
