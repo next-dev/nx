@@ -100,6 +100,7 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
         tag = l.tag;
         insertLine(line, Line{ tag, LineType::FullComment, l.startAddress, {}, comment, 0 });
         insertLine(line, Line{ tag, LineType::Blank, l.startAddress, {}, {}, 0 });
+        changed();
         return line + 1;
     }
     else
@@ -119,9 +120,9 @@ int DisassemblerDoc::insertComment(int line, int tag, string comment)
 
         Line& l2 = getLine(line);
         insertLine(line, Line{ tag, LineType::FullComment, l2.startAddress, {}, comment, 0 });
+        changed();
         return line;
     }
-    changed();
 }
 
 void DisassemblerDoc::setComment(int line, string comment)
@@ -565,8 +566,9 @@ bool DisassemblerDoc::replaceLabel(int line, string oldLabel, string newLabel)
 
 void DisassemblerDoc::deleteSingleLine(int line)
 {
-    if (line >= m_lines.size()) return;
-    deleteSingleLine(line);
+    if (line < 0 || line >= m_lines.size()) return;
+    m_lines.erase(m_lines.begin() + line);
+    checkBookmarksWhenRemovingLine(line);
 }
 
 void DisassemblerDoc::insertLine(int i, Line line)
@@ -968,25 +970,31 @@ int DisassemblerDoc::prevBookmark(int currentLine)
 
 void DisassemblerDoc::checkBookmarksWhenRemovingLine(int line)
 {
-    auto it = lower_bound(m_bookmarks.begin(), m_bookmarks.end(), line);
-    auto f = [](int& elem) { --elem; };
-    if (*it == line)
+    if (!m_bookmarks.empty())
     {
-        for_each(it + 1, m_bookmarks.end(), f);
-        m_bookmarks.erase(it);
-    }
-    else
-    {
-        for_each(it, m_bookmarks.end(), f);
+        auto it = lower_bound(m_bookmarks.begin(), m_bookmarks.end(), line);
+        auto f = [](int& elem) { --elem; };
+        if (*it == line)
+        {
+            for_each(it + 1, m_bookmarks.end(), f);
+            m_bookmarks.erase(it);
+        }
+        else
+        {
+            for_each(it, m_bookmarks.end(), f);
+        }
     }
 }
 
 void DisassemblerDoc::checkBookmarksWhenInsertingLine(int line)
 {
-    auto begin = lower_bound(m_bookmarks.begin(), m_bookmarks.end(), line);
-    for_each(begin, m_bookmarks.end(), [](int& elem) {
-        ++elem;
-    });
+    if (!m_bookmarks.empty())
+    {
+        auto begin = lower_bound(m_bookmarks.begin(), m_bookmarks.end(), line);
+        for_each(begin, m_bookmarks.end(), [](int& elem) {
+            ++elem;
+        });
+    }
 }
 
 vector<int> DisassemblerDoc::enumBookmarks()
