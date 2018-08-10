@@ -1,13 +1,8 @@
 //----------------------------------------------------------------------------------------------------------------------
-// NX - Next Emulator
+// NX - Next emulator
 //----------------------------------------------------------------------------------------------------------------------
 
 #include <emulator/nx.h>
-
-//----------------------------------------------------------------------------------------------------------------------
-// Constants
-//----------------------------------------------------------------------------------------------------------------------
-
 
 //----------------------------------------------------------------------------------------------------------------------
 // Application class
@@ -45,6 +40,7 @@ Application::Application(int argc, char** argv)
 #include <conio.h>
 #include <fcntl.h>
 #include <io.h>
+#include <crtdbg.h>
 
 void Application::console()
 {
@@ -91,8 +87,17 @@ void Application::run()
 // Main entry point
 //----------------------------------------------------------------------------------------------------------------------
 
+#define NX_MEM_BREAK    0
+
 int main(int argc, char** argv)
 {
+#if defined(_WIN32)
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    #if NX_MEM_BREAK
+        _CrtSetBreakAlloc(NX_MEM_BREAK);
+    #endif
+#endif
+
     Application::console();
     Application app(argc, argv);
     app.run();

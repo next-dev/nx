@@ -1,97 +1,22 @@
 //----------------------------------------------------------------------------------------------------------------------
-// The emulator object
-// Manages a Spectrum-derived object and the UI (including the debugger)
+//! @brief  Nx class
+//!
+//! Represents the whole emulator.  It contains the spectrum, the debugger, the editor/assembler, the disassembler,
+//! the guide, the configuration system and any other modules required by the product.
+//!
+//! @author Matt Davies
 //----------------------------------------------------------------------------------------------------------------------
 
 #pragma once
 
-#include <asm/overlay_asm.h>
-#include <debugger/overlay_debugger.h>
-#include <disasm/overlay_disasm.h>
-#include <editor/overlay_editor.h>
+#include <core.h>
 #include <emulator/spectrum.h>
-#include <tape/tape.h>
-
-#include <SFML/Graphics.hpp>
-
-#include <algorithm>
-#include <map>
-#include <mutex>
-#include <thread>
-
-enum class Joystick
-{
-    Left,
-    Right,
-    Up,
-    Down,
-    Fire
-};
+#include <overlays/overlay_emulator.h>
+#include <overlays/overlay_debugger.h>
+#include <video/frame.h>
 
 //----------------------------------------------------------------------------------------------------------------------
-// Model window
-//----------------------------------------------------------------------------------------------------------------------
-
-class ModelWindow final : public Window
-{
-public:
-    ModelWindow(Nx& nx);
-
-    bool visible() const { return m_selectedModel >= 0; }
-    void switchModel(Model model);
-
-private:
-    void onDraw(Draw& draw) override;
-    void onKey(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
-    void onText(char ch) override {};
-
-private:
-    vector<Model>   m_models;
-    int             m_selectedModel;
-    int             m_originalModel;
-};
-
-//----------------------------------------------------------------------------------------------------------------------
-// Emulator overlay
-//----------------------------------------------------------------------------------------------------------------------
-
-class Nx;
-
-class Emulator : public Overlay
-{
-public:
-    Emulator(Nx& nx);
-
-    void render(Draw& draw) override;
-    void key(sf::Keyboard::Key key, bool down, bool shift, bool ctrl, bool alt) override;
-    void text(char ch) override;
-
-    void showStatus();
-
-    void openFile();
-    void saveFile();
-
-    void switchModel(Model model);
-    void clearKeys();
-
-private:
-    void joystickKey(Joystick key, bool down);
-    void calculateKeys();
-
-private:
-    // Keyboard state
-    vector<u8>          m_speccyKeys;
-    vector<u8>          m_keyRows;
-    int                 m_counter;
-
-    // Model select
-    ModelWindow         m_modelWindow;
-
-};
-
-//----------------------------------------------------------------------------------------------------------------------
-// Emulator class
-//----------------------------------------------------------------------------------------------------------------------
+//! Main emulator class
 
 class Nx
 {
@@ -99,148 +24,67 @@ public:
     Nx(int argc, char** argv);
     ~Nx();
 
-    // Obtain a reference to the current machine.
-    Spectrum& getSpeccy() { return *m_machine; }
-    const Spectrum& getSpeccy() const { return *m_machine; }
-
-    // Obtain a reference to the debugger.
-    Debugger& getDebugger() { return m_debugger; }
-
-    // Obtain a reference to the assembler.
-    Assembler& getAssembler() { return m_assembler; }
-
-    // Obtain a reference to the emulator overlay.
-    Emulator& getEmulator() { return m_emulator; }
-
-    // Render the currently generated display
-    void render();
-
-    // The emulator main loop.  Will exit when the window is closed.
+    //! The emulator's main loop.
+    //!
+    //! Will exit when the window is closed.
     void run();
 
-    // Generate a single frame, including processing audio.
+    //! Runs a frame worth of execution.
+    //!
+    //! This is called every 50th of a second by the audio system so the frames and audio are in synchronisation.
     void frame();
-    
-    // Open a file, detect it's type and try to open it
+
+    //! Get the Spectrum machine.
+    Spectrum& getSpeccy() { return m_speccy; }
+
+    //! Get the Spectrum machine.
+    const Spectrum& getSpeccy() const { return m_speccy; }
+
+    //! Get the current overlay.
+    shared_ptr<Overlay> getCurrentOverlay() const { return m_currentOverlay; }
+
+    //! Get the emulator overlay.
+    shared_ptr<EmulatorOverlay> getEmulatorOverlay() { return m_emulatorOverlay; }
+
+    //! Get the debugger overlay.
+    shared_ptr<DebuggerOverlay> getDebuggerOverlay() { return m_debuggerOverlay; }
+
+    //! Open a file (snapshot, text file, disassembly), and open the appropriate overlay.
     bool openFile(string fileName);
 
-    // Save a file as a snapshot.
-    bool saveFile(string fileName);
-    
-    // Settings
-    void setSetting(string key, string value);
-    string getSetting(string key, string defaultSetting = "no");
-    void updateSettings();
+    //! Rebuild the layers for all the frames.  Need to do this after you change any layer.
+    //! #todo: Get rid of this.
+    void rebuildLayers();
 
-    // Debugging
-    bool isDebugging() const { return Overlay::currentOverlay() == &m_debugger; }
-    void togglePause(bool breakpointHit);
-    void stepOver();
-    void stepIn();
-    void stepOut();
-    RunMode getRunMode() const { return m_runMode; }
-    void setRunMode(RunMode runMode) { m_runMode = m_runMode; }
+protected:
+    //! Change the dimensions of a frame
+    void setFrameDimensions(int width, int height);
 
-    // Peripherals
-    bool usesKempstonJoystick() const { return m_kempstonJoystick; }
-
-    // Mode selection
-    void showTapeBrowser();
-    void toggleDebugger();
-    void showEditor();
-    void showDisassembler();
-    void hideAll();
-    bool assemble(const vector<u8>& data, string sourceName);
-    void switchModel(Model model);
-
-    // Zoom
-    void toggleZoom();
-    bool getZoom() const { return m_zoom; }
-
-    // Utilties
-    optional<MemAddr> textToAddress(string text);
-
-    // If both a1 and a2 are in the Z80 address space, will return the diff (a1 - a2)
-    optional<int> diffZ80Address(MemAddr a1, MemAddr a2);
-    
-private:
-    // Window
-    string getTitle() const;
-
-    // Loading
+    //! Load a .sna snapshot file.
     bool loadSnaSnapshot(string fileName);
+
+    //! Load a .z80 snapshot file.
     bool loadZ80Snapshot(string fileName);
-    bool loadTape(string fileName);
-    bool loadNxSnapshot(string fileName, bool allowFailure = false);
 
-    // Saving
+    //! Load a .nx snapshot file.
+    bool loadNxSnapshot(string fileName, bool full);
+
+    //! Save a .sna snapshot file
     bool saveSnaSnapshot(string fileName);
-    bool saveNxSnapshot(string fileName, bool saveEmulatorSettings);
-    
-    // Debugging helper functions
-    u16 nextInstructionAt(u16 address);
-    bool isCallInstructionAt(u16 address);
 
-    // Window scale
-    void setScale(int scale);
+    //! Save a .nx snapshot file.
+    bool saveNxSnapshot(string fileName, bool full);
 
 private:
-    Spectrum*           m_machine;
-    Ui                  m_ui;
-    Signal              m_renderSignal;
-    bool                m_quit;
-    int                 m_frameCounter;
-    bool                m_zoom;
-
-    // Emulator overlay
-    Emulator            m_emulator;
-
-    // Debugger state
-    Debugger            m_debugger;
-    RunMode             m_runMode;
-
-    // Assembler state
-    EditorOverlay       m_editorOverlay;
-    AssemblerOverlay    m_assemblerOverlay;
-    Assembler           m_assembler;
-    DisassemblerOverlay m_disassemblerOverlay;
-
-    // Settings
-    map<string, string> m_settings;
-
-    // Rendering
-    sf::RenderWindow    m_window;
-
-    // Peripherals
-    bool                m_kempstonJoystick;
-
-    // Tape emulation
-    TapeBrowser         m_tapeBrowser;
-
-    // Files
-    Path                m_tempPath;
-
-    // Key storage
-    struct KeyInfo
-    {
-        bool                isKey;
-        bool                pressed;
-        bool                shift;
-        bool                ctrl;
-        bool                alt;
-        sf::Keyboard::Key   code;
-
-        KeyInfo(bool isKey, bool pressed, bool shift, bool ctrl, bool alt, sf::Keyboard::Key key)
-            : isKey(isKey)
-            , pressed(pressed)
-            , shift(shift)
-            , ctrl(ctrl)
-            , alt(alt)
-            , code(key)
-        {}
-    };
-    vector<KeyInfo>         m_keys;
+    Spectrum                        m_speccy;           //!< The machine that is emulated.
+    FrameState                      m_mainFrameState;   //!< State of the main window.
+    Frame                           m_mainFrame;        //!< Main window.
+    bool                            m_quit;             //!< Set to true to shut down the emulator.
+    shared_ptr<Overlay>             m_currentOverlay;   //!< Pointer to the current overlay.
+    shared_ptr<EmulatorOverlay>     m_emulatorOverlay;  //!< Overlay for emulator.
+    shared_ptr<DebuggerOverlay>     m_debuggerOverlay;  //!< Debugger for emulator.
 };
 
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
+

@@ -49,6 +49,7 @@ solution "nx"
             "../src/**.rc",
             "../README.md",
             "../etc/keys.txt",
+            "../.editorconfig",
 		}
         includedirs {
             "../include",

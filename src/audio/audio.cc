@@ -12,7 +12,7 @@
 // Audio
 //----------------------------------------------------------------------------------------------------------------------
 
-Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
+Audio::Audio(int numTStatesPerFrame)
     : m_numTStatesPerSample(0)
     , m_numSamplesPerFrame(0)
     , m_numTStatesPerFrame(numTStatesPerFrame)
@@ -27,7 +27,6 @@ Audio::Audio(int numTStatesPerFrame, function<void()> frameFunc)
     , m_audioHost(0)
     , m_audioDevice(0)
     , m_stream(nullptr)
-    , m_frameFunc(frameFunc)
     , m_mute(false)
     , m_started(false)
 {

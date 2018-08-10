@@ -5,8 +5,8 @@
 #pragma once
 
 #include <codecvt>
-#include <types.h>
-#include <config.h>
+#include <sstream>
+#include <core.h>
 
 //----------------------------------------------------------------------------------------------------------------------
 // Character conversion routines
@@ -229,7 +229,7 @@ inline string stringFormat(const char* format, Args... args)
 template <typename... Args>
 inline void debugOutput(Args... args)
 {
-    string s = StringFormat(args...);
+    string s = stringFormat(args...);
 #ifdef WIN32
     OutputDebugStringA(s.c_str());
 #endif

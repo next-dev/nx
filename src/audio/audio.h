@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include <config.h>
-#include <types.h>
+#include <core.h>
 
 #include <functional>
 #include <mutex>
@@ -56,7 +55,7 @@ private:
 class Audio
 {
 public:
-    Audio(int numTStatesPerFrame, function<void()> frameFunc);
+    Audio(int numTStatesPerFrame);
     ~Audio();
 
     void start();
@@ -98,7 +97,6 @@ private:
     PaStream*           m_stream;
 
     Signal              m_renderSignal;
-    function<void()>    m_frameFunc;
 
     bool                m_mute;
     bool                m_started;

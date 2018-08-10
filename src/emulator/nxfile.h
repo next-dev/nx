@@ -81,8 +81,7 @@
 
 #pragma once
 
-#include <types.h>
-#include <config.h>
+#include <core.h>
 #include <emulator/spectrum.h>
 
 #include <map>

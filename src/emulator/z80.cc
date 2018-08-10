@@ -675,7 +675,7 @@ void Z80::decodeInstruction(u8 opCode, u8& x, u8& y, u8& z, u8& p, u8& q)
     q = (y & 1);
 }
 
-u8 Z80::fetchInstruction(i64& tState)
+u8 Z80::fetchInstruction(TState& tState)
 {
     // Fetch opcode and decode it.  The opcode can be viewed as XYZ fields with Y being sub-decoded to PQ fields:
     //
@@ -703,7 +703,7 @@ u8 Z80::fetchInstruction(i64& tState)
 #define IH idx.h
 #define IL idx.l
 
-void Z80::executeDDFDCB(Reg& idx, i64& tState)
+void Z80::executeDDFDCB(Reg& idx, TState& tState)
 {
     u8 x, y, z;
     u8 opCode;
@@ -757,7 +757,7 @@ void Z80::executeDDFDCB(Reg& idx, i64& tState)
     }
 }
 
-void Z80::executeDDFD(Reg& idx, i64& tState)
+void Z80::executeDDFD(Reg& idx, TState& tState)
 {
     u8 x, y, z, p, q;
     u8 opCode = fetchInstruction(tState);
@@ -1066,7 +1066,7 @@ invalid_instruction:
     return;
 }
 
-void Z80::executeED(i64& tState)
+void Z80::executeED(TState& tState)
 {
     u8 x, y, z, p, q;
     u8 opCode = fetchInstruction(tState);
@@ -1549,7 +1549,7 @@ invalid_instruction:
     return;
 }
 
-void Z80::execute(u8 opCode, i64& tState)
+void Z80::execute(u8 opCode, TState& tState)
 {
     u8 x, y, z, p, q;
     decodeInstruction(opCode, x, y, z, p, q);
@@ -2105,7 +2105,7 @@ void Z80::execute(u8 opCode, i64& tState)
     } // switch(x)
 }
 
-void Z80::step(i64& tState)
+void Z80::step(TState& tState)
 {
     m_flagsChanged = false;
     NX_ASSERT(tState >= 0);

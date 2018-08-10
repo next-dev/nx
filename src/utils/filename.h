@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <config.h>
-#include <types.h>
+#include <core.h>
+#include <string>
+#include <vector>
 
 string fullFileName(string originalFileName, string newFileName);
 
