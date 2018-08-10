@@ -1,8 +1,8 @@
 //----------------------------------------------------------------------------------------------------------------------
-//! @file       windows/window_memorydump.h
+//! @file       windows/window_memoryview.h
 //! @author     Matt Davies
 //! @copyright  Copyright (C)2018, all rights reserved.
-//! @brief      Defines the memory dump window that appears in the debugger.
+//! @brief      Defines the memory view window that appears in the debugger.
 
 #pragma once
 
@@ -14,10 +14,10 @@
 //! The memory dump window allows you to view all memory, and switch between Z80 mode and paged mode (8K and 16K slots).
 //! You can also edit the data in the memory dump window, and it will show all current searches.
 
-class MemoryDumpWindow : public Window
+class MemoryViewWindow : public Window
 {
 public:
-    MemoryDumpWindow(Nx& nx);
+    MemoryViewWindow(Nx& nx);
 
 protected:
     void onRender(Draw& draw) override;

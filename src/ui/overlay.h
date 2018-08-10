@@ -101,6 +101,7 @@ class Overlay: public UILayer
 {
 public:
     Overlay(Nx& nx);
+    ~Overlay();
 
     //! Apply frame changes to the overlay.
     //!
@@ -142,6 +143,22 @@ public:
 
     //! Add a key command.
     void addKey(string head, string desc, KeyEvent kev, KeyHandler handler);
+
+    //
+    // Master overlay control
+    //
+
+    //! Change the current overlay and register an on-exit function when ESCAPE is pressed to exit the overlay
+    static void setOverlay(shared_ptr<Overlay> overlay, function<void()> onExit);
+
+    //! Return the current overlay.
+    static shared_ptr<Overlay> getCurrentOverlay() { return ms_currentOverlay; }
+
+    //! Exit the overlay and run the exit handler (if any).
+    static void exit();
+
+    //! Remove any overlay.
+    static void resetOverlays() { ms_currentOverlay = {}; }
 
 protected:
     //! Handle the key input.
@@ -191,6 +208,13 @@ private:
             : head(head), desc(desc), kev(kev), handler(handler) {}
     };
     vector<KeyInfo>         m_keyInfos;         //!< Information on short-cut keys
+
+    //
+    // Static data
+    //
+
+    static shared_ptr<Overlay>  ms_currentOverlay;
+    static function<void()>     ms_onExit;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

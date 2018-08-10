@@ -9,7 +9,7 @@
 
 #include <ui/overlay.h>
 #include <windows/window_disassembly.h>
-#include <windows/window_memorydump.h>
+#include <windows/window_memoryview.h>
 #include <windows/window_cpustatus.h>
 #include <windows/window_command.h>
 
@@ -27,15 +27,18 @@ public:
     void apply(const FrameState& frameState) override;
 
     DisassemblyWindow& getDisassemblyWindow() { return m_disassemblyWindow; }
-    MemoryDumpWindow& getMemoryDumpWindow() { return m_memoryDumpWindow; }
+    MemoryViewWindow& getMemoryDumpWindow() { return m_memoryDumpWindow; }
     CpuStatusWindow& getCpuStatusWindow() { return m_cpuStatusWindow; }
     CommandWindow& getCommandWindow() { return m_commandWindow; }
 
     // Const versions because.... sigh..... C++.
     const DisassemblyWindow& getDisassemblyWindow() const { return m_disassemblyWindow; }
-    const MemoryDumpWindow& getMemoryDumpWindow() const { return m_memoryDumpWindow; }
+    const MemoryViewWindow& getMemoryDumpWindow() const { return m_memoryDumpWindow; }
     const CpuStatusWindow& getCpuStatusWindow() const { return m_cpuStatusWindow; }
     const CommandWindow& getCommandWindow() const { return m_commandWindow; }
+
+    //! Recalculate the state of the windows based on zoom settings and screen size.
+    void recalculateWindows();
 
 protected:
     void onRender(Draw& draw) override;
@@ -44,7 +47,8 @@ protected:
 
 private:
     DisassemblyWindow   m_disassemblyWindow;
-    MemoryDumpWindow    m_memoryDumpWindow;
+    MemoryViewWindow    m_memoryDumpWindow;
     CpuStatusWindow     m_cpuStatusWindow;
     CommandWindow       m_commandWindow;
+    Window*             m_currentWindow;
 };

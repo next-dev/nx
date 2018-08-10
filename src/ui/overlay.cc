@@ -120,6 +120,13 @@ Overlay::Overlay(Nx& nx)
 
 //----------------------------------------------------------------------------------------------------------------------
 
+Overlay::~Overlay()
+{
+
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
 void Overlay::apply(const FrameState& frameState)
 {
     UILayer::apply(frameState);
@@ -166,8 +173,27 @@ bool Overlay::key(const KeyEvent& kev)
     }
     else
     {
-        return onKey(kev);
+        bool result = onKey(kev);
+        if (!result && kev.key == K::Escape && kev.down)
+        {
+            // Handle ESCAPE if the overlay doesn't - this will exit the overlay
+            exit();
+            return true;
+        }
+        else
+        {
+            return result;
+        }
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+void Overlay::exit()
+{
+    ms_currentOverlay.reset();
+    if (ms_onExit) ms_onExit();
+    ms_onExit = [] {};
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -207,8 +233,11 @@ void Overlay::render(Draw& draw)
         x += draw.printPropString(x, y, info.desc, bkg);
         draw.printCharAttr(x++, y, ' ', bkg);
     }
-    draw.clearRect(x, y, width - x, 1);
-    draw.attrRect(x, y, width - x, 1, bkg);
+    if (x != 0)
+    {
+        draw.clearRect(x, y, width - x, 1);
+        draw.attrRect(x, y, width - x, 1, bkg);
+    }
 
     // Now draw the menu.
     if (m_menu.isActivated()) m_menu.render(draw);
@@ -242,6 +271,17 @@ void Overlay::setMenu(string title, vector<string>&& menuStrings, function<void(
 void Overlay::addKey(string head, string desc, KeyEvent kev, KeyHandler handler)
 {
     m_keyInfos.emplace_back(head, desc, kev, handler);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+shared_ptr<Overlay> Overlay::ms_currentOverlay;
+function<void()> Overlay::ms_onExit;
+
+void Overlay::setOverlay(shared_ptr<Overlay> overlay, function<void()> onExit)
+{
+    ms_currentOverlay = overlay;
+    ms_onExit = onExit;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

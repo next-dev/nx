@@ -21,27 +21,27 @@ Nx::Nx(int argc, char** argv)
     : m_quit(false)
 {
     //
+    // Initialise the video
+    //
+
+    m_mainFrameState = FrameState(string("Nx Nova (") + NX_VERSION + ")", kDefaultScale * kWindowWidth, kDefaultScale * kWindowHeight);
+    m_mainFrame.apply(m_mainFrameState);
+
+    //
     // Initialise overlays
     //
     m_emulatorOverlay = make_shared<EmulatorOverlay>(*this);
-    m_currentOverlay = m_emulatorOverlay;
-
-
+    m_debuggerOverlay = make_shared<DebuggerOverlay>(*this);
+    m_emulatorOverlay->apply(m_mainFrameState);
+    m_debuggerOverlay->apply(m_mainFrameState);
 
     //
     // Initialise the machine
     //
     m_speccy.apply(Model::ZX48);
 
-    //
-    // Initialise the video
-    //
 
-    m_mainFrameState = FrameState(string("Nx (") + NX_VERSION + ")", kDefaultScale * kWindowWidth, kDefaultScale * kWindowHeight);
-    m_mainFrame.apply(m_mainFrameState);
-    m_emulatorOverlay->apply(m_mainFrameState);
-
-    rebuildLayers();
+    setOverlay(m_emulatorOverlay, [] {});
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -60,6 +60,7 @@ void Nx::run()
     while (!m_quit)
     {
         sf::Event event;
+        bool skipText = false;
 
         //
         // Process the OS events
@@ -97,16 +98,24 @@ void Nx::run()
                             m_mainFrame.clearLayers();
                             getSpeccy().apply(getSpeccy().getModel());
                             rebuildLayers();
+                            skipText = true;
+                            break;
+
+                        case K::D:
+                            setOverlay(m_debuggerOverlay, [this] {
+                                setOverlay(m_emulatorOverlay, [] {});
+                            });
+                            skipText = true;
                             break;
 
                         default:
-                            getCurrentOverlay()->key(kev);
+                            skipText = getCurrentOverlay()->key(kev);
                             break;
                         }
                     }
                     else
                     {
-                        getCurrentOverlay()->key(kev);
+                        skipText = getCurrentOverlay()->key(kev);
                     }
                 }
                 break;
@@ -116,7 +125,11 @@ void Nx::run()
                 break;
 
             case sf::Event::TextEntered:
-                getCurrentOverlay()->text((char)event.text.unicode);
+                if (!skipText)
+                {
+                    getCurrentOverlay()->text((char)event.text.unicode);
+                    skipText = false;
+                }
                 break;
 
             default:
@@ -133,6 +146,9 @@ void Nx::run()
             m_mainFrame.render();
         }
     }
+
+    // We can't have any references to an overlay since the overlay & its layer lifetime will be > SFML.
+    Overlay::resetOverlays();
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -166,6 +182,14 @@ void Nx::rebuildLayers()
     m_mainFrame.addLayer(getSpeccy().getVideoLayer());
     m_mainFrame.addLayer(static_pointer_cast<Layer>(getCurrentOverlay()));
     m_mainFrame.setScales();
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+void Nx::setOverlay(shared_ptr<Overlay> overlay, function<void()> onExit)
+{
+    Overlay::setOverlay(overlay, onExit);
+    rebuildLayers();
 }
 
 //----------------------------------------------------------------------------------------------------------------------

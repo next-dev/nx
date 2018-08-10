@@ -41,7 +41,7 @@ public:
     const Spectrum& getSpeccy() const { return m_speccy; }
 
     //! Get the current overlay.
-    shared_ptr<Overlay> getCurrentOverlay() const { return m_currentOverlay; }
+    shared_ptr<Overlay> getCurrentOverlay() const { return Overlay::getCurrentOverlay(); }
 
     //! Get the emulator overlay.
     shared_ptr<EmulatorOverlay> getEmulatorOverlay() { return m_emulatorOverlay; }
@@ -55,6 +55,9 @@ public:
     //! Rebuild the layers for all the frames.  Need to do this after you change any layer.
     //! #todo: Get rid of this.
     void rebuildLayers();
+
+    //! Set the current overlay and register an on-exit handler.  This will also rebuild the layers.
+    void setOverlay(shared_ptr<Overlay> overlay, function<void()> onExit);
 
 protected:
     //! Change the dimensions of a frame
@@ -80,7 +83,6 @@ private:
     FrameState                      m_mainFrameState;   //!< State of the main window.
     Frame                           m_mainFrame;        //!< Main window.
     bool                            m_quit;             //!< Set to true to shut down the emulator.
-    shared_ptr<Overlay>             m_currentOverlay;   //!< Pointer to the current overlay.
     shared_ptr<EmulatorOverlay>     m_emulatorOverlay;  //!< Overlay for emulator.
     shared_ptr<DebuggerOverlay>     m_debuggerOverlay;  //!< Debugger for emulator.
 };
