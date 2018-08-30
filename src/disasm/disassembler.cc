@@ -415,7 +415,7 @@ int DisassemblerDoc::increaseDataSize(int line)
 
     // Figure out how much space we have to extend into
     optional<MemAddr> na = nextAddr(line);
-    if (na && (l.startAddress + numDataBytes(l.type, l.size + 1) >= *na))
+    if (na && (l.startAddress + numDataBytes(l.type, l.size + 1) > *na))
     {
         // No more room to extend data.
         Overlay::currentOverlay()->error("No more room to extend data.");
@@ -567,6 +567,27 @@ bool DisassemblerDoc::replaceLabel(int line, string oldLabel, string newLabel)
 void DisassemblerDoc::deleteSingleLine(int line)
 {
     if (line < 0 || line >= m_lines.size()) return;
+    auto it = m_lines.begin() + line;
+
+    // All previous blank/comment lines that share the same start address should take on the following line start address
+    auto toErase = it;
+    MemAddr addr = (it + 1)->startAddress;
+    if (it < m_lines.end() && (addr != it->startAddress))
+    {
+        while (it > m_lines.begin())
+        {
+            --it;
+            if (it->startAddress == toErase->startAddress)
+            {
+                it->startAddress = addr;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
     m_lines.erase(m_lines.begin() + line);
     checkBookmarksWhenRemovingLine(line);
 }
@@ -883,6 +904,12 @@ optional<int> DisassemblerDoc::findLabelLine(MemAddr addr) const
     }
 
     return {};
+}
+
+optional<string> DisassemblerDoc::findLabel(MemAddr addr) const
+{
+    auto it = m_addrMap.find(addr);
+    return (it == m_addrMap.end()) ? optional<string>{} : it->second.first;
 }
 
 optional<MemAddr> DisassemblerDoc::nextAddr(int line)

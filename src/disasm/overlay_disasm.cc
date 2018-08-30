@@ -478,7 +478,10 @@ void DisassemblerEditor::render(Draw& draw)
                     u16 a = m_speccy->convertAddress(line.startAddress);
                     for (int i = 0; i < line.size; ++i)
                     {
-                        ops += '$' + hexWord(getData().getWord(a + (i * 2))) + ',';
+                        u16 w = getData().getWord(a + (i * 2));
+                        MemAddr addr = m_speccy->convertAddress(Z80MemAddr(w));
+                        optional<string> label = getData().findLabel(addr);
+                        ops += (label ? *label : "$" + hexWord(w)) + ',';
                     }
                     ops.erase(ops.end() - 1);
 

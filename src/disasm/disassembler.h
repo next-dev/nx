@@ -38,6 +38,7 @@ public:
     int getNextTag() { return m_nextTag++; }
     optional<int> findLine(MemAddr addr) const;
     optional<int> findLabelLine(MemAddr addr) const;
+    optional<string> findLabel(MemAddr addr) const;
     optional<MemAddr> nextAddr(int line);
     u8 getByte(u16 addr) { return m_mmap[addr]; }
     u16 getWord(u16 addr) { return getByte(addr) + 256 * getByte(addr + 1); }
