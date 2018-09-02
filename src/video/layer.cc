@@ -33,6 +33,7 @@ void Layer::apply(const LayerState& state)
     {
         m_texture.create(state.width, state.height);
         m_sprite.setTexture(m_texture);
+        m_sprite.setTextureRect(sf::IntRect{ 0, 0, state.width, state.height });
         resizeImage(state.width, state.height);
     }
 

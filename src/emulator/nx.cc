@@ -162,7 +162,7 @@ void Nx::setFrameDimensions(int width, int height)
 
     // Apply the changes to the overlays.
     m_emulatorOverlay->apply(m_mainFrameState);
-    //m_debuggerOverlay->apply(m_mainFrameState);
+    m_debuggerOverlay->apply(m_mainFrameState);
 
     rebuildLayers();
 }
