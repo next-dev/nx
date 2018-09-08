@@ -40,7 +40,17 @@ void DebuggerOverlay::onRender(Draw& draw)
 
 bool DebuggerOverlay::onKey(const KeyEvent& kev)
 {
-    return m_currentWindow->key(kev);
+    using K = sf::Keyboard::Key;
+
+    if (kev.isNormal() && kev.key == K::Tilde)
+    {
+        exit();
+        return true;
+    }
+    else
+    {
+        return m_currentWindow->key(kev);
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------

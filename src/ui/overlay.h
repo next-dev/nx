@@ -45,6 +45,7 @@ struct KeyEvent
         , alt(alt)
     {}
 
+    bool isNormal() const       { return down && !shift && !ctrl && !alt; }
     bool isShift() const        { return down && shift && !ctrl && !alt; }
     bool isCtrl() const         { return down && !shift && ctrl && !alt; }
     bool isAlt() const          { return down && !shift && !ctrl && alt; }
@@ -159,6 +160,9 @@ public:
 
     //! Remove any overlay.
     static void resetOverlays() { ms_currentOverlay = {}; }
+
+    //! Return true if the overlay is the current one.
+    bool isCurrent() const;
 
 protected:
     //! Handle the key input.
