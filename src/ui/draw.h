@@ -176,6 +176,9 @@ public:
     void window(int xCell, int yCell, int width, int height, const string& title, bool selected,
                 u8 backgroundAttr = attr(Colour::Black, Colour::White));
 
+    //! printf-style formatting.
+    string format(const char* f, ...);
+
 private:
     //! Returns true if group of 8-pixels are in bounds
     bool pixelInBounds(int xCell, int yPixel);
