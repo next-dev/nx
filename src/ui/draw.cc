@@ -515,7 +515,6 @@ void Draw::window(int xCell, int yCell, int width, int height, const string& tit
     }
 
     // Render bottom line
-    x = xCell;
     printCharAttr(0, height-1, FC_BOTTOM_LEFT, backgroundAttr);
     for (int col = 1; col < (width - 1); ++col)
     {

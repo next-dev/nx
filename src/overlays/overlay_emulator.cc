@@ -262,10 +262,6 @@ bool EmulatorOverlay::onKey(const KeyEvent& kev)
 //             }
             break;
 
-        case K::Tilde:
-            //if (down) getEmulator().toggleDebugger();
-            break;
-
         case K::F5:
             //if (down) getEmulator().togglePause(false);
             break;

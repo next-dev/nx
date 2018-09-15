@@ -60,7 +60,13 @@ void Nx::run()
     while (!m_quit)
     {
         sf::Event event;
-        bool skipText = false;
+        enum class Skip
+        {
+            No,
+            Yes,
+            Maybe,
+        }
+        skipText = Skip::Maybe;
 
         //
         // Process the OS events
@@ -83,10 +89,11 @@ void Nx::run()
             case sf::Event::KeyPressed:
                 {
                     KeyEvent kev(event);
+                    using K = sf::Keyboard::Key;
+
                     if (kev.isCtrl())
                     {
                         // Possible global key
-                        using K = sf::Keyboard::Key;
 
                         switch (event.key.code)
                         {
@@ -98,37 +105,49 @@ void Nx::run()
                             m_mainFrame.clearLayers();
                             getSpeccy().apply(getSpeccy().getModel());
                             rebuildLayers();
-                            skipText = true;
-                            break;
-
-                        case K::D:
-                            setOverlay(m_debuggerOverlay, [this] {
-                                setOverlay(m_emulatorOverlay, [] {});
-                            });
-                            skipText = true;
+                            skipText = Skip::Yes;
                             break;
 
                         default:
-                            skipText = getCurrentOverlay()->key(kev);
                             break;
                         }
                     }
-                    else
+                    else if (kev.isNormal())
                     {
-                        skipText = getCurrentOverlay()->key(kev);
+                        switch (event.key.code)
+                        {
+                        case K::Tilde:
+                            if (!m_debuggerOverlay->isCurrent())
+                            {
+                                setOverlay(m_debuggerOverlay, [this] {
+                                    setOverlay(m_emulatorOverlay, [] {});
+                                });
+                                skipText = Skip::Yes;
+                            }
+                            break;
+
+                        default:
+                            break;
+                        }
+                    }
+
+                    if (skipText == Skip::Maybe)
+                    {
+                        skipText = getCurrentOverlay()->key(kev) ? Skip::Yes : Skip::No;
                     }
                 }
                 break;
 
             case sf::Event::KeyReleased:
-                getCurrentOverlay()->key(KeyEvent(event));
+                skipText = getCurrentOverlay()->key(KeyEvent(event)) ? Skip::Yes : Skip::No;
                 break;
 
             case sf::Event::TextEntered:
-                if (!skipText)
+                assert(skipText != Skip::Maybe);
+                if (skipText == Skip::Yes)
                 {
                     getCurrentOverlay()->text((char)event.text.unicode);
-                    skipText = false;
+                    skipText = Skip::Maybe;
                 }
                 break;
 
