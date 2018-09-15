@@ -127,6 +127,9 @@ public:
     //! Set the border colour
     void setBorderColour(u8 colour);
 
+    //! Return the current tState counter.
+    TState getTState() const { return m_tState; }
+
     //! Set the tState counter
     void setTState(TState t);
 
