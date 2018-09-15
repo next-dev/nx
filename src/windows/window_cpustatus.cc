@@ -96,9 +96,10 @@ void CpuStatusWindow::onRender(Draw& draw)
     {
         draw.printCharAttr(25, i, FC_VERTICAL_LINE, colour);
     }
-    //draw.pushShrink(-1);
-    //draw.printCharAttr(24, draw.getHeight() - 1, FC_UPSIDE_DOWN_T, colour);
-    //draw.popBounds();
+
+    draw.pushShrink(-1);
+    draw.printCharAttr(26, draw.getHeight() - 1, FC_UPSIDE_DOWN_T, colour);
+    draw.popBounds();
 
     u16 a = z80.SP();
     TState t = 0;

@@ -393,13 +393,12 @@ Draw::Bounds Draw::clip(Bounds bounds) const
     NX_ASSERT(bounds.m_width >= 0);
     NX_ASSERT(bounds.m_height >= 0);
 
-    // Clip to [0..width), then shift to global space
-    int x0 = max(bounds.m_x, 0) + getX();                                // Clip to current bounds left edge
-    int x1 = min(bounds.m_x + bounds.m_width, getWidth()) + getX();      // Clip to current bounds right edge
+    // Clip to [0..width) in global space
+    int x0 = min(max(bounds.m_x, 0), m_bounds[0].m_width);
+    int x1 = min(max(bounds.m_x + bounds.m_width, 0), m_bounds[0].m_width);
 
-    // Now do it for y axis
-    int y0 = max(bounds.m_y, 0) + getY();
-    int y1 = min(bounds.m_y + bounds.m_height, getHeight()) + getY();
+    int y0 = min(max(bounds.m_y, 0), m_bounds[0].m_height);
+    int y1 = min(max(bounds.m_y + bounds.m_height, 0), m_bounds[0].m_height);
 
     NX_ASSERT(x1 >= x0);
     NX_ASSERT(y1 >= y0);
@@ -430,9 +429,21 @@ Draw::Bounds Draw::clipLocal(Bounds bounds) const
 
 //----------------------------------------------------------------------------------------------------------------------
 
+Draw::Bounds Draw::toGlobal(Bounds bounds) const
+{
+    return Bounds{
+        getX() + bounds.m_x,
+        getY() + bounds.m_y,
+        bounds.m_width,
+        bounds.m_height
+    };
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
 void Draw::attrRect(int xCell, int yCell, int width, int height, u8 colour)
 {
-    Bounds b = clip(Bounds{ xCell, yCell, width, height });
+    Bounds b = toGlobal(clipLocal(Bounds{ xCell, yCell, width, height }));
     for (int j = b.m_y; j < b.m_y + b.m_height; ++j)
     {
         u8* attr = m_attrs + (j * m_stride) + b.m_x;
@@ -447,7 +458,7 @@ void Draw::attrRect(int xCell, int yCell, int width, int height, u8 colour)
 
 void Draw::clearRect(int xCell, int yCell, int width, int height)
 {
-    Bounds b = clip(Bounds{ xCell, yCell, width, height });
+    Bounds b = toGlobal(clipLocal(Bounds{ xCell, yCell, width, height }));
     height = b.m_height * 8;
     for (int j = 0; j < height; ++j)
     {

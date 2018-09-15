@@ -195,11 +195,14 @@ private:
         int     m_height;       //!< Height of the allowed rendering window.
     };
 
-    //! Clip the given bounds with the current bounds and give actual screen bounds
+    //! Clip the given bounds (in global coords) with the whole screen and give actual screen bounds (in global coords)
     Bounds clip(Bounds bounds) const;
 
-    //! Clip the given bounds with the current bounds and return local coordinate bounds.
+    //! Clip the given bounds (in local coords) with the current bounds and return local coordinate bounds.
     Bounds clipLocal(Bounds bounds) const;
+
+    //! Convert local coords to global coords
+    Bounds toGlobal(Bounds bounds) const;
 
     //! Calculate the address in the pixel array
     u8* pixelAddr(int xCell, int yPixel);
