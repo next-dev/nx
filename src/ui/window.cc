@@ -12,6 +12,8 @@
 
 Window::Window(Nx& nx)
     : m_nx(nx)
+    // #todo: Flash this
+    , m_showCursor(true)
 {
 
 }

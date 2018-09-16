@@ -23,6 +23,21 @@ protected:
     void onRender(Draw& draw) override;
     bool onKey(const KeyEvent& kev) override;
     void onText(char ch) override;
+
+    void adjust();
+    void poke(u8 value);
+
+private:
+    void jumpToAddress(string text);
+
+private:
+    u16     m_address;
+    bool    m_showChecksums;
+
+    // Edit mode
+    bool    m_editMode;
+    u16     m_editAddress;
+    int     m_editNibble;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

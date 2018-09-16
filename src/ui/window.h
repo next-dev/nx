@@ -61,6 +61,9 @@ public:
     //! Return the state.
     const State& getState() const { return m_currentState; }
 
+    //! Return whether the window is prompting for input or not.
+    bool isPrompting() const { return false; }
+
 protected:
     //! Override to fill in the contents of the window.
     virtual void onRender(Draw& draw) = 0;
@@ -80,4 +83,5 @@ protected:
 private:
     Nx&     m_nx;
     State   m_currentState;
+    bool    m_showCursor;
 };
