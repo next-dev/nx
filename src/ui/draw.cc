@@ -489,8 +489,8 @@ void Draw::window(int xCell, int yCell, int width, int height, const string& tit
     height = b.m_height;
     pushLocalBounds(xCell, yCell, width, height);
 
-    Colour titleBkgColour = Colour::Black;
-    Colour titleFgColour = Colour::White;
+    Colour titleBkgColour = selected ? Colour::Red : Colour::Black;
+    Colour titleFgColour = selected ? Colour::White : Colour::Grey;
 
     if (((backgroundAttr & 0xf0) >> 4) == (u8)Colour::Black)
     {

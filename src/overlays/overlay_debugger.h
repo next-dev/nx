@@ -27,13 +27,13 @@ public:
     void apply(const FrameState& frameState) override;
 
     DisassemblyWindow& getDisassemblyWindow() { return m_disassemblyWindow; }
-    MemoryViewWindow& getMemoryDumpWindow() { return m_memoryDumpWindow; }
+    MemoryViewWindow& getMemoryDumpWindow() { return m_memoryViewWindow; }
     CpuStatusWindow& getCpuStatusWindow() { return m_cpuStatusWindow; }
     CommandWindow& getCommandWindow() { return m_commandWindow; }
 
     // Const versions because.... sigh..... C++.
     const DisassemblyWindow& getDisassemblyWindow() const { return m_disassemblyWindow; }
-    const MemoryViewWindow& getMemoryDumpWindow() const { return m_memoryDumpWindow; }
+    const MemoryViewWindow& getMemoryDumpWindow() const { return m_memoryViewWindow; }
     const CpuStatusWindow& getCpuStatusWindow() const { return m_cpuStatusWindow; }
     const CommandWindow& getCommandWindow() const { return m_commandWindow; }
 
@@ -45,9 +45,11 @@ protected:
     bool onKey(const KeyEvent& kev) override;
     void onText(char ch) override;
 
+    void setWindow(Window& window);
+
 private:
     DisassemblyWindow   m_disassemblyWindow;
-    MemoryViewWindow    m_memoryDumpWindow;
+    MemoryViewWindow    m_memoryViewWindow;
     CpuStatusWindow     m_cpuStatusWindow;
     CommandWindow       m_commandWindow;
     Window*             m_currentWindow;

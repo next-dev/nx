@@ -11,10 +11,10 @@
 DebuggerOverlay::DebuggerOverlay(Nx& nx)
     : Overlay(nx)
     , m_disassemblyWindow(nx)
-    , m_memoryDumpWindow(nx)
+    , m_memoryViewWindow(nx)
     , m_cpuStatusWindow(nx)
     , m_commandWindow(nx)
-    , m_currentWindow(&m_memoryDumpWindow)
+    , m_currentWindow(&m_memoryViewWindow)
 {
 }
 
@@ -31,7 +31,7 @@ void DebuggerOverlay::apply(const FrameState& frameState)
 void DebuggerOverlay::onRender(Draw& draw)
 {
     m_disassemblyWindow.render(draw);
-    m_memoryDumpWindow.render(draw);
+    m_memoryViewWindow.render(draw);
     m_cpuStatusWindow.render(draw);
     m_commandWindow.render(draw);
 }
@@ -47,10 +47,36 @@ bool DebuggerOverlay::onKey(const KeyEvent& kev)
         exit();
         return true;
     }
+    else if (kev.isAlt())
+    {
+        switch (kev.key)
+        {
+        case K::Num1: setWindow(m_memoryViewWindow);    break;
+        case K::Num2: setWindow(m_disassemblyWindow);   break;
+        case K::Num3: setWindow(m_cpuStatusWindow);     break;
+        case K::Num4: setWindow(m_commandWindow);       break;
+        }
+
+        return true;
+    }
     else
     {
         return m_currentWindow->key(kev);
     }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+void DebuggerOverlay::setWindow(Window& window)
+{
+    Window::State state;
+    state = m_currentWindow->getState();
+    state.selected = false;
+    m_currentWindow->apply(state);
+    m_currentWindow = &window;
+    state = m_currentWindow->getState();
+    state.selected = true;
+    m_currentWindow->apply(state);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -75,7 +101,7 @@ void DebuggerOverlay::recalculateWindows()
     state.ink = Colour::Black;
     state.paper = Colour::White;
     state.selected = true;
-    m_memoryDumpWindow.apply(state);
+    m_memoryViewWindow.apply(state);
 
     // Disassembly window
     state.x = 1;
