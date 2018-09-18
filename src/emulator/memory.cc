@@ -210,6 +210,14 @@ MemAddr Memory::convert(u16 addr) const
 
 //----------------------------------------------------------------------------------------------------------------------
 
+bool Memory::isZ80Address(MemAddr addr) const
+{
+    optional<u16> a = convert(addr);
+    return a.has_value();
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
 u8 Memory::peek8(MemAddr addr) const
 {
     return m_blocks[(int)addr.bank().group()][addr.index()];

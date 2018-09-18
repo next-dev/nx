@@ -193,7 +193,7 @@ public:
     //! written to the memory.
     void applySizes(MemorySizes sizes);
 
-    //! Apply the slots cofniguration.
+    //! Apply the slots configuration.
     void applySlots(const Slots& slots);
 
     //! Validates an address.
@@ -204,6 +204,9 @@ public:
 
     //! Convert memory address from virtual to physical.
     MemAddr convert(u16 addr) const;
+
+    //! Returns true if the Z80 can see this address, i.e. it's in one of the slots.
+    bool isZ80Address(MemAddr addr) const;
 
     //! Read a byte from physical memory.
     u8 peek8(MemAddr addr) const;
