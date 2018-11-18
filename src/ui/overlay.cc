@@ -105,7 +105,7 @@ bool MenuWindow::onKey(const KeyEvent& kev)
 
 bool MenuWindow::isActivated() const
 {
-    return m_selectedItem != -1;
+    return m_selectedItem != -1 && m_state.items.size() > 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -239,7 +239,7 @@ void Overlay::render(Draw& draw)
         draw.attrRect(x, y, width - x, 1, bkg);
     }
 
-    // Now draw the menu.
+    // Now draw the menu if it exists.
     if (m_menu.isActivated()) m_menu.render(draw);
 }
 
