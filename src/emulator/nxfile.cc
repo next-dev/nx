@@ -214,6 +214,21 @@ vector<u8> NxFile::loadFile(string fileName)
     return buffer;
 }
 
+bool NxFile::loadTextFile(string fileName, vector<char>& textBuffer)
+{
+    sf::FileInputStream f;
+
+    if (f.open(fileName))
+    {
+        i64 size = f.getSize();
+        textBuffer.resize(size);
+        f.read(textBuffer.data(), size);
+        return true;
+    }
+
+    return false;
+}
+
 bool NxFile::saveFile(string fileName, const vector<u8>& data)
 {
     ofstream f;
@@ -222,6 +237,22 @@ bool NxFile::saveFile(string fileName, const vector<u8>& data)
     if (f)
     {
         f.write((const char *)data.data(), data.size());
+        f.close();
+        result = true;
+    }
+
+    return result;
+}
+
+bool NxFile::saveTextFile(string fileName, const vector<char>& data1, const vector<char>& data2)
+{
+    ofstream f;
+    bool result = false;
+    f.open(fileName, ios::out | ios::binary | ios::trunc);
+    if (f)
+    {
+        f.write((const char *)data1.data(), data1.size());
+        f.write((const char *)data2.data(), data2.size());
         f.close();
         result = true;
     }

@@ -187,14 +187,13 @@ bool MemoryViewWindow::onKey(const KeyEvent& kev)
                 break;
 
             case K::G:
-                //#todo: prompts and editing
-//                 prompt("Goto", {}, [this](string text) {
-//                     jumpToAddress(text);
-//                 }, ConsumeKeyState::Yes, RequireInputState::No);
+                prompt("Goto", {}, [this](string text) {
+                    jumpToAddress(text);
+                }, RequireInputState::No);
                 break;
 
             default:
-                break;
+                return false;
             }
         }
         else
@@ -218,10 +217,9 @@ bool MemoryViewWindow::onKey(const KeyEvent& kev)
                 break;
 
             case K::G:
-                //#todo: prompts and editing
-//                 prompt("Goto", {}, [this](string text) {
-//                     jumpToAddress(text);
-//                 }, ConsumeKeyState::Yes, RequireInputState::No);
+                prompt("Goto", {}, [this](string text) {
+                    jumpToAddress(text);
+                }, RequireInputState::No);
                 break;
 
             case K::C:
@@ -235,12 +233,14 @@ bool MemoryViewWindow::onKey(const KeyEvent& kev)
                 break;
 
             default:
-                break;
+                return false;
             }
         }
+
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 //----------------------------------------------------------------------------------------------------------------------

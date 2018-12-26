@@ -155,6 +155,10 @@ public:
     static vector<u8> loadFile(string fileName);
     static bool saveFile(string fileName, const vector<u8>& data);
 
+    // These functions support the text editor.
+    static bool loadTextFile(string fileName, vector<char>& textBuffer);
+    static bool saveTextFile(string fileName, const vector<char>& data1, const vector<char>& data2);
+
     bool load(string fileName);
     bool save(string fileName);
 

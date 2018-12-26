@@ -7,6 +7,7 @@
 #pragma once
 
 #include <ui/uilayer.h>
+#include <functional>
 
 //----------------------------------------------------------------------------------------------------------------------
 //! Represents a window view in the UI.
@@ -63,6 +64,22 @@ public:
 
     //! Return whether the window is prompting for input or not.
     bool isPrompting() const { return false; }
+
+    //! States for the requireInput parameter for prompt().
+    enum class RequireInputState
+    {
+        No,
+        Yes
+    };
+
+    //! Handler type for handling prompt input.
+    using PromptHandler = function<void(string)>;
+
+    //! Start a window prompt.
+    void prompt(string promptString, string originalText, PromptHandler handler, RequireInputState requireInput);
+
+    //! Quit the current prompt.
+    void killPrompt();
 
 protected:
     //! Override to fill in the contents of the window.
