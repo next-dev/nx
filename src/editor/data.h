@@ -23,9 +23,12 @@ public:
 
     void bufferLineText(i64 line, const char** s0, const char** e0, const char** s1, const char** e1);
 
+    string makeString() const;
+
     //
     // Commands
     //
+    void clear();
     void insert(Pos p, const char *start, const char* end);
     void insert(Pos p, char ch) { insert(p, &ch, &ch + 1); }
     void insert(Pos p, string str) { insert(p, &*str.begin(), &*str.end()); }

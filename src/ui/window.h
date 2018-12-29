@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <editor/editor.h>
 #include <ui/uilayer.h>
 #include <functional>
 
@@ -63,7 +64,7 @@ public:
     const State& getState() const { return m_currentState; }
 
     //! Return whether the window is prompting for input or not.
-    bool isPrompting() const { return false; }
+    bool isPrompting() const { return m_isPrompting; }
 
     //! States for the requireInput parameter for prompt().
     enum class RequireInputState
@@ -100,5 +101,12 @@ protected:
 private:
     Nx&     m_nx;
     State   m_currentState;
-    bool    m_showCursor;
+
+    // Prompt state
+    Editor              m_promptEditor;
+    EditorData          m_promptData;
+    string              m_promptString;
+    bool                m_isPrompting;
+    PromptHandler       m_promptHandler;
+    RequireInputState   m_requireInput;
 };

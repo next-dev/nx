@@ -43,6 +43,15 @@ EditorData::EditorData(string fileName)
 
 //----------------------------------------------------------------------------------------------------------------------
 
+void EditorData::clear()
+{
+    m_gapStart = 0;
+    m_gapEnd = (i64)m_buffer.size();
+    m_fileName.clear();
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
 Pos EditorData::bufferPosToPos(BufferPos p)
 {
     return p > m_gapStart ? (p - (m_gapEnd - m_gapStart)) : p;
@@ -104,6 +113,20 @@ void EditorData::insert(Pos p, const char *start, const char* end)
     ensureGapSize(end - start);
     setInsertPoint(p);
     while (start < end) m_buffer[m_gapStart++] = *start;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+string EditorData::makeString() const
+{
+    size_t s1 = (size_t)m_gapStart;
+    size_t s2 = m_buffer.size() - m_gapEnd;
+
+    string s;
+    s.reserve(s1 + s2);
+    s.append(m_buffer.data(), s1);
+    s.append(m_buffer.data() + m_gapEnd, s2);
+    return s;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
