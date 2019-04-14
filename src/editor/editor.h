@@ -12,7 +12,6 @@
 //----------------------------------------------------------------------------------------------------------------------
 //! Represents an editor view in the UI
 
-class EditorData;
 class Draw;
 struct KeyEvent;
 
@@ -20,6 +19,7 @@ class Editor
 {
 public:
     Editor();
+    ~Editor();
 
     struct State
     {
@@ -29,6 +29,11 @@ public:
         int             height;     //!< Height of editor area in cells.
         u8              colour;     //!< Base colour.
         u8              cursor;     //!< Cursor colour.
+
+        State()
+            : x(0), y(0), width(0), height(0)
+            , colour(0x07), cursor(0x04)
+        {}
     };
 
     //! Apply the state to the editor

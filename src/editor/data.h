@@ -38,10 +38,12 @@ private:
     void ensureGapSize(i64 size);
 
 private:
-    string          m_fileName;     //!< The name of the file where this text came from.
-    vector<char>    m_buffer;       //!< The text data
-    BufferPos       m_gapStart;     //!< Where the gap starts.
-    BufferPos       m_gapEnd;       //!< Where the gap ends.
+    string              m_fileName;     //!< The name of the file where this text came from.
+    vector<char>        m_buffer;       //!< The text data
+    vector<BufferPos>   m_lines;
+    int                 m_currentLine;
+    BufferPos           m_gapStart;     //!< Where the gap starts.
+    BufferPos           m_gapEnd;       //!< Where the gap ends.
 };
 
 //----------------------------------------------------------------------------------------------------------------------
