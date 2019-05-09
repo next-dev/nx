@@ -309,6 +309,18 @@ int Draw::printString(int xCell, int yCell, const string& str, const u8* font /*
 
 //----------------------------------------------------------------------------------------------------------------------
 
+int Draw::printString(int xCell, int yCell, const char* start, const char* end, const u8* font /* = gFont */)
+{
+    int len = min(min(m_stride, getX() + getWidth()) - xCell, (int)(end - start));
+    for (int i = 0; i < len; ++i)
+    {
+        printChar(xCell++, yCell, *start++, font);
+    }
+    return xCell;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
 int Draw::printString(int xCell, int yCell, const string& str, u8 attr, const u8* font /* = gFont */)
 {
     // #todo: do fast printChar to not do boundary checks.  We can do that here.

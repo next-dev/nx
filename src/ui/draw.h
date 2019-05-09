@@ -117,6 +117,14 @@ public:
     //! @return     Returns the x cell coordinate after the string.
     int printString(int xCell, int yCell, const string& str, const u8* font = gFont);
 
+    //! Print a string without affecting attributes.
+    //!
+    //! These will check for bounds and not render anything if outside.  All coordinates are local to the current
+    //! boundaries as defined by the current state.
+    //!
+    //! @return     Returns the x cell coordinate after the string.
+    int printString(int xCell, int yCell, const char* start, const char* end, const u8* font = gFont);
+
     //! Print a string and set the attributes.
     //!
     //! These will check for bounds and not render anything if outside.  All coordinates are local to the current

@@ -7,6 +7,7 @@
 
 #include <core.h>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using BufferPos = i64;      //!< Actual position in the buffer including the gap.
@@ -18,12 +19,28 @@ public:
     EditorData();
     EditorData(string fileName);
 
-    Pos bufferPosToPos(BufferPos p);
-    BufferPos posToBufferPos(Pos p);
+    Pos bufferPosToPos(BufferPos p) const;
+    BufferPos posToBufferPos(Pos p) const;
 
     void bufferLineText(i64 line, const char** s0, const char** e0, const char** s1, const char** e1);
 
     string makeString() const;
+
+    //
+    // Queries
+    //
+    char getChar(Pos p) { return m_buffer[posToBufferPos(p)]; }
+
+    struct Line
+    {
+        const char*     s1;     // Start of first part of line
+        const char*     e1;     // End of first part of line
+        const char*     s2;     // Start of second part of line (or nullptr if no second part)
+        const char*     e2;     // End of second part of line (or nullptr if no second part)
+        Pos             newPos; // New position of next line
+    };
+    Line getLine(Pos p) const;
+
 
     //
     // Commands

@@ -52,14 +52,14 @@ void EditorData::clear()
 
 //----------------------------------------------------------------------------------------------------------------------
 
-Pos EditorData::bufferPosToPos(BufferPos p)
+Pos EditorData::bufferPosToPos(BufferPos p) const
 {
     return p > m_gapStart ? (p - (m_gapEnd - m_gapStart)) : p;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 
-BufferPos EditorData::posToBufferPos(Pos p)
+BufferPos EditorData::posToBufferPos(Pos p) const
 {
     return p > m_gapStart ? m_gapStart + (p - m_gapStart) : p;
 }
@@ -127,6 +127,35 @@ string EditorData::makeString() const
     s.append(m_buffer.data(), s1);
     s.append(m_buffer.data() + m_gapEnd, s2);
     return s;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+EditorData::Line EditorData::getLine(Pos p) const
+{
+    Line l;
+    BufferPos bp = posToBufferPos(p);
+    if (bp == (BufferPos)m_buffer.size()) return { nullptr, nullptr, nullptr, nullptr, p };
+
+    l.s1 = m_buffer.data() + bp;
+
+    for (; bp < m_gapStart && m_buffer[bp] != '\n'; ++bp);
+    l.e1 = m_buffer.data() + p;
+
+    if (bp == m_gapStart)
+    {
+        l.s2 = m_buffer.data() + bp;
+        for (bp = m_gapEnd; bp < (BufferPos)m_buffer.size() && m_buffer[bp] != '\n'; ++bp);
+        l.e2 = m_buffer.data() + bp;
+    }
+    else
+    {
+        l.s2 = l.e2 = nullptr;
+    }
+
+    l.newPos = bufferPosToPos(bp) + 1;
+
+    return l;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
