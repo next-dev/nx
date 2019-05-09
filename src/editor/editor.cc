@@ -10,11 +10,13 @@
 // Constructor
 
 Editor::Editor()
-    : m_data(nullptr)
+    : m_state()
+    , m_data(nullptr)
     , m_cursor(0)
     , m_top(0)
+    , m_showLineNumbers(false)
 {
-
+    m_data = new EditorData();
 }
 
 //----------------------------------------------------------------------------------------------------------------------

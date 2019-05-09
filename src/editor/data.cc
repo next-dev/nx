@@ -17,6 +17,8 @@ EditorData::EditorData()
     , m_gapStart(0)
     , m_gapEnd(kInitialGapSize)
 {
+    m_lines.push_back(0);
+    m_currentLine = 0;
     m_buffer.resize(kInitialGapSize);
 }
 
@@ -28,6 +30,8 @@ EditorData::EditorData(string fileName)
     , m_gapStart(0)
     , m_gapEnd(0)
 {
+    m_lines.push_back(0);
+    m_currentLine = 0;
     if (NxFile::loadTextFile(fileName, m_buffer))
     {
         // Move the text to the end of an enlarged buffer.
