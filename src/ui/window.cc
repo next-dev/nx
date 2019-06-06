@@ -16,7 +16,7 @@ Window::Window(Nx& nx)
     , m_promptEditor()
     , m_isPrompting(false)
 {
-
+    m_promptEditor.setData(m_promptData);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -45,17 +45,22 @@ void Window::render(Draw& draw)
     // Draw prompt
     if (m_isPrompting)
     {
-        u8 attr = draw.attr(Colour::White, Colour::BrightMagenta);
-        draw.attrRect(0, 1, draw.getWidth(), 1, attr);
-        int width = draw.printPropString(2, 1, m_promptString, attr, true);
+        int x = m_currentState.x;
+        int y = m_currentState.y;
+        int w = m_currentState.width;
 
-        int x = 2 + width;
-        width = draw.getWidth() - x;
+        u8 attr = draw.attr(Colour::White, Colour::BrightMagenta);
+        draw.attrRect(x, y + 1, w, 1, attr);
+        draw.clearRect(x, y + 1, w, 1);
+        int width = draw.printPropString(x + 2, y + 1, m_promptString + ": ", attr, true);
+
+        x += 2 + width;
+        w -= (2 + width);
 
         Editor::State state;
         state.x = x;
-        state.y = 1;
-        state.width = width;
+        state.y = y + 1;
+        state.width = w;
         state.height = 1;
         state.colour = attr;
         state.cursor = draw.attr(Colour::Blue, Colour::White);

@@ -4,6 +4,7 @@
 //! @copyright  Copyright (C)2018, all rights reserved.
 //! @brief      Implements the memory view window
 
+#include <asm/expr.h>
 #include <emulator/nx.h>
 #include <ui/draw.h>
 #include <windows/window_memoryview.h>
@@ -356,6 +357,27 @@ void MemoryViewWindow::poke(u8 value)
         m_editNibble = 0;
         ++m_editAddress;
         adjust();
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+void MemoryViewWindow::jumpToAddress(string text)
+{
+    ExpressionEvaluator exprEval;
+    vector<u8> t(text.begin(), text.end());
+
+    auto expr = exprEval.parseExpression(t);
+
+    if (expr)
+    {
+        MemAddr m = expr->getAddress();
+        optional<u16> z80Addr = getEmulator().getSpeccy().getMemorySystem().convert(m);
+        if (z80Addr)
+        {
+            m_editAddress = m_address = *z80Addr;
+            m_editNibble = 0;
+        }
     }
 }
 

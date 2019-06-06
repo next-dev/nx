@@ -39,7 +39,11 @@ public:
         const char*     e2;     // End of second part of line (or nullptr if no second part)
         Pos             newPos; // New position of next line
     };
-    Line getLine(Pos p) const;
+    Line getLine(Pos pos) const;
+    Pos lastPos() const;
+
+    i64 getLineNumber(Pos p) const;
+    Pos getLinePos(i64 line) const;
 
 
     //
@@ -48,7 +52,7 @@ public:
     void clear();
     void insert(Pos p, const char *start, const char* end);
     void insert(Pos p, char ch) { insert(p, &ch, &ch + 1); }
-    void insert(Pos p, string str) { insert(p, &*str.begin(), &*str.end()); }
+    void insert(Pos p, string str) { insert(p, str.data(), str.data() + str.size()); }
 
 private:
     void setInsertPoint(Pos pos);
@@ -58,7 +62,6 @@ private:
     string              m_fileName;     //!< The name of the file where this text came from.
     vector<char>        m_buffer;       //!< The text data
     vector<BufferPos>   m_lines;
-    int                 m_currentLine;
     BufferPos           m_gapStart;     //!< Where the gap starts.
     BufferPos           m_gapEnd;       //!< Where the gap ends.
 };

@@ -18,7 +18,6 @@ EditorData::EditorData()
     , m_gapEnd(kInitialGapSize)
 {
     m_lines.push_back(0);
-    m_currentLine = 0;
     m_buffer.resize(kInitialGapSize);
 }
 
@@ -31,7 +30,6 @@ EditorData::EditorData(string fileName)
     , m_gapEnd(0)
 {
     m_lines.push_back(0);
-    m_currentLine = 0;
     if (NxFile::loadTextFile(fileName, m_buffer))
     {
         // Move the text to the end of an enlarged buffer.
@@ -73,7 +71,7 @@ BufferPos EditorData::posToBufferPos(Pos p) const
 void EditorData::setInsertPoint(Pos pos)
 {
     BufferPos bp = posToBufferPos(pos);
-    if (pos < m_gapStart)
+    if (pos <= m_gapStart)
     {
         // Shift all data between pos and gap to the end of the gap, moving the gap to the left at the same time.
         i64 delta = m_gapStart - bp;
@@ -135,32 +133,69 @@ string EditorData::makeString() const
 
 //----------------------------------------------------------------------------------------------------------------------
 
-EditorData::Line EditorData::getLine(Pos p) const
+EditorData::Line EditorData::getLine(Pos pos) const
 {
+    i64 line = getLineNumber(pos);
+
+    if (line < 0 || line >= i64(m_lines.size()))
+    {
+        return { nullptr, nullptr, nullptr, nullptr };
+    }
+
+    BufferPos bp = m_lines[line];
+
     Line l;
-    BufferPos bp = posToBufferPos(p);
-    if (bp == (BufferPos)m_buffer.size()) return { nullptr, nullptr, nullptr, nullptr, p };
 
     l.s1 = m_buffer.data() + bp;
 
+    // Find 1st part of line
     for (; bp < m_gapStart && m_buffer[bp] != '\n'; ++bp);
-    l.e1 = m_buffer.data() + p;
+    l.e1 = m_buffer.data() + bp;
 
-    if (bp == m_gapStart)
+    if (bp == m_gapStart) bp = m_gapEnd;
+
+    if (bp < m_gapStart || bp == i64(m_buffer.size()) || m_buffer[bp] == '\n')
     {
-        l.s2 = m_buffer.data() + bp;
-        for (bp = m_gapEnd; bp < (BufferPos)m_buffer.size() && m_buffer[bp] != '\n'; ++bp);
-        l.e2 = m_buffer.data() + bp;
+        // No second part of line
+        l.s2 = l.e2 = nullptr;
+        bp = i64(m_buffer.size());
     }
     else
     {
-        l.s2 = l.e2 = nullptr;
+        l.s2 = m_buffer.data() + m_gapEnd;
+        for (bp = m_gapEnd; bp < (BufferPos)m_buffer.size() && m_buffer[bp] != '\n'; ++bp);
+        l.e2 = m_buffer.data() + bp;
+        if (bp == '\n') ++bp;
     }
 
-    l.newPos = bufferPosToPos(bp) + 1;
+    l.newPos = bufferPosToPos(bp);
 
     return l;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
 
+Pos EditorData::lastPos() const
+{
+    return m_gapStart + i64(m_buffer.size()) - m_gapEnd;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+i64 EditorData::getLineNumber(Pos p) const
+{
+    BufferPos bp = posToBufferPos(p);
+    auto it = std::upper_bound(m_lines.begin(), m_lines.end(), bp);
+    assert(it != m_lines.begin());
+    return i64((it - 1) - m_lines.begin());
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+Pos EditorData::getLinePos(i64 line) const
+{
+    return bufferPosToPos(m_lines[line]);
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------

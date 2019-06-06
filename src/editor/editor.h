@@ -49,7 +49,7 @@ public:
     void text(char ch);
 
     //! Return the state.
-    State& getState() { return m_state; }
+    State getState() { return m_state; }
 
     //! Return the state.
     const State& getState() const { return m_state; }
@@ -60,6 +60,9 @@ public:
     //
     // Cursor control
     //
+
+    //! Make the cursor visible on the screen by adjusting m_top accordingly
+    void cursorVisible();
 
     //! Set cursor to top of document.
     void gotoTop();
@@ -77,7 +80,8 @@ private:
     State               m_state;
     EditorData*         m_data;
     Pos                 m_cursor;
-    Pos                 m_top;
+    i64                 m_top;
+    bool                m_showLineNumbers;
 };
 
 //----------------------------------------------------------------------------------------------------------------------

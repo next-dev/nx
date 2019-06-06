@@ -16,7 +16,13 @@ Editor::Editor()
     , m_top(0)
     , m_showLineNumbers(false)
 {
-    m_data = new EditorData();
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// Destructor
+
+Editor::~Editor()
+{
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -32,18 +38,18 @@ void Editor::apply(const State& state)
 
 void Editor::render(Draw& draw)
 {
-    int width = draw.getWidth();
-    int height = draw.getHeight();
+    int width = m_state.width;
+    int height = m_state.height;
 
     if (m_data)
     {
-        auto p = m_top;
+        auto p = m_data->getLinePos(m_top);
 
         for (int y = 0; y < height; ++y)
         {
             EditorData::Line l;
 
-            draw.attrRect(0, y, width, 1, m_state.colour);
+            draw.attrRect(m_state.x, m_state.y + y, width, 1, m_state.colour);
             l = m_data->getLine(p);
 
             int l1 = int(l.e1 - l.s1);
@@ -51,17 +57,17 @@ void Editor::render(Draw& draw)
             if (l.s1)
             {
                 int len = min(l1, width);
-                draw.printString(0, y, l.s1, l.s1 + len);
+                draw.printString(m_state.x, m_state.y + y, l.s1, l.s1 + len);
 
                 if (len < width)
                 {
                     // Draw 2nd part of line
                     int len2 = min(l2, width - len);
-                    draw.printString(len, y, l.s2, l.s2 + len2);
+                    draw.printString(m_state.x + len, m_state.y + y, l.s2, l.s2 + len2);
 
                     if ((len + len2) < width)
                     {
-                        draw.clearRect(len, y, (width - len), 1);
+                        draw.clearRect(m_state.x + len, m_state.y + y, (width - len), 1);
                     } 
                 }
 
@@ -69,7 +75,7 @@ void Editor::render(Draw& draw)
             else
             {
                 // Render empty line
-                draw.clearRect(0, y, width, 1);
+                draw.clearRect(m_state.x, m_state.y + y, width, 1);
             }
 
             p = l.newPos;
@@ -77,7 +83,70 @@ void Editor::render(Draw& draw)
     }
     else
     {
-        draw.attrRect(0, 0, width, height, m_state.colour);
-        draw.clearRect(0, 0, width, height);
+        draw.attrRect(m_state.x, m_state.y, width, height, m_state.colour);
+        draw.clearRect(m_state.x, m_state.y, width, height);
     }
 }
+
+//----------------------------------------------------------------------------------------------------------------------
+// key
+
+bool Editor::key(const KeyEvent& kev)
+{
+    return false;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// text
+
+void Editor::text(char ch)
+{
+
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// setData
+
+void Editor::setData(EditorData& editorData)
+{
+    m_data = &editorData;
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// gotoTop
+
+void Editor::gotoTop()
+{
+    m_cursor = 0;
+    cursorVisible();
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// gotoBottom
+
+void Editor::gotoBottom()
+{
+    assert(m_data);
+    m_cursor = m_data->lastPos();
+    cursorVisible();
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// cursorVisible
+
+void Editor::cursorVisible()
+{
+    if (!m_data) return;
+
+    i64 currentLine = m_data->getLineNumber(m_cursor);
+    i64 botLine = m_top + m_state.height;
+
+    if (currentLine < m_top || currentLine >= botLine)
+    {
+        // Cursor is outside window.  Bring it back in!
+        m_top = __max(0, currentLine - (m_state.height / 2));
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------
