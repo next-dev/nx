@@ -144,7 +144,7 @@ void Nx::run()
 
             case sf::Event::TextEntered:
                 assert(skipText != Skip::Maybe);
-                if (skipText == Skip::Yes)
+                if (skipText == Skip::No)
                 {
                     getCurrentOverlay()->text((char)event.text.unicode);
                     skipText = Skip::Maybe;

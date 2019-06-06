@@ -114,7 +114,7 @@ void EditorData::insert(Pos p, const char *start, const char* end)
 {
     ensureGapSize(end - start);
     setInsertPoint(p);
-    while (start < end) m_buffer[m_gapStart++] = *start;
+    while (start < end) m_buffer[m_gapStart++] = *start++;
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -168,7 +168,7 @@ EditorData::Line EditorData::getLine(Pos pos) const
         if (bp == '\n') ++bp;
     }
 
-    l.newPos = bufferPosToPos(bp);
+    l.newPos = bp == i64(m_buffer.size()) ? -1 : bufferPosToPos(bp);
 
     return l;
 }

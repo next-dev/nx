@@ -38,11 +38,13 @@ void Editor::apply(const State& state)
 
 void Editor::render(Draw& draw)
 {
+    // #todo: Integrate horizontal scrolling
     int width = m_state.width;
     int height = m_state.height;
 
     if (m_data)
     {
+        BufferPos cp = m_data->posToBufferPos(m_cursor);
         auto p = m_data->getLinePos(m_top);
 
         for (int y = 0; y < height; ++y)
@@ -67,7 +69,7 @@ void Editor::render(Draw& draw)
 
                     if ((len + len2) < width)
                     {
-                        draw.clearRect(m_state.x + len, m_state.y + y, (width - len), 1);
+                        draw.clearRect(m_state.x + len + len2, m_state.y + y, (width - len - len2), 1);
                     } 
                 }
 
@@ -76,6 +78,16 @@ void Editor::render(Draw& draw)
             {
                 // Render empty line
                 draw.clearRect(m_state.x, m_state.y + y, width, 1);
+            }
+
+            // Render cursor
+            if (cp >= p && (cp < l.newPos || l.newPos == -1))
+            {
+                auto cx = cp - p;
+                if (cx < m_state.width)
+                {
+                    draw.pokeAttr(m_state.x + int(cx), m_state.y, m_state.cursor);
+                }
             }
 
             p = l.newPos;
@@ -101,7 +113,10 @@ bool Editor::key(const KeyEvent& kev)
 
 void Editor::text(char ch)
 {
-
+    if (m_data)
+    {
+        m_data->insert(m_cursor++, ch);
+        cursorVisible();    }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
