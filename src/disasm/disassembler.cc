@@ -206,6 +206,7 @@ int DisassemblerDoc::generateCode(MemAddr addr, int tag, string label)
             // Lets look at the opcode to see if we continue.  We stop at JP, RET, RETI and RETN
             switch (m_mmap[c16])
             {
+            case 0x18:      // JR nnnn
             case 0xc3:      // JP nnnn
             case 0xc9:      // RET
             case 0xe9:      // JP (HL)
